@@ -6,9 +6,9 @@ progression. The game logic is a **deterministic, engine-agnostic C# simulation*
 
 ![The demo factory](docs/images/hero.jpg)
 
-| Drag a belt across a line: it bridges itself | Tiers, build limits and per-building upgrades |
+| Drag a belt across a line: it bridges itself | Manage a building, choose its recipe; windows side by side |
 |---|---|
-| ![Automatic bridge over a belt](docs/images/bridge.jpg) | ![Progress panel](docs/images/progress.jpg) |
+| ![Automatic bridge over a belt](docs/images/bridge.jpg) | ![Manage, Progress and Statistics windows](docs/images/windows.jpg) |
 | **Build menu with rendered icons** | **Every building and item is generated in code** |
 | ![Build menu](docs/images/build-menu.jpg) | ![Machine showcase](docs/images/showcase.jpg) |
 
@@ -71,7 +71,7 @@ Building is designed to be fast from the keyboard. Press `F1` in game for this t
 | `Ctrl+A` | Select all |
 | `Esc` / right-click | Cancel the tool, then clear the selection |
 | `WASD`, MMB drag · RMB drag · wheel | Pan · orbit · zoom toward the cursor |
-| `P` · `I` · `G` · `F1` | Progress (tiers, limits) · statistics · game menu · help |
+| `P` · `I` · `G` · `F1` | Progress (tiers, limits) · statistics · game menu · help. Windows can be open together; drag them by the title bar, `Esc` closes the last one |
 
 **Heights.** Everything is built at the current build height, shown on the ladder next
 to the hotbar and next to the cursor. `G` is the ground plate: nothing can go below it.
@@ -80,9 +80,15 @@ to change height by hand. Drag a belt straight across another line and it builds
 ramp up, the bridge and the ramp down itself. Place a *Ramp Up* and the build height
 follows it up. A *Ramp Down* always lands on the ground it stands on.
 
-A tooltip next to the cursor says what a click will do and what it costs. The inspector
-(right) shows status, recipe, buffers, the building's level and an upgrade button. Ghost
-previews show where items enter (blue) and leave (orange) a building.
+A tooltip next to the cursor says what a click will do and what it costs. Ghost previews
+show where items enter (blue) and leave (orange) a building.
+
+**Manage window.** Click a building to manage it: picture, description, level, value,
+speed and status, a big **Upgrade** button (with the price) and **Delete**. Machines show
+a grid of everything they can make. Pick one and the machine only takes that recipe's
+ingredients, or leave it on *Automatic*. The chosen item shows its parts, value and
+time. Select several machines of one kind to upgrade or set them all at once. Copies keep
+their choice.
 
 ## Progression and balance
 
@@ -102,7 +108,7 @@ previews show where items enter (blue) and leave (orange) a building.
 ## Testing
 
 ```bash
-dotnet test                                                     # core tests (89)
+dotnet test                                                     # core tests (94)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit
@@ -116,6 +122,8 @@ godot --path godot -- --ui-test
 
 # Every building (some upgraded) and every item shape in one scene, for checking models.
 godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
+# Screenshot options: --wait=seconds, --view=yaw,pitch,distance,x,z, --select=x,y (opens
+# the Manage window for that cell), --windows (opens Progress and Statistics).
 ```
 
 ## Continuous integration and downloads

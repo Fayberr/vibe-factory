@@ -17,6 +17,7 @@ public partial class UiScenario : Node
     public BuildController Tools = null!;
     public CameraRig Camera = null!;
     public WorldView View = null!;
+    public Hud Hud = null!;
 
     private string? _shots;
     private int _failures, _checks;
@@ -178,7 +179,37 @@ public partial class UiScenario : Node
         Check(line.All(e => e?.Level == 2), $"Shift-click upgrades the whole belt line ({line.Count(e => e?.Level == 2)}/{line.Count})");
         await Key(Godot.Key.Escape);
 
-        // 12. Menus, as a normal (non-sandbox) game sees them: locked tiers, limits.
+        // 12. Manage window: choose what a press makes by clicking its tile; Progress and
+        //     Statistics can be open at the same time.
+        await Focus(12, 8);
+        Tools.SelectTool(w.Content.Buildings["press"]);
+        await Click(Cell(12, 8));
+        await Key(Godot.Key.Escape);
+        await Click(Cell(12, 8));
+        await Frames(12);
+        Check(Hud.Manage.Window.Visible, "selecting a machine opens the Manage window");
+        var wire = Hud.Manage.TileFor("draw_wire");
+        Check(wire != null, "the press offers copper wire as a choice");
+        if (wire != null) await Click(wire.GetGlobalRect().GetCenter());
+        var press = w.EntityAt(new GridPos(12, 8, 0));
+        Check(press?.Behavior.Selection(press) == "draw_wire", "clicking the tile sets the press to wire");
+        await Frames(10);
+        await Shot("10-manage-press");
+        await Click(Hud.Manage.UpgradeButton.GetGlobalRect().GetCenter());
+        Check(press?.Level == 2, $"the Upgrade button raises the level (level {press?.Level})");
+        await Key(Godot.Key.P);
+        await Key(Godot.Key.I);
+        Check(Hud.ProgressWindow.Visible && Hud.StatsWindow.Visible, "Progress and Statistics are open together");
+        await Frames(10);
+        await Shot("11-windows");
+        await Key(Godot.Key.Escape);
+        Check(!Hud.StatsWindow.Visible && Hud.ProgressWindow.Visible, "Esc closes the last opened window first");
+        await Key(Godot.Key.Escape);
+        await Key(Godot.Key.Escape);
+        await Frames(12);
+        Check(!Hud.Manage.Window.Visible, "Esc then clears the selection and the Manage window closes");
+
+        // 13. Menus, as a normal (non-sandbox) game sees them: locked tiers, limits.
         Host.Sim.World.Sandbox = false;
         await Key(Godot.Key.B);
         await Frames(30);

@@ -241,32 +241,7 @@ public class ProgressionTests
     public void The_best_product_of_each_tier_is_worth_at_least_double_the_last()
     {
         var c = TestUtil.Content;
-        // Level-1 value of every item reachable by each tier, following the recipes.
-        var value = new Dictionary<string, (double Value, int Tier)>();
-        foreach (var b in c.BuildingList)
-            if (b.Params is MinerParams m && (!value.TryGetValue(m.Item, out var v) || b.Tier < v.Tier))
-                value[m.Item] = (c.Items[m.Item].BaseValue, b.Tier);
-        for (bool changed = true; changed;)
-        {
-            changed = false;
-            foreach (var b in c.BuildingList.Where(b => b.Params is ProcessorParams))
-                foreach (var r in ((ProcessorParams)b.Params!).Recipes.Select(id => c.Recipes[id]))
-                {
-                    if (!r.Inputs.All(i => value.ContainsKey(i.Item))) continue;
-                    int tier = Math.Max(b.Tier, r.Inputs.Max(i => value[i.Item].Tier));
-                    double total = r.Inputs.Sum(i => value[i.Item].Value * i.Count) * r.ValueMultiplier;
-                    foreach (var o in r.Outputs)
-                    {
-                        var each = total / r.Outputs.Sum(x => x.Count);
-                        if (!value.TryGetValue(o.Item, out var old) || tier < old.Tier || (tier == old.Tier && each > old.Value + 1e-9))
-                        {
-                            value[o.Item] = (each, tier);
-                            changed = true;
-                        }
-                    }
-                }
-        }
-
+        var value = c.ItemValue; // level-1 value of every item and the tier it becomes available
         double Best(int tier) => value.Values.Where(v => v.Tier <= tier).Max(v => v.Value);
         for (int t = 1; t < c.Tiers.Count; t++)
             Assert.True(Best(t) >= 2 * Best(t - 1), $"tier {t}: best {Best(t)} vs {Best(t - 1)} before");
@@ -317,5 +292,95 @@ public class ProgressionTests
         sim.Place("ramp_down", 3, 3, 0, Dir.East);
         var ramp = sim.World.EntityAt(new GridPos(3, 3, 1))!;
         Assert.Equal(0, ramp.Pos.Z);
+    }
+}
+
+public class RecipeChoiceTests
+{
+    /// <summary>Iron drill → smelter → belt → press at (3,0).</summary>
+    private static Simulation IronIntoPress()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Place("iron_miner", 0, 0, 0, Dir.East);
+        sim.Place("smelter", 1, 0, 0, Dir.East);
+        sim.Place("conveyor", 2, 0, 0, Dir.East);
+        sim.Place("press", 3, 0, 0, Dir.East);
+        sim.Place("seller", 4, 0, 0, Dir.East);
+        return sim;
+    }
+
+    [Fact]
+    public void A_machine_set_to_one_recipe_only_takes_its_ingredients()
+    {
+        var sim = IronIntoPress();
+        Assert.True(sim.Execute(new SelectRecipe(new GridPos(3, 0, 0), "draw_wire")).Ok);
+        sim.Step(20 * 10);
+        Assert.Equal(0, sim.Sold("iron_plate"));                     // ingots are refused...
+        Assert.NotEmpty(sim.Belt(2, 0, 0).Items);                    // ...and wait on the belt
+
+        Assert.True(sim.Execute(new SelectRecipe(new GridPos(3, 0, 0), null)).Ok); // back to automatic
+        sim.Step(20 * 10);
+        Assert.True(sim.Sold("iron_plate") > 0);
+    }
+
+    [Fact]
+    public void Choosing_a_recipe_drops_ingredients_it_cannot_use()
+    {
+        var sim = IronIntoPress();
+        sim.Step(20 * 5);
+        var press = sim.World.EntityAt(new GridPos(3, 0, 0))!;
+        var state = (ProcessorState)press.State;
+        state.Output.Clear();
+        sim.Execute(new RemoveBuildings(new[] { new GridPos(4, 0, 0) })); // back up the press
+        sim.Step(20 * 5);
+        Assert.True(state.Inputs["iron_ingot"].Count > 0);
+
+        Assert.True(sim.Execute(new SelectRecipe(press.Pos, "draw_wire")).Ok);
+        Assert.Equal(0, state.Inputs["iron_ingot"].Count);
+    }
+
+    [Fact]
+    public void Recipe_choice_is_undoable_copied_and_saved()
+    {
+        var sim = IronIntoPress();
+        var history = new EditHistory(sim);
+        var cell = new GridPos(3, 0, 0);
+        var press = sim.World.EntityAt(cell)!;
+
+        Assert.False(sim.Execute(new SelectRecipe(cell, "smelt_iron")).Ok); // not a press recipe
+        history.Execute(new SelectRecipe(cell, "draw_wire"));
+        Assert.Equal("draw_wire", press.Behavior.Selection(press));
+        history.Undo();
+        Assert.Null(press.Behavior.Selection(press));
+        history.Redo();
+
+        var copy = Blueprint.FromEntities(new[] { press }, press.Pos);
+        Assert.True(sim.Execute(new PlaceBlueprint(copy, new GridPos(3, 5, 0))).Ok);
+        var pasted = sim.World.EntityAt(new GridPos(3, 5, 0))!;
+        Assert.Equal("draw_wire", pasted.Behavior.Selection(pasted));
+
+        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(sim), TestUtil.Content).Simulation;
+        var again = loaded.World.EntityAt(cell)!;
+        Assert.Equal("draw_wire", again.Behavior.Selection(again));
+    }
+
+    [Fact]
+    public void Buildings_without_choices_refuse_one()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Place("conveyor", 0, 0, 0, Dir.East);
+        Assert.False(sim.Execute(new SelectRecipe(new GridPos(0, 0, 0), "draw_wire")).Ok);
+        Assert.True(sim.Execute(new SelectRecipe(new GridPos(0, 0, 0), null)).Ok); // nothing to change
+    }
+
+    [Fact]
+    public void Reference_values_follow_the_recipes()
+    {
+        var v = TestUtil.Content.ItemValue;
+        Assert.Equal(2, v["iron_ingot"].Value, 9);                // ore 1 × smelt 2
+        Assert.Equal(3.2, v["copper_wire"].Value, 9);             // ore 2 × 2 × 1.6 / 2 wires
+        Assert.Equal(11.4, v["crate"].Value, 9);                  // (2 planks × 1.35 + plate 3) × 2
+        Assert.Equal(0, v["iron_ore"].Tier);
+        Assert.Equal(5, v["robot"].Tier);
     }
 }

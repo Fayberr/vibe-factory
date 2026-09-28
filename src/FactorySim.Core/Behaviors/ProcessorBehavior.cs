@@ -17,6 +17,7 @@ public sealed class ProcessorParams
 
     [JsonIgnore] internal RecipeDef[] ResolvedRecipes { get; set; } = Array.Empty<RecipeDef>();
     [JsonIgnore] internal HashSet<string> Ingredients { get; set; } = new();
+    [JsonIgnore] internal Dictionary<string, HashSet<string>> IngredientsOf { get; set; } = new();
     [JsonIgnore] internal Dictionary<string, string> ItemNames { get; set; } = new();
 }
 
@@ -31,7 +32,13 @@ public sealed class ProcessorState
     // Keys are never removed, so enumeration order (and therefore save output) is
     // a pure function of history, which byte-identical save/load determinism requires.
     public Dictionary<string, InputBuffer> Inputs { get; set; } = new();
+
+    /// <summary>Recipe being worked on right now.</summary>
     public string? Recipe { get; set; }
+
+    /// <summary>Recipe the player chose; null = run whatever the inputs allow.</summary>
+    public string? Chosen { get; set; }
+
     public double Work { get; set; }
     public List<ItemStack> Output { get; set; } = new();
 }
@@ -41,6 +48,8 @@ public sealed class ProcessorState
 /// output bundles. Refining, smelting and multi-ingredient merging (alloys, parts) are
 /// all this behavior with different recipes. Output value derives from consumed input
 /// value × recipe multiplier, so upstream upgrades carry through the chain.
+/// By default it runs whichever recipe its inputs allow; the player can choose one, and
+/// then it only takes that recipe's ingredients.
 /// </summary>
 public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState>
 {
@@ -59,6 +68,7 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         }
         p.ResolvedRecipes = resolved.ToArray();
         p.Ingredients = resolved.SelectMany(r => r.Inputs).Select(i => i.Item).ToHashSet();
+        p.IngredientsOf = resolved.ToDictionary(r => r.Id, r => r.Inputs.Select(i => i.Item).ToHashSet());
         p.ItemNames = resolved.SelectMany(r => r.Inputs.Concat(r.Outputs)).Select(a => a.Item).Distinct()
             .ToDictionary(id => id, id => content.Items[id].Name);
     }
@@ -95,6 +105,11 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
 
     private static RecipeDef? PickRecipe(ProcessorParams p, ProcessorState s)
     {
+        if (s.Chosen != null)
+        {
+            var chosen = Array.Find(p.ResolvedRecipes, r => r.Id == s.Chosen);
+            return chosen != null && MaxCrafts(chosen, s) > 0 ? chosen : null;
+        }
         // Stick with the current recipe while it is still possible (avoids thrashing).
         foreach (var r in p.ResolvedRecipes)
             if (r.Id == s.Recipe && MaxCrafts(r, s) > 0) return r;
@@ -149,7 +164,7 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
 
     protected override bool TryAccept(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s, ItemStack item, int port, int overflow)
     {
-        if (!p.Ingredients.Contains(item.Type)) return false;
+        if (!(s.Chosen != null && p.IngredientsOf.TryGetValue(s.Chosen, out var wanted) ? wanted : p.Ingredients).Contains(item.Type)) return false;
         if (!s.Inputs.TryGetValue(item.Type, out var buf)) s.Inputs[item.Type] = buf = new InputBuffer();
         if (buf.Count >= p.InputCapacity) return false;
         buf.Count += item.Count;
@@ -157,10 +172,36 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         return true;
     }
 
+    protected override string? Selection(Entity e, ProcessorParams p, ProcessorState s) => s.Chosen;
+
+    protected override string? Select(Entity e, ProcessorParams p, ProcessorState s, string? option)
+    {
+        if (option != null && !p.IngredientsOf.ContainsKey(option)) return $"{e.Def.Name} can't make that";
+        s.Chosen = option;
+        if (option == null) return null;
+        // Drop buffered ingredients the chosen recipe never uses, or they would block the machine.
+        foreach (var (item, buf) in s.Inputs)
+            if (!p.IngredientsOf[option].Contains(item))
+            {
+                buf.Count = 0;
+                buf.ValueSum = BigNum.Zero;
+            }
+        if (s.Recipe != option)
+        {
+            s.Recipe = null;
+            s.Work = 0;
+        }
+        return null;
+    }
+
     protected override void Describe(Entity e, ProcessorParams p, ProcessorState s, List<InfoLine> into)
     {
+        into.Add(new InfoLine("Producing", s.Chosen is { } chosen
+            ? string.Join(" + ", Array.Find(p.ResolvedRecipes, r => r.Id == chosen)!.Outputs.Select(o => p.ItemNames[o.Item])) + " (chosen)"
+            : "Automatic"));
         foreach (var r in p.ResolvedRecipes)
         {
+            if (s.Chosen != null && r.Id != s.Chosen) continue;
             string ins = string.Join(" + ", r.Inputs.Select(i => $"{i.Count} {p.ItemNames[i.Item]}"));
             string outs = string.Join(" + ", r.Outputs.Select(o => $"{o.Count} {p.ItemNames[o.Item]}"));
             into.Add(new InfoLine("Recipe", $"{ins} → {outs} ({r.Ticks / (Simulation.TicksPerSecond * e.SpeedFactor):0.##}s, ×{r.ValueMultiplier * e.ValueFactor:0.##} value)"));

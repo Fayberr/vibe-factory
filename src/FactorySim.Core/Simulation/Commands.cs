@@ -41,6 +41,12 @@ public readonly record struct LevelChange(GridPos Cell, int Level);
 /// <summary>Sets building levels atomically, charging (or refunding) the difference in upgrade costs.</summary>
 public sealed record SetBuildingLevels(IReadOnlyList<LevelChange> Changes) : Command;
 
+/// <summary>
+/// Chooses what the building at <paramref name="Cell"/> produces (a machine's recipe id);
+/// null returns it to automatic.
+/// </summary>
+public sealed record SelectRecipe(GridPos Cell, string? Recipe) : Command;
+
 /// <summary>Unlocks the next progression tier (needs lifetime earnings and money).</summary>
 public sealed record UnlockTier : Command;
 

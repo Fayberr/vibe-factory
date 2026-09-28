@@ -280,6 +280,33 @@ public partial class BuildController : Node3D
         return result;
     }
 
+    public void ClearSelection()
+    {
+        if (Selection.Count == 0) return;
+        Selection.Clear();
+        Changed?.Invoke();
+    }
+
+    /// <summary>Sets what the selected machines produce (null = automatic). One undo step.</summary>
+    public void ChooseRecipe(string? recipe)
+    {
+        var machines = SelectedEntities().Where(e => e.Def.Params is ProcessorParams).ToList();
+        if (machines.Count == 0) return;
+        History.BeginGroup();
+        string? error = null;
+        foreach (var e in machines)
+            if (History.Execute(new SelectRecipe(e.Pos, recipe)) is { Ok: false } r) error ??= r.Error;
+        History.EndGroup();
+        if (error != null) Notice(error);
+        else if (recipe == null) Notice(machines.Count == 1 ? $"{machines[0].Def.Name}: automatic" : $"{machines.Count} machines: automatic");
+        else
+        {
+            var item = World.Content.Items[World.Content.Recipes[recipe].Outputs[0].Item].Name;
+            Notice(machines.Count == 1 ? $"{machines[0].Def.Name} now makes {item}" : $"{machines.Count} machines now make {item}");
+        }
+        Changed?.Invoke();
+    }
+
     public void DeleteSelection()
     {
         if (Selection.Count == 0) return;
@@ -689,7 +716,7 @@ public partial class BuildController : Node3D
             case ToolMode.Move or ToolMode.Paste when _floating != null && _hoverCell is { } at:
                 var moving = Mode == ToolMode.Move ? Selection : null;
                 bool allOk = true;
-                foreach (var (defId, pos, facing, _) in _floating.Placements(at, _floatingTurns))
+                foreach (var (defId, pos, facing, _, _) in _floating.Placements(at, _floatingTurns))
                 {
                     if (!World.Content.Buildings.TryGetValue(defId, out var def)) continue;
                     bool ok = Entity.CellsFor(def, pos, facing).All(c =>

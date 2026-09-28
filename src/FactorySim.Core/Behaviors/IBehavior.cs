@@ -43,6 +43,12 @@ public interface IBehavior
 
     /// <summary>Level-up track used when a building def doesn't specify one.</summary>
     UpgradeTrack DefaultUpgrade(BuildingDef def);
+
+    /// <summary>The player's choice for this building (a machine's recipe), or null for automatic.</summary>
+    string? Selection(Entity entity);
+
+    /// <summary>Applies a choice (null = automatic). Returns an error, or null on success.</summary>
+    string? Select(Entity entity, string? option);
 }
 
 /// <summary>Typed convenience base: casts params/state once so implementations stay readable.</summary>
@@ -70,6 +76,15 @@ public abstract class Behavior<TParams, TState> : IBehavior
     public void Describe(Entity entity, List<InfoLine> into) => Describe(entity, P(entity), S(entity), into);
 
     public virtual UpgradeTrack DefaultUpgrade(BuildingDef def) => new() { MaxLevel = 10, SpeedPerLevel = 0.25 };
+
+    public string? Selection(Entity entity) => Selection(entity, P(entity), S(entity));
+
+    public string? Select(Entity entity, string? option) => Select(entity, P(entity), S(entity), option);
+
+    protected virtual string? Selection(Entity e, TParams p, TState s) => null;
+
+    protected virtual string? Select(Entity e, TParams p, TState s, string? option) =>
+        option == null ? null : $"{e.Def.Name} has nothing to choose";
 
     protected virtual void Bind(BuildingDef def, TParams p, ContentRegistry content) { }
 

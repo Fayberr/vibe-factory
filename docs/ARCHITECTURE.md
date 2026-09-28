@@ -107,6 +107,13 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings plus
   a price (`UnlockTier`), and grow the plot. `limit` (base + per tier after the
   building's own) caps extractors and depots; placement, paste and undo all check it.
+- **Choices.** `SelectRecipe` sets what a machine makes (null = automatic): it then only
+  accepts that recipe's ingredients and drops buffered ones it can't use. Behaviors expose
+  it through `IBehavior.Selection`/`Select`; it is undoable, saved, and kept by blueprints.
+- **Reference values.** `ItemValues` (`ContentRegistry.ItemValue`) follows the recipes from
+  raw resources to give every item's level-1 value and the tier it becomes available. The
+  Manage window shows it, and a test checks that each tier's best product is worth at
+  least double the last.
 - **Replacing.** A def's `group` and `replaces` say what it may be dropped onto
   (`PlaceBuilding(Replace: true)`); the old building is refunded, and items on a belt
   survive a swap between belt pieces.
@@ -192,7 +199,7 @@ instead of failing. `Migrate()` is the hook for version bumps.
 |---|---|
 | `Visual/` | `MeshBuilder` (procedural geometry), `ModelFactory` (all building models), `WorldView` (instancing, curve/pillar-aware rebuilds, item MultiMeshes with tick interpolation, highlights, floating income), shaders, lighting and ground |
 | `Input/` | `CameraRig` (orbit/pan/zoom-to-cursor), `BuildController` (select, build, upgrade, delete, move, paste, pipette, undo, build height; uses `BuildPlanner`), `GhostLayer` (translucent previews with port arrows and pillars) |
-| `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip, panels), build menu with locks and limits, inspector with levels, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders icons from the 3D models) |
+| `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip), `HudWindow` (draggable windows, several open at once), `ManageWindow` (the selection: stats, upgrade, recipe choice), build menu with locks and limits, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders building and item icons from the 3D models) |
 | `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
 
 Scene graph order matters for input: the HUD is the last child, so it sees unhandled

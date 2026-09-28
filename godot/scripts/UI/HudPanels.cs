@@ -61,6 +61,19 @@ public static class Ui
         return p;
     }
 
+    /// <summary>Wraps <paramref name="content"/> in padding.</summary>
+    public static MarginContainer Pad(Control content, int x, int y)
+    {
+        // Stretch like the content does, so expanding content actually gets the room.
+        var m = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = content.SizeFlagsHorizontal };
+        m.AddThemeConstantOverride("margin_left", x);
+        m.AddThemeConstantOverride("margin_right", x);
+        m.AddThemeConstantOverride("margin_top", y);
+        m.AddThemeConstantOverride("margin_bottom", y);
+        m.AddChild(content);
+        return m;
+    }
+
     public static Control Spacer(bool horizontal = true) => new Control
     {
         SizeFlagsHorizontal = horizontal ? Control.SizeFlags.ExpandFill : Control.SizeFlags.Fill,
@@ -228,148 +241,10 @@ public sealed class BuildMenu
     }
 }
 
-/// <summary>Details and actions for the current selection.</summary>
-public sealed class InspectorPanel
-{
-    public readonly PanelContainer Root;
-    private readonly TextureRect _image = new() { CustomMinimumSize = new Vector2(64, 64), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered };
-    private readonly Label _title = Ui.Label("", 19);
-    private readonly Label _subtitle = Ui.Label("", 13, UiTheme.Muted);
-    private readonly ColorRect _dot = new() { CustomMinimumSize = new Vector2(10, 10), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
-    private readonly Label _status = Ui.Label("", 14);
-    private readonly ProgressBar _progress = new() { CustomMinimumSize = new Vector2(0, 6), ShowPercentage = false, MaxValue = 1 };
-    private readonly GridContainer _details = new() { Columns = 2 };
-    private readonly List<InfoLine> _lines = new();
-    private readonly Label _level = Ui.Label("", 14);
-    private readonly Label _levelInfo = Ui.Label("", 12, UiTheme.Muted);
-    private readonly Button _upgrade;
-
-    public InspectorPanel(Action rotate, Action move, Action copy, Action delete, Action upgrade)
-    {
-        var body = new VBoxContainer { CustomMinimumSize = new Vector2(290, 0) };
-        var head = new HBoxContainer();
-        head.AddChild(_image);
-        var titles = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
-        titles.AddChild(_title);
-        titles.AddChild(_subtitle);
-        head.AddChild(titles);
-        body.AddChild(head);
-
-        var status = new HBoxContainer();
-        status.AddChild(_dot);
-        status.AddChild(_status);
-        body.AddChild(status);
-        body.AddChild(_progress);
-        body.AddChild(new HSeparator());
-        body.AddChild(_details);
-
-        var level = new HBoxContainer();
-        var levelText = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        levelText.AddChild(_level);
-        levelText.AddChild(_levelInfo);
-        level.AddChild(levelText);
-        _upgrade = Ui.TextButton("", upgrade, "Upgrade (U). Each building is upgraded on its own");
-        _upgrade.CustomMinimumSize = new Vector2(120, 38);
-        level.AddChild(_upgrade);
-        body.AddChild(new HSeparator());
-        body.AddChild(level);
-
-        var actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
-        actions.AddChild(Ui.IconButton(Icon.Rotate, "Rotate (R)", rotate, 36));
-        actions.AddChild(Ui.IconButton(Icon.Move, "Move (M)", move, 36));
-        actions.AddChild(Ui.IconButton(Icon.Copy, "Copy & paste (C) · Ctrl+C copies", copy, 36));
-        var del = Ui.IconButton(Icon.Delete, "Delete (Del)", delete, 36);
-        del.Modulate = new Color("#ff9c9c");
-        actions.AddChild(del);
-        body.AddChild(actions);
-        Root = Ui.Panel(body);
-    }
-
-    public void Show(World world, IReadOnlyList<Entity> selection, Thumbnails thumbs)
-    {
-        Root.Visible = selection.Count > 0;
-        if (selection.Count == 0) return;
-        _lines.Clear();
-        ShowLevels(world, selection);
-
-        if (selection.Count == 1)
-        {
-            var e = selection[0];
-            var status = e.Behavior.GetStatus(e);
-            _image.Texture = thumbs.Get(e.Def.Id);
-            _image.Visible = true;
-            _title.Text = e.Def.Name;
-            _subtitle.Text = $"{Ui.CategoryName(e.Def.Category)} · {BuildController.HeightName(e.Pos.Z).ToLowerInvariant()} · facing {e.Facing}";
-            _dot.Color = status.Working ? Palette.Ok : status.Detail == "idle" || status.Detail == "empty" ? new Color("#f2c14e") : Palette.Danger;
-            _status.Text = string.IsNullOrEmpty(status.Detail) ? (status.Working ? "Working" : "Idle") : char.ToUpperInvariant(status.Detail[0]) + status.Detail[1..];
-            _progress.Visible = status.Progress > 0;
-            _progress.Value = status.Progress;
-            e.Behavior.Describe(e, _lines);
-        }
-        else
-        {
-            _image.Visible = false;
-            _title.Text = $"{selection.Count} buildings";
-            _subtitle.Text = "Selection";
-            _dot.Color = UiTheme.Accent;
-            _status.Text = $"Value ${selection.Aggregate(BigNum.Zero, (sum, e) => sum + world.InvestedIn(e)).Format()}";
-            _progress.Visible = false;
-            foreach (var g in selection.GroupBy(e => e.Def.Name).OrderByDescending(g => g.Count()).Take(8))
-                _lines.Add(new InfoLine(g.Key, $"×{g.Count()}"));
-        }
-
-        while (_details.GetChildCount() < _lines.Count * 2)
-        {
-            _details.AddChild(Ui.Label("", 13, UiTheme.Muted));
-            var value = Ui.Label("", 13);
-            value.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            value.CustomMinimumSize = new Vector2(190, 0);
-            _details.AddChild(value);
-        }
-        for (int i = 0; i < _details.GetChildCount(); i++)
-        {
-            var label = (Label)_details.GetChild(i);
-            int line = i / 2;
-            label.Visible = line < _lines.Count;
-            if (line < _lines.Count) label.Text = i % 2 == 0 ? _lines[line].Label : _lines[line].Value;
-        }
-    }
-
-    /// <summary>Level, what the next level brings, and the upgrade button (cheapest first for several).</summary>
-    private void ShowLevels(World world, IReadOnlyList<Entity> selection)
-    {
-        var upgradable = selection.Where(e => e.Def.Upgrade?.CanUpgrade(e.Level) == true).ToList();
-        var cost = upgradable.Aggregate(BigNum.Zero, (s, e) => s + e.Def.Upgrade!.UpgradeCost(e.Def, e.Level));
-        if (selection.Count == 1)
-        {
-            var e = selection[0];
-            var track = e.Def.Upgrade;
-            _level.Text = track?.MaxLevel is int max ? $"Level {e.Level} / {max}" : $"Level {e.Level}";
-            _levelInfo.Text = track == null ? "" : !track.CanUpgrade(e.Level) ? "Fully upgraded" : NextLevelText(track, e.Level);
-        }
-        else
-        {
-            int min = selection.Min(e => e.Level), max = selection.Max(e => e.Level);
-            _level.Text = min == max ? $"All level {min}" : $"Levels {min} to {max}";
-            _levelInfo.Text = upgradable.Count == 0 ? "All fully upgraded" : $"{upgradable.Count} can go one level up";
-        }
-        _upgrade.Text = upgradable.Count == 0 ? "Max" : $"Upgrade ${cost.Format()}";
-        _upgrade.Disabled = upgradable.Count == 0 || (!world.Sandbox && world.Money < upgradable.Min(e => e.Def.Upgrade!.UpgradeCost(e.Def, e.Level)));
-    }
-
-    private static string NextLevelText(UpgradeTrack track, int level)
-    {
-        var parts = new List<string>();
-        if (track.SpeedPerLevel > 0) parts.Add($"speed ×{track.SpeedFactor(level):0.##} → ×{track.SpeedFactor(level + 1):0.##}");
-        if (track.ValuePerLevel > 0) parts.Add($"value ×{track.ValueFactor(level):0.##} → ×{track.ValueFactor(level + 1):0.##}");
-        return string.Join(", ", parts);
-    }
-}
-
 /// <summary>Tiers (P): what the next one unlocks, how far along it is, and the build limits.</summary>
 public sealed class ProgressPanel
 {
-    public readonly PanelContainer Root;
+    public readonly Control Root;
     private readonly Label _current = Ui.Label("", 14, UiTheme.Muted);
     private readonly Label _nextName = Ui.Label("", 19);
     private readonly Label _nextInfo = Ui.Label("", 13, UiTheme.Muted);
@@ -381,8 +256,7 @@ public sealed class ProgressPanel
 
     public ProgressPanel(Action unlock)
     {
-        var body = new VBoxContainer { CustomMinimumSize = new Vector2(320, 0) };
-        body.AddChild(Ui.Label("Progress", 19));
+        var body = new VBoxContainer();
         body.AddChild(_current);
         body.AddChild(new HSeparator());
 
@@ -402,7 +276,7 @@ public sealed class ProgressPanel
         body.AddChild(Ui.Label("BUILD LIMITS", 11, UiTheme.Muted));
         body.AddChild(_limits);
         body.AddChild(Ui.Label("Upgrades are per building: select one and press U.", 12, UiTheme.Muted));
-        Root = Ui.Panel(body);
+        Root = Ui.Pad(body, 14, 12);
     }
 
     public void Refresh(Simulation sim)
@@ -438,15 +312,12 @@ public sealed class ProgressPanel
 /// <summary>Production statistics.</summary>
 public sealed class StatsPanel
 {
-    public readonly PanelContainer Root;
+    public readonly Control Root;
     private readonly Label _text = Ui.Label("", 14);
 
     public StatsPanel()
     {
-        var body = new VBoxContainer { CustomMinimumSize = new Vector2(300, 0) };
-        body.AddChild(Ui.Label("Statistics", 19));
-        body.AddChild(_text);
-        Root = Ui.Panel(body);
+        Root = Ui.Pad(_text, 14, 12);
     }
 
     public void Refresh(World world)

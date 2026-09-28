@@ -150,6 +150,8 @@ public sealed class EditHistory
                 var before = lv.Changes.Select(ch => world.EntityAt(ch.Cell)).OfType<Entity>().Distinct()
                     .Select(e => new LevelChange(e.Pos, e.Level)).ToList();
                 return before.Count > 0 ? One(new SetBuildingLevels(before)) : null;
+            case SelectRecipe sr:
+                return world.EntityAt(sr.Cell) is { } chosen ? One(new SelectRecipe(chosen.Pos, chosen.Behavior.Selection(chosen))) : null;
             default:
                 return null; // research, tiers and unknown commands are not undoable
         }

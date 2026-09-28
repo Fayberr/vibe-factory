@@ -24,6 +24,11 @@ public sealed class ContentRegistry
     public IReadOnlyDictionary<string, RecipeDef> Recipes { get; }
     public IReadOnlyDictionary<string, UpgradeDef> Upgrades { get; }
 
+    private IReadOnlyDictionary<string, ItemValues.Info>? _itemValues;
+
+    /// <summary>Level-1 value of each item made from raw resources, and the tier it becomes available (see <see cref="ItemValues"/>).</summary>
+    public IReadOnlyDictionary<string, ItemValues.Info> ItemValue => _itemValues ??= ItemValues.Compute(this);
+
     /// <summary>Buildings in declaration order (for toolbars and hotkeys).</summary>
     public IReadOnlyList<BuildingDef> BuildingList { get; }
 

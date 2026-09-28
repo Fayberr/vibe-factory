@@ -15,6 +15,7 @@ public sealed record ItemSold(long Tick, int EntityId, string Item, long Count, 
 public sealed record CraftCompleted(long Tick, int EntityId, string Recipe, long Crafts) : SimEvent(Tick);
 public sealed record UpgradePurchased(long Tick, string UpgradeId, int Level, BigNum Cost) : SimEvent(Tick);
 public sealed record EntityLevelChanged(long Tick, int EntityId, int Level) : SimEvent(Tick);
+public sealed record EntitySelectionChanged(long Tick, int EntityId, string? Selection) : SimEvent(Tick);
 public sealed record TierUnlocked(long Tick, int Tier, string Name) : SimEvent(Tick);
 
 /// <summary>Bounded buffer of pending events. Oldest events are dropped if nobody drains it.</summary>

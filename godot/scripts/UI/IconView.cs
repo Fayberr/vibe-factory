@@ -22,6 +22,12 @@ public enum Icon
     Rotate,
     Progress,
     Lock,
+    Star,
+    Coin,
+    Gauge,
+    Clock,
+    Search,
+    Auto,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -154,6 +160,50 @@ public partial class IconView : Control
                 Poly(3, 20.5f, 3, 16, 8, 16, 8, 11.5f, 13, 11.5f, 13, 7, 18, 7, 18, 20.5f);
                 L(18, 7, 18, 1.8f, 1.6f);
                 Poly(18.6f, 1.8f, 22.5f, 3.4f, 18.6f, 5);
+                break;
+            case Icon.Star:
+            {
+                var pts = new float[20];
+                for (int i = 0; i < 10; i++)
+                {
+                    float a = -Mathf.Pi / 2 + i * Mathf.Pi / 5;
+                    float r = i % 2 == 0 ? 10f : 4.3f;
+                    pts[2 * i] = 12 + Mathf.Cos(a) * r;
+                    pts[2 * i + 1] = 12.6f + Mathf.Sin(a) * r;
+                }
+                Poly(pts);
+                break;
+            }
+            case Icon.Coin:
+                Arc(12, 12, 9.5f, 0, Mathf.Tau, 1.8f);
+                L(12, 4.5f, 12, 19.5f, 1.6f);
+                Arc(12, 9.3f, 3.1f, Mathf.Pi * 0.45f, Mathf.Pi * 1.95f, 2f);
+                Arc(12, 14.7f, 3.1f, -Mathf.Pi * 0.55f, Mathf.Pi * 0.95f, 2f);
+                break;
+            case Icon.Gauge:
+                Arc(12, 14, 9, Mathf.Pi * 0.8f, Mathf.Pi * 2.2f, 2.4f);
+                for (int i = 0; i <= 4; i++)
+                {
+                    float a = Mathf.Pi * (0.8f + 0.35f * i);
+                    L(12 + Mathf.Cos(a) * 5.5f, 14 + Mathf.Sin(a) * 5.5f, 12 + Mathf.Cos(a) * 7, 14 + Mathf.Sin(a) * 7, 1.4f);
+                }
+                L(12, 14, 16.5f, 8.5f, 2.2f);
+                DrawCircle(P(12, 14), 1.9f * s, _color);
+                break;
+            case Icon.Clock:
+                Arc(12, 12, 9.5f, 0, Mathf.Tau, 2f);
+                L(12, 12, 12, 6.5f, 2f);
+                L(12, 12, 16, 14, 2f);
+                break;
+            case Icon.Search:
+                Arc(10, 10, 6.5f, 0, Mathf.Tau, 2.6f);
+                L(14.8f, 14.8f, 20.5f, 20.5f, 3.2f);
+                break;
+            case Icon.Auto:
+                Arc(12, 12, 7.5f, -Mathf.Pi * 0.2f, Mathf.Pi * 0.75f, 2.2f);
+                Arc(12, 12, 7.5f, Mathf.Pi * 0.8f, Mathf.Pi * 1.75f, 2.2f);
+                Poly(19.5f, 6.5f, 19.8f, 12.2f, 14.6f, 9.9f);
+                Poly(4.5f, 17.5f, 4.2f, 11.8f, 9.4f, 14.1f);
                 break;
             case Icon.Lock:
                 Arc(12, 10, 4.2f, Mathf.Pi, Mathf.Tau, 2.2f);

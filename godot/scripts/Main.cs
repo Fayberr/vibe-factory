@@ -31,13 +31,13 @@ public partial class Main : Node3D
         host.Autosave = System.Array.IndexOf(args, "--ui-test") < 0 && System.Array.IndexOf(args, "--smoke") < 0;
         if (System.Array.IndexOf(args, "--ui-test") >= 0)
         {
-            AddChild(new UiScenario { Name = "UiScenario", Host = host, Tools = tools, Camera = camera, View = view });
+            AddChild(new UiScenario { Name = "UiScenario", Host = host, Tools = tools, Camera = camera, View = view, Hud = hud });
             return;
         }
 
         bool smoke = System.Array.IndexOf(args, "--smoke") >= 0;
         host.Start(loadSave: !smoke);
-        if (smoke) RunSmokeTest(host, camera);
+        if (smoke) RunSmokeTest(host, camera, tools, hud);
     }
 
     /// <summary>Centre of the built area, or of the plot's first 16×16 cells when empty.</summary>
@@ -53,7 +53,7 @@ public partial class Main : Node3D
     /// `godot --headless -- --smoke`: build the demo, run at 16×, print stats, quit (CI check).
     /// With `--showcase` it lays out every building and item instead (for checking the models).
     /// </summary>
-    private void RunSmokeTest(SimHost host, CameraRig camera)
+    private void RunSmokeTest(SimHost host, CameraRig camera, BuildController tools, Hud hud)
     {
         bool showcase = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--showcase") >= 0;
         host.NewGame(withDemo: !showcase);
@@ -65,6 +65,17 @@ public partial class Main : Node3D
         {
             if (arg.StartsWith("--screenshot=")) screenshot = arg["--screenshot=".Length..];
             if (arg.StartsWith("--wait=")) wait = double.Parse(arg["--wait=".Length..], System.Globalization.CultureInfo.InvariantCulture);
+            if (arg == "--windows")
+            {
+                hud.ProgressWindow.Visible = true;
+                hud.StatsWindow.Visible = true;
+            }
+            if (arg.StartsWith("--select="))
+            {
+                // --select=x,y: open the Manage window for the building on that cell.
+                var xy = System.Array.ConvertAll(arg["--select=".Length..].Split(','), int.Parse);
+                if (host.Sim.World.EntityAt(new GridPos(xy[0], xy[1], 0)) is { } picked) tools.Selection.Add(picked.Id);
+            }
             if (arg.StartsWith("--view="))
             {
                 // --view=yaw,pitch,distance,focusX,focusZ
