@@ -7,63 +7,63 @@ public partial class Main : Node3D
 {
     public override void _Ready()
     {
-        AddChild(new WorldEnvironment
-        {
-            Environment = new Godot.Environment
-            {
-                BackgroundMode = Godot.Environment.BGMode.Color,
-                BackgroundColor = new Color(0.10f, 0.11f, 0.13f),
-                AmbientLightSource = Godot.Environment.AmbientSource.Color,
-                AmbientLightColor = new Color(0.62f, 0.66f, 0.75f),
-                AmbientLightEnergy = 0.55f,
-                TonemapMode = Godot.Environment.ToneMapper.Filmic,
-            },
-        });
-        AddChild(new DirectionalLight3D
-        {
-            RotationDegrees = new Vector3(-55, -35, 0),
-            LightEnergy = 1.1f,
-            ShadowEnabled = true,
-        });
-
         var host = new SimHost { Name = "SimHost" };
         var view = new WorldView { Name = "WorldView" };
         var camera = new CameraRig { Name = "CameraRig" };
-        var tool = new BuildTool { Name = "BuildTool" };
+        var tools = new BuildController { Name = "BuildController" };
+        var thumbs = new Thumbnails { Name = "Thumbnails" };
         var hud = new Hud { Name = "Hud" };
+        // Wire before entering the tree: _Ready() of each node may already use its collaborators.
+        view.Init(host);
+        tools.Init(host, camera, view);
+        hud.Init(host, tools, thumbs);
+        host.WorldReplaced += () => camera.Focus(FocusPoint(host.Sim.World), instant: true);
+
         AddChild(host);
         AddChild(view);
         AddChild(camera);
-        AddChild(tool);
-        AddChild(hud);
+        AddChild(tools);
+        AddChild(thumbs);
+        AddChild(hud); // last: gets unhandled input first (hotbar/menu keys)
 
-        view.Init(host);
-        tool.Init(host, camera, view);
-        hud.Init(host, tool);
-        host.WorldReplaced += () => camera.Focus(FocusPoint(host.Sim.World));
+        var args = OS.GetCmdlineUserArgs();
+        host.Autosave = System.Array.IndexOf(args, "--ui-test") < 0 && System.Array.IndexOf(args, "--smoke") < 0;
+        if (System.Array.IndexOf(args, "--ui-test") >= 0)
+        {
+            AddChild(new UiScenario { Name = "UiScenario", Host = host, Tools = tools, Camera = camera, View = view });
+            return;
+        }
 
-        host.Start();
-
-        // `godot --headless -- --smoke`: build the demo, run at 16×, print stats, quit (CI check).
-        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke") >= 0) RunSmokeTest(host);
+        bool smoke = System.Array.IndexOf(args, "--smoke") >= 0;
+        host.Start(loadSave: !smoke);
+        if (smoke) RunSmokeTest(host, camera);
     }
 
     /// <summary>Centre of the built area, or of the plot's first 16×16 cells when empty.</summary>
     private static Vector3 FocusPoint(World world)
     {
-        if (world.EntityCount == 0) return new Vector3(world.Bounds.Min.X + 8, 0, world.Bounds.Min.Y + 8);
+        if (world.EntityCount == 0) return new Vector3(world.Bounds.Min.X + 16, 0, world.Bounds.Min.Y + 16);
         var sum = Vector3.Zero;
         foreach (var e in world.Entities) sum += GridMapping.CellFloor(e.Pos);
         return sum / world.EntityCount;
     }
 
-    private void RunSmokeTest(SimHost host)
+    /// <summary>`godot --headless -- --smoke`: build the demo, run at 16×, print stats, quit (CI check).</summary>
+    private void RunSmokeTest(SimHost host, CameraRig camera)
     {
         host.NewGame(withDemo: true);
         host.TimeScale = 16;
         string? screenshot = null;
         foreach (var arg in OS.GetCmdlineUserArgs())
+        {
             if (arg.StartsWith("--screenshot=")) screenshot = arg["--screenshot=".Length..];
+            if (arg.StartsWith("--view="))
+            {
+                // --view=yaw,pitch,distance,focusX,focusZ
+                var v = System.Array.ConvertAll(arg["--view=".Length..].Split(','), s => float.Parse(s, System.Globalization.CultureInfo.InvariantCulture));
+                camera.SetView(v[0], v[1], v[2], new Vector3(v[3], 0, v[4]));
+            }
+        }
 
         GetTree().CreateTimer(3.0).Timeout += () =>
         {

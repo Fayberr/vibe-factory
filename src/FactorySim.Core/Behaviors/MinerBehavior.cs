@@ -12,6 +12,8 @@ public sealed class MinerParams
 
     /// <summary>Units produced per cycle.</summary>
     public int Amount { get; init; } = 1;
+
+    [System.Text.Json.Serialization.JsonIgnore] internal string ItemName { get; set; } = "";
 }
 
 public sealed class MinerState
@@ -36,6 +38,7 @@ public sealed class MinerBehavior : Behavior<MinerParams, MinerState>
         Require(content.Items.ContainsKey(p.Item), def, $"unknown item '{p.Item}'.");
         Require(p.Interval > 0 && p.Amount > 0, def, "interval and amount must be > 0.");
         Require(def.OutputPorts.Count >= 1, def, "needs an output port.");
+        p.ItemName = content.Items[p.Item].Name;
     }
 
     protected override void Tick(TickContext ctx, Entity e, MinerParams p, MinerState s)
@@ -62,12 +65,12 @@ public sealed class MinerBehavior : Behavior<MinerParams, MinerState>
 
     protected override void Describe(Entity e, MinerParams p, MinerState s, List<InfoLine> into)
     {
-        into.Add(new InfoLine("Produces", p.Item));
+        into.Add(new InfoLine("Produces", p.ItemName));
         into.Add(new InfoLine("Base rate", $"{p.Amount * Simulation.TicksPerSecond / (double)p.Interval:0.##}/s"));
     }
 
     protected override EntityStatus GetStatus(Entity e, MinerParams p, MinerState s) =>
         s.Output == null
-            ? new EntityStatus(true, (float)Math.Min(1, s.Work / p.Interval), p.Item)
+            ? new EntityStatus(true, (float)Math.Min(1, s.Work / p.Interval), $"mining {p.ItemName}")
             : new EntityStatus(false, 1, "output blocked");
 }

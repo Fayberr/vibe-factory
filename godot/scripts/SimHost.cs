@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using FactorySim.Content;
+using FactorySim.Editing;
 using FactorySim.Persistence;
 using FactorySim.Samples;
 
@@ -24,6 +25,12 @@ public partial class SimHost : Node
     public ContentRegistry Content { get; private set; } = null!;
     public Simulation Sim { get; private set; } = null!;
 
+    /// <summary>Undo/redo for building edits in the current world.</summary>
+    public EditHistory History { get; private set; } = null!;
+
+    /// <summary>Periodic and on-quit saving; scripted tests turn it off so they never touch player saves.</summary>
+    public bool Autosave { get; set; } = true;
+
     /// <summary>Simulation speed multiplier (1 = real time).</summary>
     public int TimeScale { get; set; } = 1;
 
@@ -40,10 +47,10 @@ public partial class SimHost : Node
     public event Action<string>? Notice;
 
     /// <summary>Loads content and the last save (or starts fresh). Call after listeners are wired.</summary>
-    public void Start()
+    public void Start(bool loadSave = true)
     {
         Content = ContentRegistry.LoadDefault();
-        if (!TryLoad()) NewGame(withDemo: false);
+        if (!loadSave || !TryLoad()) NewGame(withDemo: false);
     }
 
     public override void _Process(double delta)
@@ -56,14 +63,15 @@ public partial class SimHost : Node
         if (ticks > 0) TicksAdvanced?.Invoke(ticks);
 
         _sinceSave += delta;
-        if (_sinceSave >= AutosaveSeconds) Save(quiet: true);
+        if (Autosave && _sinceSave >= AutosaveSeconds) Save(quiet: true);
     }
 
     public override void _Notification(int what)
     {
-        if (what == NotificationWMCloseRequest && Sim != null) Save(quiet: true);
+        if (what == NotificationWMCloseRequest && Sim != null && Autosave) Save(quiet: true);
     }
 
+    /// <summary>Runs a non-undoable command (upgrades) and reports failures.</summary>
     public CommandResult Execute(Command command)
     {
         var result = Sim.Execute(command);
@@ -71,12 +79,21 @@ public partial class SimHost : Node
         return result;
     }
 
-    public void NewGame(bool withDemo)
+    public void Notify(string text) => Notice?.Invoke(text);
+
+    private void Replace(Simulation sim)
     {
-        Sim = Simulation.CreateNew(Content, StartingMoney, seed: (uint)Random.Shared.Next());
-        if (withDemo) DemoLayout.Build(Sim, new GridPos(2, 2, 0));
+        Sim = sim;
+        History = new EditHistory(sim);
         Sim.Events.Clear();
         WorldReplaced?.Invoke();
+    }
+
+    public void NewGame(bool withDemo)
+    {
+        var sim = Simulation.CreateNew(Content, StartingMoney, seed: (uint)Random.Shared.Next());
+        if (withDemo) DemoLayout.Build(sim, new GridPos(8, 8, 0));
+        Replace(sim);
     }
 
     public void Save(bool quiet = false)
@@ -99,21 +116,23 @@ public partial class SimHost : Node
         {
             using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
             var result = SaveSystem.Deserialize(file.GetAsText(), Content);
-            Sim = result.Simulation;
+            var sim = result.Simulation;
             foreach (var w in result.Warnings) GD.PushWarning(w);
 
+            string? welcome = null;
             if (result.SavedAtUtc is DateTimeOffset savedAt)
             {
                 double away = (DateTimeOffset.UtcNow - savedAt).TotalSeconds;
                 if (away > 5)
                 {
-                    var report = Sim.CatchUp(away);
-                    Notice?.Invoke($"Welcome back! {FormatDuration(away)} offline: earned {report.Earned.Format()} " +
-                                   $"({report.IncomePerSecond.Format()}/s).");
+                    var report = sim.CatchUp(away);
+                    if (!report.Earned.IsZero)
+                    welcome = $"Welcome back! {FormatDuration(away)} offline: earned ${report.Earned.Format()} " +
+                              $"({report.IncomePerSecond.Format()}/s)";
                 }
             }
-            Sim.Events.Clear();
-            WorldReplaced?.Invoke();
+            Replace(sim);
+            if (welcome != null) Notice?.Invoke(welcome);
             return true;
         }
         catch (Exception ex)

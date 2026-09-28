@@ -17,6 +17,7 @@ public sealed class ProcessorParams
 
     [JsonIgnore] internal RecipeDef[] ResolvedRecipes { get; set; } = Array.Empty<RecipeDef>();
     [JsonIgnore] internal HashSet<string> Ingredients { get; set; } = new();
+    [JsonIgnore] internal Dictionary<string, string> ItemNames { get; set; } = new();
 }
 
 public sealed class InputBuffer
@@ -58,6 +59,8 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         }
         p.ResolvedRecipes = resolved.ToArray();
         p.Ingredients = resolved.SelectMany(r => r.Inputs).Select(i => i.Item).ToHashSet();
+        p.ItemNames = resolved.SelectMany(r => r.Inputs.Concat(r.Outputs)).Select(a => a.Item).Distinct()
+            .ToDictionary(id => id, id => content.Items[id].Name);
     }
 
     protected override void Tick(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s)
@@ -158,12 +161,12 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
     {
         foreach (var r in p.ResolvedRecipes)
         {
-            string ins = string.Join(" + ", r.Inputs.Select(i => $"{i.Count} {i.Item}"));
-            string outs = string.Join(" + ", r.Outputs.Select(o => $"{o.Count} {o.Item}"));
+            string ins = string.Join(" + ", r.Inputs.Select(i => $"{i.Count} {p.ItemNames[i.Item]}"));
+            string outs = string.Join(" + ", r.Outputs.Select(o => $"{o.Count} {p.ItemNames[o.Item]}"));
             into.Add(new InfoLine("Recipe", $"{ins} → {outs} ({r.Ticks / (double)Simulation.TicksPerSecond:0.##}s, ×{r.ValueMultiplier:0.##})"));
         }
         foreach (var (item, buf) in s.Inputs)
-            if (buf.Count > 0) into.Add(new InfoLine("Input", $"{buf.Count}/{p.InputCapacity} {item}"));
+            if (buf.Count > 0) into.Add(new InfoLine("Input", $"{buf.Count}/{p.InputCapacity} {p.ItemNames.GetValueOrDefault(item, item)}"));
         long waiting = s.Output.Sum(o => o.Count);
         if (waiting > 0) into.Add(new InfoLine("Output", $"{waiting}/{p.OutputCapacity} waiting"));
     }
@@ -173,6 +176,6 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         var recipe = s.Recipe == null ? null : Array.Find(p.ResolvedRecipes, r => r.Id == s.Recipe);
         return recipe == null
             ? new EntityStatus(false, 0, "idle")
-            : new EntityStatus(true, (float)Math.Min(1, s.Work / recipe.Ticks), recipe.Id);
+            : new EntityStatus(true, (float)Math.Min(1, s.Work / recipe.Ticks), $"making {p.ItemNames[recipe.Outputs[0].Item]}");
     }
 }

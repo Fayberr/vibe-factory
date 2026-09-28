@@ -161,8 +161,9 @@ public readonly struct BigNum : IEquatable<BigNum>, IComparable<BigNum>
         if (group < Suffixes.Length)
         {
             double scaled = m * Pow10[Exponent - group * 3];
-            string text = group == 0 && scaled == Math.Floor(scaled)
-                ? scaled.ToString("0", inv)
+            // Plain amounts drop trailing zeros (12, 12.5); suffixed ones keep fixed digits (1.20K).
+            string text = group == 0
+                ? scaled.ToString("0." + new string('#', digits), inv)
                 : scaled.ToString("F" + digits, inv);
             return sign + text + Suffixes[group];
         }

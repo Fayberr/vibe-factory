@@ -5,16 +5,17 @@
 ```
 ┌───────────────────────────── frontends (replaceable) ─────────────────────────────┐
 │  godot/ (Godot 4 .NET)          src/FactorySim.Cli (ASCII, bench)     future: server │
-│  SimHost · WorldView · BuildTool · Hud                                              │
+│  SimHost · WorldView · BuildController · Hud                                        │
 └───────────────┬──────────────────────────────────────────────┬─────────────────────┘
-       reads    │ World queries, View/*, drained SimEvents      │ writes: Simulation.Execute(Command)
+       reads    │ World queries, View/*, drained SimEvents      │ writes: Execute(Command) / EditHistory
 ┌───────────────▼──────────────────────────────────────────────▼─────────────────────┐
 │ FactorySim.Core  (net8.0, BCL only)                                                  │
 │  Simulation ── fixed 20 Hz tick, commands, event queue, offline catch-up             │
 │  World ─────── sparse 3D grid, entities, money, upgrades→stats, stats, RNG           │
-│  Behaviors ─── conveyor · miner · processor · seller   (stateless; state on entity)  │
+│  Behaviors ─── conveyor · router · miner · processor · seller  (state on entity)    │
+│  Editing ───── blueprints, batch commands, undo/redo (EditHistory)                  │
 │  Content ───── JSON packs → validated registry (items, buildings, recipes, upgrades) │
-│  Persistence ─ versioned JSON saves        View ─ render-agnostic geometry/models    │
+│  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -69,6 +70,18 @@ underneath. Lifts, tunnels and multi-level machines use the same mechanism.
 - Senders pass `TickContext.Waiting` for an item that was already waiting at their
   edge. Belts can then place it as far forward as their speed allows, so machine
   outputs keep belts fully compressed.
+- **Curves are automatic.** A belt whose back input isn't fed but exactly one side
+  input is becomes a curve (`ConveyorBehavior.CurveSide`): items from that side
+  enter at the start of the tile instead of merging at mid-tile. Players never pick
+  a "corner piece".
+- **Router** (splitter 1→3, merger 3→1): a hub tile that picks outputs round-robin
+  at mid-tile and skips blocked ones at the exit. Merging is fair: while the
+  preferred input has items waiting, other inputs are refused, then the preference
+  rotates. Both are tested with saturated inputs.
+- **Shared geometry.** `View/TransportPath` defines every path in building-local
+  space: straight, S-curved ramps (smoothstep), quarter-circle curves, and hub
+  entry→centre→exit. The simulation positions items with it, and the Godot client
+  sweeps belt meshes along it, so items ride exactly on the drawn belt.
 
 ### Machines
 
@@ -78,6 +91,7 @@ underneath. Lifts, tunnels and multi-level machines use the same mechanism.
 | `processor` | recipes | Buffers inputs from any port and crafts at `machine.speed`. Output value = consumed input value × `valueMultiplier`. Smelter and alloy forge are the same behavior. |
 | `seller` | sink | Pays value × count × `sell.multiplier`. |
 | `conveyor` | transport | Belts, ramps and in-line effects. |
+| `router` | transport | Splitters and mergers (see above). |
 
 ### Economy, upgrades, stats
 
@@ -114,6 +128,22 @@ possible: a server can re-run a submitted command log with the same core.
 The host supplies the wall-clock gap from the save's `SavedAtUtc`.
 Extrapolated time adds money and lifetime earnings but not per-item sold counts.
 
+### Editing
+
+`FactorySim.Editing` makes building ergonomic without special-casing the simulation:
+
+- `Blueprint`: building entries relative to an origin. It is captured from a
+  selection, can be rotated, and serializes to JSON (the clipboard, and later a
+  sharing format and the input to "compress into one machine").
+- Batch commands: `PlaceBlueprint` is atomic (all cells free and affordable, or
+  nothing happens). `RemoveBuildings` removes many at once. `MoveBuildings` moves
+  and rotates a group atomically, keeping entity ids and state, so items stay on
+  moved belts.
+- `EditHistory` wraps `Execute`: each edit is recorded with its inverse, computed
+  from the world *before* it runs. Inverses are expressed by cell rather than
+  entity id, so they stay valid when undo/redo recreates buildings. `BeginGroup`
+  and `EndGroup` make a dragged line a single undo step. Upgrades are not undoable.
+
 ### Persistence
 
 `SaveSystem` writes versioned JSON: world scalars, upgrades, stats, and entities
@@ -131,13 +161,30 @@ instead of failing. `Migrate()` is the hook for version bumps.
   on `ctx.Rng`.
 - **New command:** add a `Command` record and a case in `Simulation.Execute`.
 - **New frontend:** read `World`, `TransportPath.CollectAll` for item positions,
-  and `Behavior.GetStatus` for machine state, drain `Simulation.Events`, and send
-  `Command`s.
+  and `Behavior.GetStatus`/`Describe` for machine state, drain `Simulation.Events`,
+  and send `Command`s (through `EditHistory` for undoable edits).
+- **New look:** add a case to `godot/scripts/Visual/ModelFactory.cs`, keyed by the
+  def's `meta.model`. Models are built with `MeshBuilder` (beveled boxes, faceted
+  cylinders, beams, profile sweeps), cached per def, and shared between instances.
+  Animated parts (spinners, bobbers, glows, smoke) go into the `ModelRig`, which
+  eases them with the machine's working state.
+
+## Godot client
+
+| Folder | Contents |
+|---|---|
+| `Visual/` | `MeshBuilder` (procedural geometry), `ModelFactory` (all building models), `WorldView` (instancing, curve/pillar-aware rebuilds, item MultiMeshes with tick interpolation, highlights, floating income), shaders, lighting and ground |
+| `Input/` | `CameraRig` (orbit/pan/zoom-to-cursor), `BuildController` (select, build with line drag, delete, move, paste, pipette, undo, ramp-aware layers), `GhostLayer` (translucent previews with port arrows) |
+| `UI/` | `Hud` (tool bar, sidebar, factory card, hotbar, key hints, panels), build menu, inspector, upgrades/stats, vector `IconView`, `Thumbnails` (renders icons from the 3D models) |
+| `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
+
+Scene graph order matters for input: the HUD is the last child, so it sees unhandled
+keys first (hotbar, menus, Esc for panels). Everything else falls through to the
+`BuildController`.
 
 ## Roadmap (suggested next steps)
 
-1. **Logistics depth:** splitters/mergers, filters, underground belts (tunnel
-   entrance/exit pairs), lifts, and belt tiers.
+1. **Logistics depth:** filters/sorters, lifts, belt tiers, and hotbar drag-and-drop.
 2. **Active loop:** per-entity overclock (a stat scoped to an entity), anomalies
    (seeded `Rng` events that spawn on machines and reward a click), and timed
    production contracts (a `Contract` system reading `ItemSold` events).

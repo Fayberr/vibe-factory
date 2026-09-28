@@ -18,13 +18,12 @@ public static class GridMapping
 
     /// <summary>
     /// Grid offset (building-local, facing north) → Godot-local offset. Rotating the parent by
-    /// <see cref="Yaw"/> then matches <see cref="GridPos.Rotate"/>.
+    /// <see cref="Yaw"/> then matches <see cref="GridPos.Rotate(Dir)"/>.
     /// </summary>
     public static Vector3 LocalOffset(GridPos local) => new(local.X, local.Z * LayerHeight, local.Y);
 
     /// <summary>Rotation about Godot's up axis that points a north-facing model toward <paramref name="facing"/>.</summary>
     public static float Yaw(Dir facing) => -(int)facing * Mathf.Pi / 2f;
 
-    public static Color ParseColor(string? hex, Color fallback) =>
-        !string.IsNullOrEmpty(hex) && Color.HtmlIsValid(hex) ? Color.FromHtml(hex) : fallback;
+    public static Color ParseColor(string? hex, Color fallback) => Palette.Parse(hex, fallback);
 }

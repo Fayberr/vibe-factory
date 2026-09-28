@@ -4,70 +4,107 @@ A modular factory/tycoon game about automation, resource pipelines and endless
 progression. The game logic is a **deterministic, engine-agnostic C# simulation**.
 **Godot 4** is one frontend for it; a headless CLI is another.
 
-![Godot client running the demo layout](docs/images/godot-demo.png)
+![The demo factory](docs/images/hero.jpg)
 
-*The demo layout: iron ore rides a ramp up, crosses a bridge over the copper line,
-drops into a smelter, gets polished and sold. The lower line merges two ingredients
-in an alloy forge.*
+| Bridges and ramps | Splitters, curves, mergers |
+|---|---|
+| ![Bridge over a belt](docs/images/bridge.jpg) | ![Splitter and merger loop](docs/images/logistics.jpg) |
+| **Build menu with rendered icons** | **Copy/paste with live ghost preview** |
+| ![Build menu](docs/images/build-menu.jpg) | ![Paste preview](docs/images/paste.jpg) |
+
+Every 3D model is **generated in code**: beveled low-poly bodies, belt profiles swept
+along curves, lattice towers, and smoking chimneys. Build-menu and hotbar icons are
+rendered from those same models, so new content gets art and icons with no asset work.
 
 ## Repository layout
 
 ```
-src/FactorySim.Core/     Simulation: grid, entities, transport, machines, economy, saves, offline.
+src/FactorySim.Core/     Simulation: grid, transport, machines, economy, blueprints, undo, saves, offline.
                          Plain .NET 8. No engine references (a test enforces this).
 src/FactorySim.Cli/      Headless host: demo walkthrough, ASCII view, benchmark.
-tests/FactorySim.Tests/  xUnit tests for the core (belt physics, machines, determinism, saves…).
-godot/                   Godot 4.7 (.NET) client: 3D isometric view, building, HUD. Presentation only.
+tests/FactorySim.Tests/  xUnit tests for the core (belt physics, splitting/merging, editing, determinism…).
+godot/                   Godot 4.7 (.NET) client. Presentation and input only.
+  scripts/Visual/          procedural models (MeshBuilder, ModelFactory), world view, shaders
+  scripts/Input/           camera, build tools, ghost previews
+  scripts/UI/              HUD, build menu, inspector, icons, thumbnails
+  scripts/Dev/             scripted end-to-end UI test
 docs/ARCHITECTURE.md     How the pieces fit, and where to extend them.
 ```
 
 ## Quick start
 
-Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download). The Godot client
-also needs **Godot 4.7 .NET** (the "mono" download).
+Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download). The client needs
+**Godot 4.7 .NET** (the "mono" download).
 
 ```bash
-dotnet test                                   # run the core test suite
-dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, stats, save/load, 8 h offline catch-up
-dotnet run --project src/FactorySim.Cli -c Release -- bench 200   # ~6.6k entities, ticks/s
+dotnet test                                   # core test suite
+dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, stats, save/load, offline catch-up
 ```
 
-**Godot:** open `godot/project.godot` in Godot 4.7 .NET and press Play. Pick
-"New (demo layout)" on the right to spawn the demo factory, or build your own.
+**Play:** open `godot/project.godot` in Godot 4.7 .NET and press Play. Pick
+*New factory (demo layout)* in the game menu (`G`) to spawn the demo, or start building.
 
-Headless smoke test (CI-friendly): builds the demo, runs at 16× speed for 3 s, prints stats and exits non-zero if nothing was earned:
+## Building — controls
+
+Building is designed to be fast from the keyboard. Press `F1` in game for this table.
+
+| Keys | Action |
+|---|---|
+| `1`–`0` | Hotbar building (press again to put it away) |
+| `B` | Build menu. Hover a building and press `1`–`0` to put it on the hotbar |
+| LMB | Place / select |
+| Drag (building) | Lay a line. It forms an L, and belts orient and curve themselves |
+| Drag (selecting) | Box select. `Shift` adds, `Ctrl` removes |
+| `R` / `Shift+R` | Rotate the placement, the selection, or the hovered building |
+| `F` | Pick the hovered building (type + rotation) |
+| `Q` / `E`, `Shift+wheel` | Build layer down / up |
+| `Tab` | Cutaway: hide layers above the current one |
+| `X` | Delete tool (click or drag a box) · `Del` deletes the selection |
+| `M` | Move the selection (keeps items on belts) |
+| `C` · `Ctrl+C` / `Ctrl+V` / `Ctrl+X` | Copy & paste selection · copy / paste / cut |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo (a dragged line is one step) |
+| `Ctrl+A` | Select all |
+| `Esc` / right-click | Cancel the tool, then clear the selection |
+| `WASD`, MMB drag · RMB drag · wheel | Pan · orbit · zoom toward the cursor |
+| `U` · `I` · `G` · `F1` | Upgrades · statistics · game menu · help |
+
+**Bridges and tunnels need no layer juggling.** Place a *Ramp Up*: the build layer
+follows it up, so you keep dragging belts on the upper layer. Place a *Ramp Down* and
+you're back on the ground. A ramp down placed on the ground digs into the tunnel layer.
+Belts that span empty space get support pillars automatically.
+
+The selection inspector (right) shows status, recipe, buffers and totals, plus
+rotate/move/copy/delete buttons. Ghost previews show where items enter (blue) and
+leave (orange) a building.
+
+## Testing
 
 ```bash
+dotnet test                                                     # 59 core tests
+
+# Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit
 godot --headless --path godot -- --smoke
+
+# Scripted end-to-end UI test: injects real mouse/keyboard input (line drag, undo,
+# box select, copy/paste, delete, move, pipette, bridge flow) and checks the results.
+# Needs a display (e.g. xvfb-run). Add --shots=/abs/dir to save screenshots.
+godot --path godot -- --ui-test
 ```
-
-### Controls (Godot)
-
-| Input | Action |
-|---|---|
-| `1`–`9`, `0` / toolbar | Select a building (again or `Esc` to deselect) |
-| LMB (drag) | Place. Dragging a belt lays a line and turns corners automatically |
-| RMB (drag) | Remove (full refund for now) |
-| `R` / `Shift+R` | Rotate placement. With no tool selected, rotates the hovered building |
-| `Q` / `E` | Build layer down / up (negative = underground) |
-| `Tab` | Cutaway: hide everything above the current layer |
-| `WASD`, arrows, MMB drag | Pan · wheel zooms · `Z` / `C` turn the view 90° |
-
-The game autosaves every 30 s and on quit. On the next start, time spent away is
-caught up (see *Offline progress* in the architecture doc).
 
 ## Adding content
 
-Most new content is data. `src/FactorySim.Core/Content/Data/base.json` defines
-items, recipes, buildings (footprint, ports, behavior and params) and upgrades.
-For example, a faster belt or a machine with a new recipe needs no code. Extra
-packs layer on top and override by id:
+Most content is data. `src/FactorySim.Core/Content/Data/base.json` defines items,
+recipes, buildings (footprint, ports, behavior, params) and upgrades. A building's
+`meta.model` picks its procedural model (`belt`, `ramp`, `splitter`, `merger`, `drill`,
+`furnace`, `forge`, `polisher`, `depot`), and `meta.accent` tints it. A new machine that
+reuses an existing behavior and model therefore needs no code at all. Extra packs
+layer on top and override by id:
 
 ```csharp
 var content = ContentRegistry.LoadDefault(null, ContentRegistry.ParsePack(File.ReadAllText("my_pack.json")));
 ```
 
-New *kinds* of behavior (e.g. a splitter, a heater with a temperature model) are a
-class deriving from `Behavior<TParams, TState>`, registered in `BehaviorRegistry`.
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+New *kinds* of behavior are a class deriving from `Behavior<TParams, TState>`. New
+*looks* are a case in `godot/scripts/Visual/ModelFactory.cs`. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
