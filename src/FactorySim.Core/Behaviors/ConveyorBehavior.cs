@@ -116,13 +116,37 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
         if (w < items.Count) items.RemoveRange(w, items.Count - w);
     }
 
+    /// <summary>
+    /// A belt whose back input is not fed but exactly one side input is becomes a curve:
+    /// items from that side enter at the start of the tile (full length, like the back)
+    /// instead of merging in at mid-tile. Returns that side, or null for a straight belt.
+    /// </summary>
+    public static Side? CurveSide(Entity e)
+    {
+        Side? side = null;
+        int fedSides = 0;
+        foreach (int port in e.Def.InputPorts)
+        {
+            if (!e.IsInputFed(port)) continue;
+            var s = e.Def.Ports[port].Side;
+            if (s == Side.Back) return null;
+            if (s is Side.Left or Side.Right)
+            {
+                side = s;
+                fedSides++;
+            }
+        }
+        return fedSides == 1 ? side : null;
+    }
+
     protected override bool TryAccept(TickContext ctx, Entity e, ConveyorParams p, ConveyorState s, ItemStack item, int port, int overflow)
     {
         var items = s.Items;
         int index;
         int entry;
+        var side = e.Def.Ports[port].Side;
 
-        if (e.Def.Ports[port].Side == Side.Back)
+        if (side == Side.Back || side == CurveSide(e))
         {
             entry = Math.Min(overflow, EffectiveSpeed(ctx, p));
             if (items.Count > 0) entry = Math.Min(entry, items[^1].Pos - p.Spacing);
@@ -150,5 +174,14 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
     }
 
     protected override EntityStatus GetStatus(Entity e, ConveyorParams p, ConveyorState s) =>
-        new(s.Items.Count > 0, 0, $"{s.Items.Count} item(s)");
+        new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
+
+    protected override void Describe(Entity e, ConveyorParams p, ConveyorState s, List<InfoLine> into)
+    {
+        into.Add(new InfoLine("Speed", $"{p.Speed * Simulation.TicksPerSecond / (double)Length:0.##} tiles/s"));
+        into.Add(new InfoLine("Capacity", $"{p.Speed * Simulation.TicksPerSecond / (double)p.Spacing:0.#} items/s"));
+        if (p.Effect != null)
+            into.Add(new InfoLine("Effect", $"×{p.Effect.ValueMultiplier:0.##} value{(p.Effect.Once ? ", once" : "")} [{p.Effect.Tag}]"));
+        into.Add(new InfoLine("On belt", s.Items.Count.ToString()));
+    }
 }

@@ -145,7 +145,24 @@ public sealed class World
         _topologyDirty = true;
     }
 
+    /// <summary>Repositions several entities at once (callers validate first).</summary>
+    internal void MoveEntities(IReadOnlyList<(Entity Entity, GridPos Pos, Dir Facing)> plan)
+    {
+        foreach (var (e, _, _) in plan)
+            foreach (var cell in e.Cells()) _grid.Remove(cell);
+        foreach (var (e, pos, facing) in plan)
+        {
+            e.Pos = pos;
+            e.Facing = facing;
+            foreach (var cell in e.Cells()) _grid[cell] = e;
+        }
+        _topologyDirty = true;
+    }
+
     // ---- Topology ----------------------------------------------------------
+
+    /// <summary>Rebuilds port links now if the layout changed (renderers call this before reading links).</summary>
+    public void EnsureTopology() => _ = UpdateOrder;
 
     /// <summary>Entities in tick order (downstream first). Rebuilds links if the layout changed.</summary>
     public IReadOnlyList<Entity> UpdateOrder

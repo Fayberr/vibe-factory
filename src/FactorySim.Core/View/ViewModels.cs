@@ -4,8 +4,14 @@ namespace FactorySim.View;
 // future web or server dashboard) reads the simulation through these and the
 // public World queries, and changes it only through Simulation.Execute(Command).
 
-/// <summary>An item on/in an entity, with progress 0..1 along the entity's transport path.</summary>
-public readonly record struct ItemView(ItemStack Item, float Progress);
+/// <summary>
+/// An item on/in an entity, with progress 0..1 along the entity's transport path.
+/// Hubs (splitters/mergers) also report the port it came from and the one it is heading to (-1 = unknown).
+/// </summary>
+public readonly record struct ItemView(ItemStack Item, float Progress, int FromPort = -1, int ToPort = -1);
+
+/// <summary>One labelled line of inspector detail ("Recipe", "smelt_iron").</summary>
+public readonly record struct InfoLine(string Label, string Value);
 
 /// <summary>Coarse machine status for UI and effects.</summary>
 public readonly record struct EntityStatus(bool Working, float Progress, string? Detail = null);

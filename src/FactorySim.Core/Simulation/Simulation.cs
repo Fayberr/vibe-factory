@@ -90,6 +90,9 @@ public sealed class Simulation
             RemoveBuilding c => Remove(c),
             RotateBuilding c => Rotate(c),
             BuyUpgrade c => Buy(c),
+            PlaceBlueprint c => PlaceMany(c),
+            RemoveBuildings c => RemoveMany(c),
+            MoveBuildings c => Move(c),
             _ => CommandResult.Fail($"Unknown command {command.GetType().Name}"),
         };
         if (result.Ok) CommandLog?.Add(new LoggedCommand(World.Tick, command));
@@ -131,6 +134,83 @@ public sealed class Simulation
         World.Reorient(e, e.Pos, facing);
         if (Events.Enabled) Events.Add(new EntityReoriented(World.Tick, e.Id, e.Pos, e.Facing));
         return CommandResult.Success(e.Id);
+    }
+
+    private CommandResult PlaceMany(PlaceBlueprint c)
+    {
+        var plan = new List<(BuildingDef Def, GridPos Pos, Dir Facing)>();
+        var claimed = new HashSet<GridPos>();
+        BigNum cost = BigNum.Zero;
+        foreach (var (defId, pos, facing) in c.Blueprint.Placements(c.At, c.QuarterTurns))
+        {
+            if (!Content.Buildings.TryGetValue(defId, out var def)) return CommandResult.Fail($"Unknown building '{defId}'");
+            var check = World.CanPlace(def, pos, facing);
+            if (!check.Ok) return CommandResult.Fail(check.Reason!);
+            foreach (var cell in Entity.CellsFor(def, pos, facing))
+                if (!claimed.Add(cell)) return CommandResult.Fail($"Blueprint overlaps itself at {cell}");
+            cost += def.Cost;
+            plan.Add((def, pos, facing));
+        }
+        if (plan.Count == 0) return CommandResult.Fail("Nothing to place");
+        if (!World.Sandbox)
+        {
+            if (World.Money < cost) return CommandResult.Fail($"Need {cost.Format()} (have {World.Money.Format()})");
+            World.Money -= cost;
+        }
+
+        var ids = new List<int>(plan.Count);
+        foreach (var (def, pos, facing) in plan)
+        {
+            var e = World.AddEntity(def, pos, facing);
+            ids.Add(e.Id);
+            if (Events.Enabled) Events.Add(new EntityPlaced(World.Tick, e.Id, def.Id, e.Pos, e.Facing));
+        }
+        return CommandResult.Success(ids);
+    }
+
+    private CommandResult RemoveMany(RemoveBuildings c)
+    {
+        var entities = c.Cells.Select(World.EntityAt).OfType<Entity>().Distinct().ToList();
+        if (entities.Count == 0) return CommandResult.Fail("Nothing to remove");
+        foreach (var e in entities)
+        {
+            World.RemoveEntity(e);
+            if (!World.Sandbox) World.Money += e.Def.Cost * RefundFraction;
+            if (Events.Enabled) Events.Add(new EntityRemoved(World.Tick, e.Id, e.Def.Id, e.Pos));
+        }
+        return CommandResult.Success(entities.Select(e => e.Id).ToList());
+    }
+
+    private CommandResult Move(MoveBuildings c)
+    {
+        var entities = new List<Entity>();
+        foreach (var cell in c.Cells)
+        {
+            var e = World.EntityAt(cell);
+            if (e == null) return CommandResult.Fail($"Nothing at {cell}");
+            if (!entities.Contains(e)) entities.Add(e);
+        }
+        var moving = entities.ToHashSet();
+        var plan = entities
+            .Select(e => (Entity: e, Pos: (e.Pos - c.Pivot).Rotate(c.QuarterTurns) + c.Pivot + c.Delta, Facing: e.Facing.RotateCW(c.QuarterTurns)))
+            .ToList();
+
+        var claimed = new HashSet<GridPos>();
+        foreach (var (e, pos, facing) in plan)
+        {
+            foreach (var cell in Entity.CellsFor(e.Def, pos, facing))
+            {
+                if (!World.Bounds.Contains(cell)) return CommandResult.Fail($"{cell} is outside the plot");
+                var occupant = World.EntityAt(cell);
+                if (occupant != null && !moving.Contains(occupant)) return CommandResult.Fail($"{cell} is occupied by {occupant.Def.Name}");
+                if (!claimed.Add(cell)) return CommandResult.Fail($"Moved buildings overlap at {cell}");
+            }
+        }
+
+        World.MoveEntities(plan);
+        if (Events.Enabled)
+            foreach (var (e, _, _) in plan) Events.Add(new EntityReoriented(World.Tick, e.Id, e.Pos, e.Facing));
+        return CommandResult.Success(entities.Select(e => e.Id).ToList());
     }
 
     private CommandResult Buy(BuyUpgrade c)

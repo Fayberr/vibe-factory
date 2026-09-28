@@ -12,8 +12,17 @@ internal static class Topology
 
         foreach (var e in entities)
         {
-            for (int i = 0; i < e.Links.Length; i++) e.Links[i] = default;
-            foreach (int port in e.Def.OutputPorts) e.Links[port] = Resolve(world, e, port);
+            Array.Clear(e.Links);
+            Array.Clear(e.Fed);
+        }
+        foreach (var e in entities)
+        {
+            foreach (int port in e.Def.OutputPorts)
+            {
+                var link = Resolve(world, e, port);
+                e.Links[port] = link;
+                if (link.Target != null) link.Target.Fed[link.TargetPort] = true;
+            }
         }
 
         return DownstreamFirst(entities);

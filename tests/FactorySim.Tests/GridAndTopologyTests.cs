@@ -81,16 +81,16 @@ public class GridAndTopologyTests
         _ = sim.World.UpdateOrder;
         var w = sim.World;
 
-        var rampUp = w.EntityAt(new GridPos(1, 2, 0))!;
-        var bridge = w.EntityAt(new GridPos(2, 2, 1))!;
-        var rampDown = w.EntityAt(new GridPos(3, 2, 0))!;
-        var smelter = w.EntityAt(new GridPos(4, 2, 0))!;
-        var tunnel = w.EntityAt(new GridPos(2, 2, 0))!; // line B under the bridge
+        var rampUp = w.EntityAt(new GridPos(1, 4, 0))!;
+        var bridge = w.EntityAt(new GridPos(2, 4, 1))!;
+        var rampDown = w.EntityAt(new GridPos(3, 4, 0))!;
+        var smelter = w.EntityAt(new GridPos(4, 4, 0))!;
+        var tunnel = w.EntityAt(new GridPos(2, 4, 0))!; // line B under the bridge
 
         Assert.Equal(bridge.Id, OutTarget(w, rampUp.Id));
         Assert.Equal(rampDown.Id, OutTarget(w, bridge.Id));
         Assert.Equal(smelter.Id, OutTarget(w, rampDown.Id));
-        Assert.Equal(w.EntityAt(new GridPos(2, 3, 0))!.Id, OutTarget(w, tunnel.Id));
+        Assert.Equal(w.EntityAt(new GridPos(2, 5, 0))!.Id, OutTarget(w, tunnel.Id));
     }
 
     [Fact]

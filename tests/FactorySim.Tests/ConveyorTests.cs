@@ -92,10 +92,10 @@ public class ConveyorTests
         sim.Step(20 * 60);
 
         var stats = sim.World.Stats;
-        Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 50);  // line A went over the bridge
-        Assert.True(stats.Sold.GetValueOrDefault("copper_ore") > 30);  // line B went under it
-        Assert.True(stats.Sold.GetValueOrDefault("bronze") > 0);       // line C merged ingredients
-        Assert.Equal(0, stats.Sold.GetValueOrDefault("iron_ore"));      // nothing leaked across lines
+        Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 50); // line A went over the bridge
+        Assert.True(stats.Sold.GetValueOrDefault("bronze") > 30);     // line B's copper went under it into the forge
+        Assert.Equal(0, stats.Sold.GetValueOrDefault("iron_ore"));     // nothing leaked across lines
+        Assert.Equal(0, stats.Sold.GetValueOrDefault("copper_ore"));
     }
 
     [Fact]

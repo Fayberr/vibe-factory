@@ -31,6 +31,9 @@ public sealed class Entity
     /// <summary>Per port index; only output ports are ever connected. Rebuilt by Topology.</summary>
     internal PortLink[] Links;
 
+    /// <summary>Per port index: true for input ports that some neighbour's output feeds. Rebuilt by Topology.</summary>
+    internal bool[] Fed;
+
     internal Entity(int id, BuildingDef def, IBehavior behavior, GridPos pos, Dir facing, object state)
     {
         Id = id;
@@ -40,6 +43,7 @@ public sealed class Entity
         Facing = facing;
         State = state;
         Links = new PortLink[def.Ports.Length];
+        Fed = new bool[def.Ports.Length];
     }
 
     public IEnumerable<GridPos> Cells() => CellsFor(Def, Pos, Facing);
@@ -56,6 +60,12 @@ public sealed class Entity
     public Dir PortDir(int port) => Def.Ports[port].Side.ToWorld(Facing);
 
     public PortLink Link(int port) => Links[port];
+
+    /// <summary>Whether an upstream output is connected to input <paramref name="port"/>.</summary>
+    public bool IsInputFed(int port) => Fed[port];
+
+    /// <summary>Rotates a building-local offset into world space and adds the anchor.</summary>
+    public GridPos LocalToWorld(GridPos local) => Pos + local.Rotate(Facing);
 
     public override string ToString() => $"#{Id} {Def.Id} @{Pos} facing {Facing}";
 }

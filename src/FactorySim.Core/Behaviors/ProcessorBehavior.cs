@@ -154,6 +154,20 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         return true;
     }
 
+    protected override void Describe(Entity e, ProcessorParams p, ProcessorState s, List<InfoLine> into)
+    {
+        foreach (var r in p.ResolvedRecipes)
+        {
+            string ins = string.Join(" + ", r.Inputs.Select(i => $"{i.Count} {i.Item}"));
+            string outs = string.Join(" + ", r.Outputs.Select(o => $"{o.Count} {o.Item}"));
+            into.Add(new InfoLine("Recipe", $"{ins} → {outs} ({r.Ticks / (double)Simulation.TicksPerSecond:0.##}s, ×{r.ValueMultiplier:0.##})"));
+        }
+        foreach (var (item, buf) in s.Inputs)
+            if (buf.Count > 0) into.Add(new InfoLine("Input", $"{buf.Count}/{p.InputCapacity} {item}"));
+        long waiting = s.Output.Sum(o => o.Count);
+        if (waiting > 0) into.Add(new InfoLine("Output", $"{waiting}/{p.OutputCapacity} waiting"));
+    }
+
     protected override EntityStatus GetStatus(Entity e, ProcessorParams p, ProcessorState s)
     {
         var recipe = s.Recipe == null ? null : Array.Find(p.ResolvedRecipes, r => r.Id == s.Recipe);

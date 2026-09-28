@@ -37,6 +37,9 @@ public interface IBehavior
     void CollectItems(Entity entity, List<ItemView> into);
 
     EntityStatus GetStatus(Entity entity);
+
+    /// <summary>Inspector details (buffers, recipe, totals). Purely informational.</summary>
+    void Describe(Entity entity, List<InfoLine> into);
 }
 
 /// <summary>Typed convenience base: casts params/state once so implementations stay readable.</summary>
@@ -61,6 +64,8 @@ public abstract class Behavior<TParams, TState> : IBehavior
 
     public EntityStatus GetStatus(Entity entity) => GetStatus(entity, P(entity), S(entity));
 
+    public void Describe(Entity entity, List<InfoLine> into) => Describe(entity, P(entity), S(entity), into);
+
     protected virtual void Bind(BuildingDef def, TParams p, ContentRegistry content) { }
 
     protected virtual void Tick(TickContext ctx, Entity e, TParams p, TState s) { }
@@ -70,6 +75,8 @@ public abstract class Behavior<TParams, TState> : IBehavior
     protected virtual void CollectItems(Entity e, TParams p, TState s, List<ItemView> into) { }
 
     protected virtual EntityStatus GetStatus(Entity e, TParams p, TState s) => default;
+
+    protected virtual void Describe(Entity e, TParams p, TState s, List<InfoLine> into) { }
 
     protected static TParams P(Entity e) => (TParams)e.Def.Params!;
     protected static TState S(Entity e) => (TState)e.State;

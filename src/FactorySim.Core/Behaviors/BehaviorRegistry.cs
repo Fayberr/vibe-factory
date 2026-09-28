@@ -12,6 +12,7 @@ public sealed class BehaviorRegistry
         r.Register(new MinerBehavior());
         r.Register(new ProcessorBehavior());
         r.Register(new SellerBehavior());
+        r.Register(new RouterBehavior());
         return r;
     }
 

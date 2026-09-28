@@ -60,6 +60,12 @@ public sealed class MinerBehavior : Behavior<MinerParams, MinerState>
         if (s.Output != null && ctx.Push(e, e.Def.OutputPorts[0], s.Output, fresh ? 0 : TickContext.Waiting)) s.Output = null;
     }
 
+    protected override void Describe(Entity e, MinerParams p, MinerState s, List<InfoLine> into)
+    {
+        into.Add(new InfoLine("Produces", p.Item));
+        into.Add(new InfoLine("Base rate", $"{p.Amount * Simulation.TicksPerSecond / (double)p.Interval:0.##}/s"));
+    }
+
     protected override EntityStatus GetStatus(Entity e, MinerParams p, MinerState s) =>
         s.Output == null
             ? new EntityStatus(true, (float)Math.Min(1, s.Work / p.Interval), p.Item)

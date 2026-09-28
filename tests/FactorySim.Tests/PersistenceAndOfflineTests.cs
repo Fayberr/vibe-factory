@@ -44,10 +44,11 @@ public class PersistenceAndOfflineTests
     public void Load_drops_unknown_content_with_warnings()
     {
         var sim = Demo();
+        int polishers = sim.World.Entities.Count(e => e.Def.Id == "polisher");
         var json = SaveSystem.Serialize(sim).Replace("\"def\":\"polisher\"", "\"def\":\"removed_machine\"");
         var loaded = SaveSystem.Deserialize(json, TestUtil.Content);
-        Assert.Single(loaded.Warnings);
-        Assert.Equal(sim.World.EntityCount - 1, loaded.Simulation.World.EntityCount);
+        Assert.Equal(polishers, loaded.Warnings.Count);
+        Assert.Equal(sim.World.EntityCount - polishers, loaded.Simulation.World.EntityCount);
     }
 
     [Fact]

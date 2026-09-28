@@ -3,13 +3,17 @@
 //
 // Units: 20 ticks = 1 second. Conveyor tile = 1000 units.
 // Ports: "side" is relative to the building facing north; "cell" is a footprint cell.
-// "meta" is ignored by the simulation — renderers/tools use it (color, shape, glyph, height).
+// "meta" is ignored by the simulation — frontends use it:
+//   model   which procedural 3D model the Godot client builds (belt, ramp, splitter, merger,
+//           drill, furnace, forge, polisher, depot)
+//   color   main body/item colour, accent = highlight colour, glyph = ASCII view,
+//   shape   item mesh (rock, ingot), description = build menu text.
 {
   "items": [
-    { "id": "iron_ore",   "name": "Iron Ore",     "baseValue": 1,   "meta": { "color": "#8b7d74" } },
-    { "id": "copper_ore", "name": "Copper Ore",   "baseValue": 1.5, "meta": { "color": "#c8733c" } },
-    { "id": "iron_ingot", "name": "Iron Ingot",   "baseValue": 0,   "meta": { "color": "#d3dae2" } },
-    { "id": "bronze",     "name": "Bronze Alloy", "baseValue": 0,   "meta": { "color": "#d9a441" } }
+    { "id": "iron_ore",   "name": "Iron Ore",     "baseValue": 1,   "meta": { "color": "#7c7470", "shape": "rock" } },
+    { "id": "copper_ore", "name": "Copper Ore",   "baseValue": 1.5, "meta": { "color": "#d9773a", "shape": "rock" } },
+    { "id": "iron_ingot", "name": "Iron Ingot",   "baseValue": 0,   "meta": { "color": "#dfe6ee", "shape": "ingot" } },
+    { "id": "bronze",     "name": "Bronze Alloy", "baseValue": 0,   "meta": { "color": "#e0a93b", "shape": "ingot" } }
   ],
 
   "recipes": [
@@ -31,13 +35,14 @@
 
   "buildings": [
     {
+      // Straight belt. It curves automatically when fed only from one side.
       "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 1, "category": "logistics",
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
         { "kind": "out", "side": "front" }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "shape": "belt", "color": "#3b3f46", "glyph": "belt" }
+      "meta": { "model": "belt", "glyph": "belt", "description": "Moves items. Bends into a curve when fed from one side only." }
     },
     {
       // Occupies its cell and the one above; enters low at the back, leaves one layer up at the front.
@@ -48,10 +53,9 @@
         { "kind": "out", "side": "front", "cell": [0, 0, 1] }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "shape": "ramp", "color": "#4a5260", "glyph": "U" }
+      "meta": { "model": "ramp", "glyph": "U", "description": "Lifts items one layer up. Build bridges over other lines." }
     },
     {
-      // Mirror of ramp_up: enters at the upper layer, leaves at the lower one.
       "id": "ramp_down", "name": "Ramp Down", "behavior": "conveyor", "cost": 5, "category": "logistics",
       "footprint": [ [0, 0, 0], [0, 0, 1] ],
       "ports": [
@@ -59,25 +63,43 @@
         { "kind": "out", "side": "front", "cell": [0, 0, 0] }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "shape": "ramp", "color": "#4a5260", "glyph": "D" }
+      "meta": { "model": "ramp", "glyph": "D", "description": "Drops items one layer down." }
     },
     {
-      "id": "iron_miner", "name": "Iron Miner", "behavior": "miner", "cost": 25, "category": "production",
+      "id": "splitter", "name": "Splitter", "behavior": "router", "cost": 20, "category": "logistics",
+      "ports": [
+        { "kind": "in", "side": "back" },
+        { "kind": "out", "side": "front" }, { "kind": "out", "side": "left" }, { "kind": "out", "side": "right" }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "model": "splitter", "glyph": "Y", "accent": "#4fb6ff", "description": "Distributes items evenly over up to three outputs; skips blocked ones." }
+    },
+    {
+      "id": "merger", "name": "Merger", "behavior": "router", "cost": 20, "category": "logistics",
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
+        { "kind": "out", "side": "front" }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "model": "merger", "glyph": "X", "accent": "#ffb347", "description": "Joins up to three lines fairly into one." }
+    },
+    {
+      "id": "iron_miner", "name": "Iron Drill", "behavior": "miner", "cost": 25, "category": "production",
       "ports": [ { "kind": "out", "side": "front" } ],
       "params": { "item": "iron_ore", "interval": 20, "amount": 1 },
-      "meta": { "shape": "box", "height": "0.8", "color": "#6b5b4f", "glyph": "M" }
+      "meta": { "model": "drill", "accent": "#8d95a3", "glyph": "M", "description": "Extracts iron ore: 1 per second." }
     },
     {
-      "id": "copper_miner", "name": "Copper Miner", "behavior": "miner", "cost": 60, "category": "production",
+      "id": "copper_miner", "name": "Copper Drill", "behavior": "miner", "cost": 60, "category": "production",
       "ports": [ { "kind": "out", "side": "front" } ],
       "params": { "item": "copper_ore", "interval": 30, "amount": 1 },
-      "meta": { "shape": "box", "height": "0.8", "color": "#9a5a32", "glyph": "C" }
+      "meta": { "model": "drill", "accent": "#e07a3a", "glyph": "C", "description": "Extracts copper ore: 1 every 1.5 seconds." }
     },
     {
       "id": "smelter", "name": "Smelter", "behavior": "processor", "cost": 80, "category": "processing",
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "smelt_iron" ], "inputCapacity": 8, "outputCapacity": 8 },
-      "meta": { "shape": "box", "height": "0.9", "color": "#b3502d", "glyph": "S" }
+      "meta": { "model": "furnace", "accent": "#ff7a2f", "glyph": "S", "description": "Smelts ore into ingots worth 2× the ore." }
     },
     {
       // Same behavior as the smelter, different recipe and three inputs: merging is just data.
@@ -87,28 +109,28 @@
         { "kind": "out", "side": "front" }
       ],
       "params": { "recipes": [ "alloy_bronze" ], "inputCapacity": 8, "outputCapacity": 8 },
-      "meta": { "shape": "box", "height": "1.0", "color": "#8e6b2e", "glyph": "A" }
+      "meta": { "model": "forge", "accent": "#f2b134", "glyph": "A", "description": "Fuses iron ingots and copper ore into bronze (×3 value)." }
     },
     {
       // An in-line upgrader is a conveyor with an effect: ×1.5 value, once per item.
       "id": "polisher", "name": "Polisher", "behavior": "conveyor", "cost": 150, "category": "processing",
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
       "params": { "speed": 100, "spacing": 250, "effect": { "tag": "polished", "valueMultiplier": 1.5, "once": true } },
-      "meta": { "shape": "belt", "color": "#2f7f8f", "glyph": "P" }
+      "meta": { "model": "polisher", "accent": "#35d0c9", "glyph": "P", "description": "In-line upgrader: ×1.5 value, once per item." }
     },
     {
-      "id": "seller", "name": "Seller", "behavior": "seller", "cost": 10, "category": "economy",
+      "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 10, "category": "economy",
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" },
         { "kind": "in", "side": "right" }, { "kind": "in", "side": "front" }
       ],
-      "meta": { "shape": "box", "height": "0.5", "color": "#2e8b57", "glyph": "$" }
+      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered from any side." }
     }
   ],
 
   "upgrades": [
     { "id": "belt_speed",   "name": "Belt Speed",   "stat": "conveyor.speed",      "effect": "multiply", "perLevel": 1.1,  "baseCost": 100, "costGrowth": 1.6, "maxLevel": 9 },
-    { "id": "miner_rate",   "name": "Miner Rate",   "stat": "miner.rate",          "effect": "multiply", "perLevel": 1.15, "baseCost": 50,  "costGrowth": 1.5 },
+    { "id": "miner_rate",   "name": "Drill Rate",   "stat": "miner.rate",          "effect": "multiply", "perLevel": 1.15, "baseCost": 50,  "costGrowth": 1.5 },
     { "id": "machine_speed","name": "Machine Speed","stat": "machine.speed",       "effect": "multiply", "perLevel": 1.15, "baseCost": 150, "costGrowth": 1.55 },
     { "id": "sell_price",   "name": "Sell Price",   "stat": "sell.multiplier",     "effect": "multiply", "perLevel": 1.25, "baseCost": 250, "costGrowth": 1.8 },
     { "id": "stack_size",   "name": "Stack Size",   "stat": "logistics.stackSize", "effect": "add",      "perLevel": 1,    "baseCost": 500, "costGrowth": 2.2 }

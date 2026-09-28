@@ -16,10 +16,13 @@ public readonly record struct GridPos(int X, int Y, int Z)
     public GridPos Above(int levels = 1) => new(X, Y, Z + levels);
 
     /// <summary>Rotates a local offset clockwise (seen from above) to match a building's facing.</summary>
-    public GridPos Rotate(Dir facing)
+    public GridPos Rotate(Dir facing) => Rotate((int)facing);
+
+    /// <summary>Rotates clockwise (seen from above) by quarter turns; negative turns rotate counter-clockwise.</summary>
+    public GridPos Rotate(int quarterTurns)
     {
         int x = X, y = Y;
-        for (int i = 0; i < (int)facing; i++) (x, y) = (-y, x);
+        for (int i = 0; i < (((quarterTurns % 4) + 4) % 4); i++) (x, y) = (-y, x);
         return new GridPos(x, y, Z);
     }
 
