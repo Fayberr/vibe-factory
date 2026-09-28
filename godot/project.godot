@@ -19,6 +19,7 @@ window/size/viewport_height=900
 [dotnet]
 
 project/assembly_name="FactorySim.Client"
+project/solution_directory="sln"
 
 [rendering]
 

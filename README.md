@@ -92,6 +92,27 @@ godot --headless --path godot -- --smoke
 godot --path godot -- --ui-test
 ```
 
+## Continuous integration and downloads
+
+`.github/workflows/build.yml` runs on every push to `main`:
+
+1. Runs the unit tests (`dotnet test`) and builds the client (`dotnet build godot -c Release`).
+2. Exports the Windows build headlessly with Godot 4.7.2 .NET on Linux, using preset
+   **Windows Desktop** in `godot/export_presets.cfg`, into `build/`.
+3. Uploads `FactorySim-Windows.zip` as a workflow artifact and publishes it on the
+   rolling **`latest-build`** pre-release. The latest push from any of those branches wins.
+
+The export is self-contained (it bundles the .NET runtime). Unzip and run `FactorySim.exe`,
+keeping the `.pck` and the `data_*` folder next to it. Godot's C# export needs a solution
+file. It lives in `godot/sln/` (project setting `dotnet/project/solution_directory`), which
+keeps `godot/` itself to a single project file so `dotnet build godot` works.
+
+Export locally with the same command (export templates for 4.7.2 installed):
+
+```bash
+cd godot && godot --headless --export-release "Windows Desktop" ../build/FactorySim.exe
+```
+
 ## Adding content
 
 Most content is data. `src/FactorySim.Core/Content/Data/base.json` defines items,

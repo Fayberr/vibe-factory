@@ -1,0 +1,151 @@
+name: Build Windows client
+
+# Tests the core, builds the Godot 4.7 .NET client and exports the Windows
+# desktop build from Linux (headless Godot cross-export), then publishes it as
+# an artifact and on the rolling "latest-build" pre-release.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write # move the latest-build tag and publish the release
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: '4.7.2'
+  GODOT_STATUS: stable
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+jobs:
+  windows-client:
+    name: Windows client
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'global.json', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # Headless Linux editor (.NET) + only the Windows x86_64 export templates
+      # (~215 MB instead of the full 1.2 GB template archive).
+      - name: Cache Godot engine and export templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.${{ env.GODOT_STATUS }}.mono
+          key: godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_STATUS }}-mono-linux-editor-windows-templates
+
+      - name: Download Godot .NET and export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}"
+          mkdir -p ~/godot
+          curl -fsSL --retry 3 -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_mono_linux_x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          curl -fsSL --retry 3 -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_mono_export_templates.tpz"
+          templates=~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}.mono
+          mkdir -p "$templates"
+          unzip -q -j /tmp/templates.tpz 'templates/version.txt' 'templates/windows_*_x86_64*' -d "$templates"
+          rm -f /tmp/godot.zip /tmp/templates.tpz
+          ls -la "$templates"
+
+      - name: Locate Godot
+        run: |
+          set -euo pipefail
+          godot="$(find ~/godot -type f -name 'Godot_v*_mono_linux.x86_64' | head -n 1)"
+          test -n "$godot"
+          chmod +x "$godot"
+          echo "GODOT=$godot" >> "$GITHUB_ENV"
+          "$godot" --headless --version
+
+      - name: Unit tests
+        run: dotnet test -c Release
+
+      - name: Build C# project (Release)
+        run: dotnet build godot -c Release
+
+      - name: Import Godot project
+        run: '"$GODOT" --headless --path godot --import'
+
+      # Godot exits 0 even when the C# publish fails, so verify the output itself:
+      # the exe, the pack, and the data folder with the published game assembly.
+      - name: Export Windows Desktop
+        working-directory: godot
+        run: |
+          set -euo pipefail
+          mkdir -p ../build
+          "$GODOT" --headless --export-release "Windows Desktop" ../build/FactorySim.exe 2>&1 | tee ../export.log
+          test -f ../build/FactorySim.exe
+          test -f ../build/FactorySim.pck
+          test -f ../build/data_FactorySim.Client_windows_x86_64/FactorySim.Client.dll
+          test -f ../build/data_FactorySim.Client_windows_x86_64/FactorySim.Core.dll
+          if grep -q '^ERROR:' ../export.log; then
+            echo "::error::Godot reported errors during export (see log above)"
+            exit 1
+          fi
+          ls -la ../build
+
+      - name: Package FactorySim-Windows.zip
+        run: |
+          set -euo pipefail
+          cd build
+          zip -qr ../FactorySim-Windows.zip .
+          cd ..
+          unzip -l FactorySim-Windows.zip | tail -n 1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FactorySim-Windows
+          path: FactorySim-Windows.zip
+          if-no-files-found: error
+
+      # The release action reuses an existing tag as-is, so move the rolling tag
+      # to this commit first; the release then always points at the newest build.
+      - name: Move latest-build tag to this commit
+        run: |
+          set -euo pipefail
+          git tag -f latest-build "$GITHUB_SHA"
+          git push -f origin refs/tags/latest-build
+
+      - name: Publish rolling pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Latest build
+          prerelease: true
+          make_latest: false
+          files: FactorySim-Windows.zip
+          fail_on_unmatched_files: true
+          body: |
+            Automated Windows build of the Godot client (Godot ${{ env.GODOT_VERSION }} .NET).
+
+            - Branch: `${{ github.ref_name }}`
+            - Commit: ${{ github.sha }}
+            - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Unzip `FactorySim-Windows.zip` and run `FactorySim.exe`. Keep the `.pck` and the
+            `data_*` folder next to the executable.

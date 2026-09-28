@@ -8,5 +8,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Godot exports build referenced projects (the core) with Configuration=ExportRelease,
+         which the SDK doesn't treat as optimized by default. -->
+    <Optimize Condition="'$(Configuration)' == 'ExportRelease'">true</Optimize>
   </PropertyGroup>
 </Project>

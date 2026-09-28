@@ -9,8 +9,14 @@ TestResults/
 # Godot
 godot/.godot/
 godot/.mono/
-godot/export_presets.cfg
 *.translation
+# Godot's solution lives in godot/sln/ (project setting dotnet/project/solution_directory).
+# Keep godot/ itself to a single project file so `dotnet build godot` works.
+godot/*.sln
+
+# Export output (CI packages build/ into FactorySim-Windows.zip)
+build/
+FactorySim-Windows.zip
 
 # OS
 .DS_Store
