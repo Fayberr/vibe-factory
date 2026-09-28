@@ -72,8 +72,8 @@ public class LogisticsTests
         sim.Place("conveyor", 1, 2, 0, Dir.East);
         sim.Place("splitter", 2, 2, 0, Dir.East);
         sim.Place("seller", 3, 2, 0, Dir.East); // front
-        sim.Place("seller", 2, 1, 0, Dir.East); // left (north)
-        sim.Place("seller", 2, 3, 0, Dir.East); // right (south)
+        sim.Place("seller", 2, 1, 0, Dir.North); // left (north), taking in from the south
+        sim.Place("seller", 2, 3, 0, Dir.South); // right (south), taking in from the north
 
         sim.Step(1000);
         var perSeller = sim.DrainEvents().OfType<ItemSold>().GroupBy(s => s.EntityId).Select(g => g.Count()).ToList();
@@ -125,7 +125,7 @@ public class LogisticsTests
         var sim = TestUtil.NewSim();
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
         sim.Place("splitter", 1, 0, 0, Dir.East);
-        sim.Place("seller", 1, 1, 0, Dir.East); // only the right (south) output is connected
+        sim.Place("seller", 1, 1, 0, Dir.South); // only the right (south) output is connected
 
         var seen = new List<PositionedItem>();
         var points = new List<GridPoint>();

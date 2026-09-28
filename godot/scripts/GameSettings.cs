@@ -50,13 +50,26 @@ public sealed class GameSettings
         f?.StoreString(JsonSerializer.Serialize(this, Json));
     }
 
+    /// <summary>The HUD is laid out for at least 1280×720; the interface size shrinks to fit smaller windows.</summary>
+    public const float MinWidth = 1280, MinHeight = 720;
+
+    /// <summary>Interface size, capped so the HUD still fits the window. Call again when the window resizes.</summary>
+    public void ApplyScale(Window root)
+    {
+        var px = root.Size;
+        float fit = px.X > 0 && px.Y > 0 ? Mathf.Min(px.X / MinWidth, px.Y / MinHeight) : 1;
+        float scale = Mathf.Max(0.5f, Mathf.Min(Mathf.Clamp(UiScale, 0.8f, 1.5f), fit));
+        // Changing the factor resizes the viewport (and raises size_changed), so only on a real change.
+        if (!Mathf.IsEqualApprox(root.ContentScaleFactor, scale)) root.ContentScaleFactor = scale;
+    }
+
     /// <summary>Applies display and window settings (audio volumes are applied by the AudioManager).</summary>
     public void ApplyDisplay(Window root)
     {
         if (DisplayServer.GetName() == "headless") return;
         DisplayServer.WindowSetMode(Fullscreen ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed);
         DisplayServer.WindowSetVsyncMode(VSync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
-        root.ContentScaleFactor = Mathf.Clamp(UiScale, 0.75f, 1.75f);
+        ApplyScale(root);
         root.Msaa3D = Quality switch
         {
             "Low" => Viewport.Msaa.Disabled,

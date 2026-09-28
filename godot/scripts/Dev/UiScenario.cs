@@ -76,6 +76,7 @@ public partial class UiScenario : Node
         await Click(Cell(9, 10));
         Check(w.EntityAt(new GridPos(3, 5, 0))?.Def.Id == "iron_miner", "drill placed with hotkey 6");
         Check(w.EntityAt(new GridPos(9, 10, 0))?.Def.Id == "seller", "depot placed with hotkey 9");
+        Check(w.EntityAt(new GridPos(9, 10, 0))?.Facing == Dir.South, "the depot turned to take the belt in (its one input), though the tool faced east");
         Host.TimeScale = 16;
         await Frames(90);
         Host.TimeScale = 1;
@@ -224,11 +225,18 @@ public partial class UiScenario : Node
         await Frames(10);
         await Shot("11-windows");
         await Key(Godot.Key.Escape);
-        Check(!Hud.StatsWindow.Visible && Hud.ProgressWindow.Visible, "Esc closes the last opened window first");
-        await Key(Godot.Key.Escape);
-        await Key(Godot.Key.Escape);
         await Frames(12);
-        Check(!Hud.Manage.Window.Visible, "Esc then clears the selection and the Manage window closes");
+        Check(!Hud.Manage.Window.Visible && Hud.ProgressWindow.Visible && Hud.StatsWindow.Visible,
+            "Esc clears the selection (Manage closes); Progress and Statistics stay open");
+        await Key(Godot.Key.Escape);
+        await Frames(5);
+        Check(Menus.PauseVisible && Hud.ProgressWindow.Visible && Hud.StatsWindow.Visible,
+            "the next Esc opens the pause menu straight away, windows still open");
+        await Key(Godot.Key.Escape);
+        await Frames(5);
+        await Key(Godot.Key.P);
+        await Key(Godot.Key.I);
+        Check(!Menus.PauseVisible && !Hud.ProgressWindow.Visible && !Hud.StatsWindow.Visible, "Esc resumes; P and I close their windows");
 
         // 13. Menus, as a normal (non-sandbox) game sees them: locked tiers, limits.
         Host.Sim.World.Sandbox = false;

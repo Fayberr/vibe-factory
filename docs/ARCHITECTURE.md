@@ -106,8 +106,9 @@ underneath. Lifts and multi-level machines use the same mechanism.
   several levels atomically and is undoable; removing a building refunds everything
   invested in it; blueprints keep levels and charge for them.
 - **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings plus
-  a price (`UnlockTier`), and grow the plot. `limit` (base + per tier after the
-  building's own) caps extractors and depots; placement, paste and undo all check it.
+  a price (`UnlockTier`), and grow the plot. `limit` (base, plus `perTier` for every
+  `every` tiers after the building's own) caps extractors and depots; placement, paste
+  and undo all check it. Depots have a single input, which makes them the bottleneck.
 - **Choices.** `SelectRecipe` sets what a machine makes (null = automatic): it then only
   accepts that recipe's ingredients and drops buffered ones it can't use. Behaviors expose
   it through `IBehavior.Selection`/`Select`; it is undoable, saved, and kept by blueprints.
@@ -182,7 +183,8 @@ Extrapolated time adds money and lifetime earnings but not per-item sold counts.
 - `BuildPlanner` turns a click or drag into placement steps, independent of any
   frontend: L-shaped paths, belts facing along the drag, re-aiming existing belts,
   never downgrading pricier pieces, keeping a replaced building's direction, the
-  anchor height for ramps (a ramp down placed on the ground stands on it), and
+  anchor height for ramps (a ramp down placed on the ground stands on it), turning a
+  single-input building (a depot) toward the belt that feeds its cell (`FaceFeeder`), and
   **automatic bridges** (a belt dragged straight across other belt lines gets a ramp up,
   a deck one level higher and a ramp down). It is unit-tested like the rest of the core.
 

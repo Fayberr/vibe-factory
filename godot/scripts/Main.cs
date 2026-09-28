@@ -105,6 +105,8 @@ public partial class Main : Node3D
                 hud.ProgressWindow.Visible = true;
                 hud.OrdersWindow.Visible = true;
             }
+            if (arg.StartsWith("--tool=") && host.Content.Buildings.TryGetValue(arg["--tool=".Length..], out var toolDef))
+                tools.SelectTool(toolDef); // with the pointer over the world, shows the ghost there
             if (arg.StartsWith("--select="))
             {
                 // --select=x,y: open the Manage window for the building on that cell.

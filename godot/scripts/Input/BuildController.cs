@@ -644,6 +644,9 @@ public partial class BuildController : Node3D
 
     // ---- Placement ------------------------------------------------------------
 
+    /// <summary>The direction a click would build in now: a depot turns to the belt feeding the hovered cell.</summary>
+    public Dir ShownFacing => PlanNow(fromPress: false) is { Steps.Count: 1 } plan ? plan.Steps[0].Facing : Facing;
+
     /// <summary>What a click (or the drag so far) would build.</summary>
     private BuildPlan? PlanNow(bool fromPress)
     {

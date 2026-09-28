@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 
 namespace FactorySim.Client;
@@ -388,7 +389,7 @@ public partial class MenuLayer : CanvasLayer
     }
 }
 
-/// <summary>Audio, display and gameplay settings; every change applies and saves at once.</summary>
+/// <summary>Audio, display and gameplay settings; every change applies at once and is saved.</summary>
 public sealed class SettingsPanel
 {
     public readonly Control Root;
@@ -412,7 +413,12 @@ public sealed class SettingsPanel
         col.AddChild(Check("Fullscreen", () => _s.Fullscreen, v => _s.Fullscreen = v));
         col.AddChild(Check("VSync", () => _s.VSync, v => _s.VSync = v));
         col.AddChild(Choice("Graphics", new[] { "Low", "Medium", "High" }, () => _s.Quality, v => _s.Quality = v));
-        col.AddChild(Slider("Interface size", () => _s.UiScale, v => _s.UiScale = v, 0.75f, 1.5f, 0.05f));
+        // Steps, not a slider: rescaling the interface under a dragged slider moves the slider.
+        var sizes = new[] { 0.8f, 0.9f, 1f, 1.1f, 1.25f, 1.5f };
+        string SizeName(float f) => $"{f * 100:0}%";
+        col.AddChild(Choice("Interface size", Array.ConvertAll(sizes, SizeName),
+            () => SizeName(sizes.MinBy(f => Math.Abs(f - _s.UiScale))),
+            v => _s.UiScale = sizes[Array.FindIndex(sizes, f => SizeName(f) == v)]));
 
         col.AddChild(Header("GAMEPLAY"));
         var autosave = new[] { ("Off", 0), ("Every 30 s", 30), ("Every minute", 60), ("Every 2 minutes", 120), ("Every 5 minutes", 300) };
@@ -428,11 +434,7 @@ public sealed class SettingsPanel
         Root = Ui.Pad(col, 18, 14);
     }
 
-    private void Changed()
-    {
-        _s.Save();
-        _changed();
-    }
+    private void Changed() => _changed(); // applies, and saves a moment later
 
     private static Label Header(string text)
     {

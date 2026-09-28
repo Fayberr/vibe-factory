@@ -16,6 +16,8 @@ public sealed class HudWindow
 {
     public readonly PanelContainer Root;
     public readonly VBoxContainer Body;
+    private readonly ScrollContainer _scroll;
+    private bool _watchingScreen;
     private readonly HBoxContainer _headerRow;
     private readonly Label _title;
     private bool _dragging;
@@ -52,14 +54,35 @@ public sealed class HudWindow
         _title.AddThemeFontOverride("font", UiTheme.Bold);
         _headerRow.AddChild(_title);
         _headerRow.AddChild(Ui.Spacer());
-        _headerRow.AddChild(Ui.IconButton(Icon.Close, "Close (Esc)", Close, 36));
+        _headerRow.AddChild(Ui.IconButton(Icon.Close, "Close", Close, 36));
         header.GuiInput += OnHeaderInput;
         col.AddChild(header);
         col.AddChild(new HSeparator());
 
-        Body = new VBoxContainer();
+        // The body scrolls once it is taller than the screen (long lists, a large interface size).
+        _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        Body = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         Body.AddThemeConstantOverride("separation", 0);
-        col.AddChild(Body);
+        _scroll.AddChild(Body);
+        col.AddChild(_scroll);
+        Body.MinimumSizeChanged += FitHeight;
+        Root.TreeEntered += () =>
+        {
+            if (!_watchingScreen) Root.GetViewport().SizeChanged += FitHeight;
+            _watchingScreen = true;
+            FitHeight();
+        };
+    }
+
+    /// <summary>Room left for the body: the screen height minus the title bar and a margin.</summary>
+    private void FitHeight()
+    {
+        float room = Root.IsInsideTree() ? Root.GetViewportRect().Size.Y - 150 : float.MaxValue;
+        float want = Body.GetCombinedMinimumSize().Y;
+        float height = Mathf.Min(want, Mathf.Max(160, room));
+        if (Mathf.IsEqualApprox(_scroll.CustomMinimumSize.Y, height)) return;
+        _scroll.CustomMinimumSize = new Vector2(0, height);
+        if (Root.IsInsideTree()) Callable.From(Fit).CallDeferred();
     }
 
     public string Title
@@ -100,6 +123,7 @@ public sealed class HudWindow
     /// <summary>Shrinks the window to its content and keeps it on screen.</summary>
     public void Fit()
     {
+        if (!Root.IsInsideTree()) return;
         Root.ResetSize();
         if (KeepRight) Root.Position = Root.Position with { X = Root.GetViewportRect().Size.X - Root.Size.X - 12 };
         Root.Position = Clamp(Root.Position);
@@ -129,6 +153,7 @@ public sealed class HudWindow
     {
         var screen = Root.GetViewportRect().Size;
         var size = Root.Size;
+        // The title bar never leaves the screen; a window may be pushed partly below the bottom edge.
         return new Vector2(Mathf.Clamp(p.X, 0, Mathf.Max(0, screen.X - size.X)), Mathf.Clamp(p.Y, 0, Mathf.Max(0, screen.Y - 64)));
     }
 }

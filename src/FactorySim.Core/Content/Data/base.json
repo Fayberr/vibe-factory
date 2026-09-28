@@ -6,7 +6,7 @@
 // Buildings: "tier" gates unlocking; "group"/"replaces" control placing on top of other
 // buildings (a splitter can be dropped into a belt line, a belt never replaces a machine);
 // "upgrade" overrides the behavior's default per-building level track; "limit" caps how
-// many can be built (base + perTier for every tier unlocked after the building's own).
+// many can be built (base, plus perTier for every "every" tiers unlocked after the building's own).
 // Items marked "raw" sell at a quarter of their value: processing is what pays.
 // There are no global upgrades: every building is levelled on its own.
 // "meta" is ignored by the simulation; frontends use it:
@@ -318,25 +318,19 @@
 
     // ---- Economy -------------------------------------------------------------------------
     {
-      "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 15, "category": "economy", "tier": 0,
+      "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 50, "category": "economy", "tier": 0,
       "group": "seller", "replaces": [ "seller", "belt" ],
-      "limit": { "base": 2, "perTier": 1 },
-      "ports": [
-        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" },
-        { "kind": "in", "side": "right" }, { "kind": "in", "side": "front" }
-      ],
-      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered from any side. Raw resources fetch only 25%. Upgrade it for better prices." }
+      "limit": { "base": 2, "perTier": 1, "every": 2 },
+      "ports": [ { "kind": "in", "side": "back" } ],
+      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered into its one input (the blue side). Depots are few, so merge lines into them. Raw resources fetch only 25%. Upgrade it for better prices." }
     },
     {
       "id": "export_terminal", "name": "Export Terminal", "behavior": "seller", "cost": 2.5e4, "category": "economy", "tier": 3,
       "group": "seller", "replaces": [ "seller", "belt" ],
       "limit": { "base": 1, "perTier": 1 },
-      "ports": [
-        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" },
-        { "kind": "in", "side": "right" }, { "kind": "in", "side": "front" }
-      ],
+      "ports": [ { "kind": "in", "side": "back" } ],
       "params": { "multiplier": 2 },
-      "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price." }
+      "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price, through one input (the blue side)." }
     }
   ],
 

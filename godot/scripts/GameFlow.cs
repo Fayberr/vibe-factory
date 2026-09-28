@@ -30,6 +30,8 @@ public partial class GameFlow : Node, IMenuActions
         Tools.EscapeIdle += Pause;
         Hud.OpenSettings = () => Menus.OpenSettings();
         Hud.QuitToMenu = QuitToMenu;
+        var root = GetTree().Root;
+        root.SizeChanged += () => Settings.ApplyScale(root);
     }
 
     public void ShowTitle()

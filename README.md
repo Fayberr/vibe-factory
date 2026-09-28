@@ -91,9 +91,9 @@ Building is designed to be fast from the keyboard. Press `F1` in game for this t
 | `Ctrl+A` | Select all |
 | `Esc` / right-click | Cancel the tool, then clear the selection |
 | `WASD`, MMB drag · RMB drag · wheel | Pan · orbit · zoom toward the cursor |
-| `P` · `O` · `I` · `G` · `F1` | Progress (tiers, limits, goals) · orders · statistics · game menu · help. Windows can be open together; drag them by the title bar, `Esc` closes the last one |
+| `P` · `O` · `I` · `G` · `F1` | Progress (tiers, limits, goals) · orders · statistics · game menu · help. Windows can be open together and stay open until you close them (the same key, or ×); drag them by the title bar |
 | `Space` | Pause or resume the factory (you can keep building while it is paused) |
-| `Esc` (nothing to cancel) | Pause menu: resume, save, settings, quit to the title screen or to the desktop |
+| `Esc` | Cancels the tool, then clears the selection, then opens the pause menu (resume, save, settings, quit to the title screen or to the desktop). Open windows stay open |
 
 **Heights.** Everything is built at the current build height, shown on the ladder next
 to the hotbar and next to the cursor. `G` is the ground plate: nothing can go below it.
@@ -133,7 +133,12 @@ their choice.
 - **Raw resources sell for 25%.** Processing is what pays: an ingot sells for 8× what its
   ore fetches raw, and a robot is worth about 1600 iron ore.
 - **Build limits.** Extractors and depots are capped per tier (for example 4 iron drills
-  and 2 depots at the start, more with every tier). Belts and machines are unlimited.
+  at the start and 2 more with every tier). Belts and machines are unlimited.
+- **Depots are the bottleneck.** A Market Depot costs $50, takes items in through one side
+  only (the blue side, under its green canopy) and there are few of them: 2 at the start,
+  one more every second tier. So instead of a depot per drill, you merge lines into them.
+  Export Terminals (double price) also have a single input. Placed at the end of a belt,
+  a depot turns to face it by itself.
 
 ## Testing
 

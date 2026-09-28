@@ -104,14 +104,14 @@ public class MachineAndEconomyTests
     }
 
     [Fact]
-    public void Raw_resources_sell_for_a_quarter_so_ringing_a_depot_with_drills_does_not_pay()
+    public void Raw_resources_sell_for_a_quarter_so_merging_drills_into_a_depot_does_not_pay()
     {
         var sim = TestUtil.NewSim();
-        sim.Place("seller", 1, 1, 0, Dir.East);
-        sim.Place("iron_miner", 0, 1, 0, Dir.East);
-        sim.Place("iron_miner", 2, 1, 0, Dir.West);
-        sim.Place("iron_miner", 1, 0, 0, Dir.South);
-        sim.Place("iron_miner", 1, 2, 0, Dir.North);
+        sim.Place("iron_miner", 0, 1, 0, Dir.East);  // merger's back
+        sim.Place("iron_miner", 1, 0, 0, Dir.South); // left
+        sim.Place("iron_miner", 1, 2, 0, Dir.North); // right
+        sim.Place("merger", 1, 1, 0, Dir.East);
+        sim.Place("seller", 2, 1, 0, Dir.East);
         sim.Step(20 * 20);
         var raw = sim.World.Money.ToDouble();
 
@@ -121,8 +121,8 @@ public class MachineAndEconomyTests
         smelted.Place("seller", 2, 0, 0, Dir.East);
         smelted.Step(20 * 20);
 
-        Assert.Equal(4 * 20 * 0.25, raw, 9);                       // four drills, raw: $1/s
-        Assert.True(smelted.World.Money.ToDouble() > 1.5 * raw);  // one drill, smelted: ~$2/s
+        Assert.InRange(raw, 3 * 18 * 0.25, 3 * 20 * 0.25);          // three drills, raw: $0.75/s
+        Assert.True(smelted.World.Money.ToDouble() > 2 * raw);    // one drill, smelted: ~$2/s
     }
 
     [Fact]

@@ -137,13 +137,18 @@ public sealed class UpgradeTrack
     }
 }
 
-/// <summary>Cap on a building's count: Base once its tier is unlocked, plus PerTier for every later tier.</summary>
+/// <summary>
+/// Cap on a building's count: Base once its tier is unlocked, plus PerTier for every
+/// <see cref="Every"/> later tiers (Every = 2: one more every second tier).
+/// </summary>
 public sealed class BuildLimit
 {
     public int Base { get; init; } = 1;
     public int PerTier { get; init; }
+    public int Every { get; init; } = 1;
 
-    public int At(BuildingDef def, int unlockedTier) => Base + PerTier * Math.Max(0, unlockedTier - def.Tier);
+    public int At(BuildingDef def, int unlockedTier) =>
+        Base + PerTier * (Math.Max(0, unlockedTier - def.Tier) / Math.Max(1, Every));
 }
 
 /// <summary>A progression tier: unlocking it costs money, needs lifetime earnings, and grows the plot.</summary>

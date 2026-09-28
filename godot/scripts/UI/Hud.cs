@@ -33,6 +33,7 @@ public partial class Hud : CanvasLayer
     private readonly List<Button> _heightButtons = new();
     private RichTextLabel _hints = null!;
     private Control _hintPanel = null!;
+    private Control _card = null!, _bottomRow = null!;
     private PanelContainer _cursorTip = null!;
     private Label _cursorText = null!;
     private readonly List<BuildingTile> _slots = new();
@@ -43,7 +44,7 @@ public partial class Hud : CanvasLayer
     private StatsPanel _stats = null!;
     private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!;
     private OrdersPanel _orders = null!;
-    private readonly List<HudWindow> _openWindows = new(); // most recently opened last (Esc closes it)
+    private readonly List<HudWindow> _openWindows = new(); // most recently opened last
     private TutorialPanel _tutorial = null!;
     private Button _progressButton = null!;
     private Control _ladder = null!;
@@ -199,6 +200,7 @@ public partial class Hud : CanvasLayer
         body.AddChild(_goalBar);
         var panel = Ui.Panel(body);
         panel.CustomMinimumSize = new Vector2(240, 0);
+        _card = panel;
         _root.AddChild(Ui.Anchor(panel, 0, 1, 12, -12, Control.GrowDirection.End, Control.GrowDirection.Begin));
     }
 
@@ -241,6 +243,7 @@ public partial class Hud : CanvasLayer
         _ladder = BuildHeightLadder();
         row.AddChild(_ladder);
         row.AddChild(col);
+        _bottomRow = row;
         _root.AddChild(Ui.Anchor(row, 0.5f, 1, 0, -12, Control.GrowDirection.Both, Control.GrowDirection.Begin));
     }
 
@@ -298,17 +301,18 @@ public partial class Hud : CanvasLayer
         AddWindow(_manage.Window);
 
         _progress = new ProgressPanel(() => _host.Execute(new UnlockTier()));
-        _progressWindow = new HudWindow("Progress", Icon.Progress, 340);
+        // Info windows stay open through Esc (it goes to the pause menu); P, O and I toggle them.
+        _progressWindow = new HudWindow("Progress", Icon.Progress, 340) { EscCloses = false };
         _progressWindow.Body.AddChild(_progress.Root);
         AddWindow(_progressWindow);
 
         _orders = new OrdersPanel(id => _host.Execute(new RerollContract(id)));
-        _ordersWindow = new HudWindow("Orders", Icon.Orders, 420);
+        _ordersWindow = new HudWindow("Orders", Icon.Orders, 420) { EscCloses = false };
         _ordersWindow.Body.AddChild(_orders.Root);
         AddWindow(_ordersWindow);
 
         _stats = new StatsPanel();
-        _statsWindow = new HudWindow("Statistics", Icon.Stats, 300);
+        _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
         _statsWindow.Body.AddChild(_stats.Root);
         AddWindow(_statsWindow);
 
@@ -428,7 +432,7 @@ public partial class Hud : CanvasLayer
             ("P", "Progress: tiers, limits, goals"), ("O", "Orders"),
             ("I", "Statistics"), ("Space", "Pause the simulation"),
             ("G", "Game menu"), ("F1", "This help"),
-            ("Esc (nothing to cancel)", "Pause menu"), ("", ""),
+            ("Esc (nothing to cancel)", "Pause menu (windows stay open)"), ("", ""),
             ("Click building", "Manage: upgrade, recipe"), ("Drag title bar", "Move a window"),
         };
         foreach (var (key, action) in keys)
@@ -586,7 +590,8 @@ public partial class Hud : CanvasLayer
             case Key.Escape:
                 if (_help.Visible) _help.Visible = false;
                 else if (_menu is { Root.Visible: true }) _menu.Root.Visible = false;
-                // The last opened window closes first; Manage closes with the selection (BuildController).
+                // Menus like the Game window close first; info windows stay open, and Manage closes
+                // with the selection (BuildController). With nothing left to cancel: pause menu.
                 else if (_openWindows.LastOrDefault(w => w != _manage.Window && w.EscCloses) is { } last) last.Close();
                 else handled = false;
                 RefreshToolState();
@@ -617,8 +622,14 @@ public partial class Hud : CanvasLayer
             _slots[i].Button.SetPressedNoSignal(_tools.Mode == ToolMode.Build && _tools.Tool?.Id == _hotbar[i]);
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;
-        _hints.Text = "[center]" + HintsFor() + "[/center]";
+        RefreshHints();
         _hintPanel.Visible = _menu is not { Root.Visible: true };
+    }
+
+    private void RefreshHints()
+    {
+        string text = "[center]" + HintsFor() + "[/center]";
+        if (_hints.Text != text) _hints.Text = text;
     }
 
     private string HintsFor()
@@ -628,7 +639,7 @@ public partial class Hud : CanvasLayer
             string.Join("    ", items.Select(i => $"{K(i.Key)} [color=#c9d2dd]{i.Action}[/color]"));
         return _tools.Mode switch
         {
-            ToolMode.Build => $"[color=#4fb6ff]{_tools.Tool?.Name}[/color] facing {_tools.Facing} · {BuildController.HeightName(_tools.Height).ToLowerInvariant()}    " +
+            ToolMode.Build => $"[color=#4fb6ff]{_tools.Tool?.Name}[/color] facing {_tools.ShownFacing} · {BuildController.HeightName(_tools.Height).ToLowerInvariant()}    " +
                               H(("LMB", "Place"), ("Drag", "Line"), ("R", "Rotate"), ("E/Q", "Height"), ("F", "Pick"), ("Esc", "Cancel")),
             ToolMode.Upgrade => H(("LMB", "Upgrade"), ("Shift+LMB", "Whole line"), ("Drag", "Upgrade area"), ("Esc", "Cancel")),
             ToolMode.Delete => H(("LMB", "Delete"), ("Drag", "Delete area"), ("Ctrl+Z", "Undo"), ("Esc", "Cancel")),
@@ -639,14 +650,24 @@ public partial class Hud : CanvasLayer
         };
     }
 
+    /// <summary>Centres the hotbar, but never over the factory card (narrow screens, large interface).</summary>
+    private void KeepBottomClear()
+    {
+        float width = _root.Size.X;
+        float left = Mathf.Max((width - _bottomRow.Size.X) / 2, _card.Position.X + _card.Size.X + 12);
+        _bottomRow.Position = _bottomRow.Position with { X = Mathf.Round(Mathf.Min(left, Mathf.Max(0, width - _bottomRow.Size.X - 12))) };
+    }
+
     public override void _Process(double delta)
     {
         if (_host?.Sim == null) return;
+        KeepBottomClear();
         UpdateCursorTip();
         _tutorial.Update(_host.Sim.World, delta);
         _refresh -= delta;
         if (_refresh > 0) return;
         _refresh = 0.15;
+        if (_tools.Mode == ToolMode.Build) RefreshHints(); // the facing follows the cursor (depots face their belt)
 
         var world = _host.Sim.World;
         _money.Text = "$ " + world.Money.Format();

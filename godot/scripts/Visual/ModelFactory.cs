@@ -600,6 +600,17 @@ public static partial class ModelFactory
             // Coin post.
             mb.Cylinder(Palette.Solid(Palette.Steel), new Vector3(0, 0.62f, 0), 0.03f, 0.28f, 6);
             Sockets(mb, def);
+
+            // A canopy over each input, so the side that takes items in reads at a glance.
+            foreach (var port in def.Ports)
+            {
+                var d = SideVector(port.Side);
+                Vector3 Across(float along, float h, float depth) => d.X == 0 ? new Vector3(along, h, depth) : new Vector3(depth, h, along);
+                mb.Box(Palette.Solid(accent.Darkened(0.2f)), d * 0.58f + new Vector3(0, 0.43f, 0), Across(0.72f, 0.05f, 0.26f), 0.015f);
+                mb.Box(Palette.Glow(Palette.PortIn, 1.3f), d * 0.715f + new Vector3(0, 0.43f, 0), Across(0.72f, 0.055f, 0.025f), 0f);
+                foreach (float side in new[] { -0.32f, 0.32f })
+                    mb.Box(Palette.Solid(Palette.Steel), d * 0.68f + Across(side, 0, 0) + new Vector3(0, 0.25f, 0), Across(0.04f, 0.36f, 0.04f), 0f);
+            }
             return mb.Commit();
         }));
 

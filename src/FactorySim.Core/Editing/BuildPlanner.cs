@@ -117,11 +117,36 @@ public sealed class BuildPlanner
         var plan = new BuildPlan();
         // Dropped onto exactly one building (a polisher onto a belt): keep that building's direction.
         if (World.CanPlaceReplacing(def, anchor, facing, _scratch).Ok && _scratch.Count == 1) facing = _scratch[0].Facing;
+        facing = FaceFeeder(def, anchor, facing);
         var here = World.EntityAt(anchor);
         bool same = here != null && here.Def == def && here.Pos == anchor;
         plan.Steps.Add(new PlanStep(same && here!.Facing == facing ? PlanAction.Keep : same ? PlanAction.Rotate : PlanAction.Place,
             def, anchor, facing, null));
         return plan;
+    }
+
+    /// <summary>
+    /// A building whose only port is one input (a depot) does nothing facing away from the
+    /// belt that runs into its cell, so it turns to take that belt in. <paramref name="facing"/>
+    /// is kept when it already does, or when nothing feeds the cell.
+    /// </summary>
+    public Dir FaceFeeder(BuildingDef def, GridPos anchor, Dir facing)
+    {
+        if (def.Footprint.Length != 1 || def.Ports.Length != 1 || def.InputPorts.Count != 1) return facing;
+        var side = def.Ports[0].Side;
+        var cell = anchor + def.Ports[0].Cell;
+        bool FedFrom(Dir d)
+        {
+            var e = World.EntityAt(cell.Step(d));
+            if (e == null) return false;
+            foreach (int p in e.Def.OutputPorts)
+                if (e.PortCell(p).Step(e.PortDir(p)) == cell) return true;
+            return false;
+        }
+        if (FedFrom(side.ToWorld(facing))) return facing;
+        for (int f = 0; f < 4; f++)
+            if (FedFrom(side.ToWorld((Dir)f))) return (Dir)f;
+        return facing;
     }
 
     /// <summary>A drag along <paramref name="cells"/> (from <see cref="LPath"/>). Non-line tools keep <paramref name="facing"/>.</summary>

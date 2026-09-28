@@ -34,7 +34,7 @@ public partial class SimHost : Node
     private const string OldSavePath = "user://factory_save.json";
 
     /// <summary>Enough for a first drill → smelter → depot line with a little to spare.</summary>
-    private static readonly BigNum StartingMoney = 150;
+    private static readonly BigNum StartingMoney = 200;
 
     private static readonly JsonSerializerOptions MetaJson = new() { WriteIndented = true };
 
