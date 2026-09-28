@@ -41,6 +41,9 @@ public sealed class ContentRegistry
     /// <summary>Long-term goals in declaration order.</summary>
     public IReadOnlyList<MilestoneDef> Milestones { get; }
 
+    /// <summary>Money a new game starts with.</summary>
+    public BigNum StartingMoney { get; }
+
     private ContentRegistry(
         BehaviorRegistry behaviors,
         List<ItemDef> items,
@@ -48,9 +51,11 @@ public sealed class ContentRegistry
         List<RecipeDef> recipes,
         List<UpgradeDef> upgrades,
         List<TierDef> tiers,
-        List<MilestoneDef> milestones)
+        List<MilestoneDef> milestones,
+        BigNum startingMoney)
     {
         Milestones = milestones;
+        StartingMoney = startingMoney;
         Behaviors = behaviors;
         Items = items.ToDictionary(x => x.Id);
         Buildings = buildings.ToDictionary(x => x.Id);
@@ -90,8 +95,10 @@ public sealed class ContentRegistry
         var upgrades = new OrderedById<UpgradeDef>(x => x.Id);
         var tiers = new List<TierDef>();
         var milestones = new OrderedById<MilestoneDef>(x => x.Id);
+        BigNum startingMoney = 0;
         foreach (var pack in packs)
         {
+            if (pack.StartingMoney is BigNum money) startingMoney = money;
             if (pack.Tiers.Count > 0)
             {
                 tiers.Clear();
@@ -104,7 +111,7 @@ public sealed class ContentRegistry
             pack.Milestones.ForEach(milestones.Put);
         }
 
-        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List);
+        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List, startingMoney);
         registry.Validate();
         return registry;
     }

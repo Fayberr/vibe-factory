@@ -242,6 +242,9 @@ public sealed class MilestoneDef
 
 public sealed class ContentPack
 {
+    /// <summary>Money a new game starts with; the last pack that sets it wins.</summary>
+    public BigNum? StartingMoney { get; init; }
+
     public List<ItemDef> Items { get; init; } = new();
     public List<BuildingDef> Buildings { get; init; } = new();
     public List<RecipeDef> Recipes { get; init; } = new();

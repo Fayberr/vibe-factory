@@ -38,7 +38,7 @@ public class BuildPlannerTests
         Assert.Equal("ramp_down", sim.World.EntityAt(new GridPos(6, 3, 0))!.Def.Id);
         Assert.Equal(Dir.South, sim.World.EntityAt(new GridPos(5, 3, 0))!.Facing); // crossed belt untouched
 
-        sim.Step(20 * 20);
+        sim.Step(20 * 30); // the bridged line is ~9 tiles long: ~9 s before its first sale
         var sold = sim.DrainEvents().OfType<ItemSold>().GroupBy(s => sim.World.GetEntity(s.EntityId)!.Pos).ToDictionary(g => g.Key, g => g.Sum(s => s.Count));
         Assert.True(sold.GetValueOrDefault(new GridPos(5, 6, 0)) >= 15, "the crossed line still delivers");
         Assert.True(sold.GetValueOrDefault(new GridPos(9, 3, 0)) >= 15, "the bridged line delivers");

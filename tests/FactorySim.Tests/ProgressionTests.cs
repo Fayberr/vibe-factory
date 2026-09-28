@@ -25,7 +25,7 @@ public class ProgressionTests
         var polisher = sim.World.EntityAt(carrying.Pos)!;
         Assert.Equal("polisher", polisher.Def.Id);
         Assert.Single(((ConveyorState)polisher.State).Items);                      // the ore rode along
-        Assert.Equal((moneyBefore - 150 + 1).ToDouble(), sim.World.Money.ToDouble(), 6); // belt refunded
+        Assert.Equal((moneyBefore - 150 + 10).ToDouble(), sim.World.Money.ToDouble(), 6); // belt refunded
     }
 
     [Fact]
@@ -101,13 +101,13 @@ public class ProgressionTests
     }
 
     [Fact]
-    public void Belts_cap_at_level_five_where_they_reach_full_speed()
+    public void Belts_cap_at_level_nine_where_they_reach_full_speed()
     {
         var sim = TestUtil.NewSim();
         sim.Place("conveyor", 0, 0, 0, Dir.East);
-        Assert.True(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(0, 0, 0), 5) })).Ok);
-        Assert.False(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(0, 0, 0), 6) })).Ok);
-        Assert.Equal(2.5, sim.World.EntityAt(new GridPos(0, 0, 0))!.SpeedFactor, 9);
+        Assert.True(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(0, 0, 0), 9) })).Ok);
+        Assert.False(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(0, 0, 0), 10) })).Ok);
+        Assert.Equal(5.0, sim.World.EntityAt(new GridPos(0, 0, 0))!.SpeedFactor, 9);
     }
 
     [Fact]
@@ -117,13 +117,13 @@ public class ProgressionTests
         sim.Place("fast_miner", 0, 0, 0, Dir.East);
         sim.Line(new GridPos(1, 0, 0), Dir.East, 4);
         sim.Place("seller", 5, 0, 0, Dir.East);
-        var cells = Enumerable.Range(1, 4).Select(x => new LevelChange(new GridPos(x, 0, 0), 5)).ToList();
+        var cells = Enumerable.Range(1, 4).Select(x => new LevelChange(new GridPos(x, 0, 0), 9)).ToList();
         Assert.True(sim.Execute(new SetBuildingLevels(cells)).Ok);
 
         sim.Step(200);
         long before = sim.Sold("iron_ore");
         sim.Step(1000);
-        Assert.InRange(sim.Sold("iron_ore") - before, 990, 1001); // spacing-limited: 1 per tick (vs 0.4 at level 1)
+        Assert.InRange(sim.Sold("iron_ore") - before, 990, 1001); // spacing-limited: 1 per tick (vs 0.2 at level 1)
     }
 
     [Fact]

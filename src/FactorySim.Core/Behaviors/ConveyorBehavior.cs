@@ -79,9 +79,9 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
         Require(p.Effect == null || p.Effect.Tag.Length > 0, def, "effect needs a tag.");
     }
 
-    /// <summary>Belts cap at level 5, where speed reaches spacing (the physical limit: 2.5× base).</summary>
+    /// <summary>Level 9 is 5× the base speed: for a belt built at a fifth of its spacing, the physical limit.</summary>
     public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
-        new() { MaxLevel = 5, SpeedPerLevel = 0.375, CostFactor = 3, CostGrowth = 2.2 };
+        new() { MaxLevel = 9, SpeedPerLevel = 0.5, CostFactor = 3, CostGrowth = 2 };
 
     /// <summary>Effective speed; capped at Spacing so at most one item crosses an edge per tick.</summary>
     public static int EffectiveSpeed(TickContext ctx, Entity e, ConveyorParams p) =>

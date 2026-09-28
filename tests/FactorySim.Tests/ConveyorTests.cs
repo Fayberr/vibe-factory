@@ -5,7 +5,7 @@ namespace FactorySim.Tests;
 public class ConveyorTests
 {
     [Fact]
-    public void Items_travel_exactly_one_tile_per_ten_ticks()
+    public void Items_travel_exactly_one_tile_per_twenty_ticks()
     {
         var sim = TestUtil.NewSim();
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
@@ -24,8 +24,8 @@ public class ConveyorTests
         }
 
         Assert.Equal(19, produced); // 20 ticks of work at rate 1
-        // speed 100 units/tick, 1000 units/tile → 10 ticks per tile, no loss at tile edges.
-        Assert.Equal(produced + 3 * 10, sold);
+        // speed 50 units/tick, 1000 units/tile → 20 ticks per tile, no loss at tile edges.
+        Assert.Equal(produced + 3 * 20, sold);
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class ConveyorTests
         sim.Step(1000);
         long sold = sim.Sold("iron_ore") - before;
 
-        // speed 100 / spacing 250 = 0.4 items per tick.
-        Assert.InRange(sold, 399, 401);
+        // speed 50 / spacing 250 = 0.2 items per tick (4 per second).
+        Assert.InRange(sold, 199, 201);
     }
 
     [Fact]
@@ -92,9 +92,10 @@ public class ConveyorTests
         sim.Step(20 * 60);
 
         var stats = sim.World.Stats;
-        Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 50);  // line A went over the bridge
-        Assert.True(stats.Sold.GetValueOrDefault("copper_wire") > 50); // line B went under it
-        Assert.True(stats.Sold.GetValueOrDefault("crate") > 10);       // line C merged planks and plates
+        string sold = string.Join(", ", stats.Sold.Select(kv => $"{kv.Key}={kv.Value}"));
+        Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 40, sold);  // line A went over the bridge (~11 tiles: ~11 s to the first sale)
+        Assert.True(stats.Sold.GetValueOrDefault("copper_wire") > 50, sold); // line B went under it
+        Assert.True(stats.Sold.GetValueOrDefault("crate") > 10, sold);       // line C merged planks and plates
         Assert.Equal(0, stats.Sold.GetValueOrDefault("iron_ore"));      // nothing leaked across lines
         Assert.Equal(0, stats.Sold.GetValueOrDefault("copper_ore"));
     }

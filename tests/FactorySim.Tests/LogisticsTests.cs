@@ -19,7 +19,7 @@ public class LogisticsTests
         Assert.Equal(Side.Left, ConveyorBehavior.CurveSide(corner));
         Assert.Equal(PathKind.CurveLeft, TransportPath.ShapeOf(corner).Kind);
 
-        // Items enter the curve at its start (not mid-tile) → 10 ticks per tile, like straight belts.
+        // Items enter the curve at its start (not mid-tile) → 20 ticks per tile, like straight belts.
         long? produced = null, sold = null;
         for (int t = 0; t < 200 && sold == null; t++)
         {
@@ -30,7 +30,7 @@ public class LogisticsTests
                 if (ev is ItemSold s) sold = s.Tick;
             }
         }
-        Assert.Equal(produced + 2 * 10, sold);
+        Assert.Equal(produced + 2 * 20, sold);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class LogisticsTests
         var perSeller = sim.DrainEvents().OfType<ItemSold>().GroupBy(s => s.EntityId).Select(g => g.Count()).ToList();
         Assert.Equal(3, perSeller.Count);
         Assert.True(perSeller.Max() - perSeller.Min() <= 1, string.Join(",", perSeller));
-        Assert.True(perSeller.Sum() > 380); // full belt throughput passes through
+        Assert.True(perSeller.Sum() > 190); // full belt throughput (0.2 items/tick) passes through
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class LogisticsTests
         sim.Step(400);
         long before = sim.Sold("iron_ore");
         sim.Step(1000);
-        Assert.InRange(sim.Sold("iron_ore") - before, 390, 401); // everything goes to the free branch
+        Assert.InRange(sim.Sold("iron_ore") - before, 195, 201); // everything goes to the free branch
     }
 
     [Fact]
@@ -116,7 +116,43 @@ public class LogisticsTests
         var byProducer = sim.DrainEvents().OfType<ItemProduced>().GroupBy(p => p.EntityId).Select(g => g.Sum(p => p.Count)).ToList();
         Assert.Equal(2, byProducer.Count);
         Assert.True(Math.Abs(byProducer[0] - byProducer[1]) <= 4, string.Join(",", byProducer));
-        Assert.InRange(byProducer.Sum(), 790, 810); // output belt saturated: 0.4 items/tick
+        Assert.InRange(byProducer.Sum(), 395, 405); // output belt saturated: 0.2 items/tick
+    }
+
+    [Fact]
+    public void Merger_is_a_throughput_gate_that_widens_with_levels()
+    {
+        // Three saturated lines into a merger that feeds a depot directly: the merger alone sets the pace.
+        long Throughput(int level)
+        {
+            var sim = TestUtil.NewSim(TestUtil.FastContent);
+            sim.Place("fast_miner", 0, 2, 0, Dir.East);  // back
+            sim.Place("conveyor", 1, 2, 0, Dir.East);
+            sim.Place("fast_miner", 2, 0, 0, Dir.South); // left
+            sim.Place("conveyor", 2, 1, 0, Dir.South);
+            sim.Place("fast_miner", 2, 4, 0, Dir.North); // right
+            sim.Place("conveyor", 2, 3, 0, Dir.North);
+            sim.Place("merger", 2, 2, 0, Dir.East);
+            sim.Place("seller", 3, 2, 0, Dir.East);
+            foreach (var pos in new[] { new GridPos(1, 2, 0), new GridPos(2, 1, 0), new GridPos(2, 3, 0) })
+                Assert.True(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(pos, 9) })).Ok); // maxed feeds
+            if (level > 1)
+                Assert.True(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(2, 2, 0), level) })).Ok);
+
+            sim.Step(200);
+            long before = sim.Sold("iron_ore");
+            sim.Step(2000);
+            return sim.Sold("iron_ore") - before;
+        }
+
+        // Level 1: speed 50 / spacing 200 = 0.25 items/tick (5/s), a quarter above a level-1 belt,
+        // even though the three maxed input belts could bring 60/s.
+        Assert.InRange(Throughput(1), 495, 505);
+        // Level 3: twice the speed.
+        Assert.InRange(Throughput(3), 995, 1005);
+        // Level 7 (the max) reaches the physical cap, speed = spacing: one item per tick (20/s).
+        Assert.InRange(Throughput(7), 1995, 2001);
+        Assert.Equal(7, TestUtil.Content.Building("merger").Upgrade!.MaxLevel);
     }
 
     [Fact]

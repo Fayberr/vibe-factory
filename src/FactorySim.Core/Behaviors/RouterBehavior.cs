@@ -59,7 +59,7 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         Math.Clamp((int)(p.Speed * ctx.Stat(StatIds.ConveyorSpeed) * e.SpeedFactor), 1, p.Spacing);
 
     public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
-        new() { MaxLevel = 5, SpeedPerLevel = 0.375, CostFactor = 1.5, CostGrowth = 2.2 };
+        new() { MaxLevel = 9, SpeedPerLevel = 0.5, CostFactor = 1.5, CostGrowth = 2.2 };
 
     protected override void Tick(TickContext ctx, Entity e, RouterParams p, RouterState s)
     {
@@ -162,6 +162,8 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         int ins = e.Def.InputPorts.Count(e.IsInputFed);
         int outs = e.Def.OutputPorts.Count(o => e.Link(o).IsConnected);
         into.Add(new InfoLine("Connected", $"{ins} in / {outs} out"));
+        double speed = Math.Min(p.Speed * e.SpeedFactor, p.Spacing);
+        into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
         into.Add(new InfoLine("Inside", s.Items.Count.ToString()));
     }
 }

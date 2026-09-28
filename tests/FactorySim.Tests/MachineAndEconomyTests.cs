@@ -83,8 +83,8 @@ public class MachineAndEconomyTests
         var sales = sim.DrainEvents().OfType<ItemSold>().ToList();
         Assert.All(sales, s => Assert.InRange(s.Count, 1, 4));
         Assert.Contains(sales, s => s.Count == 4);
-        // Belt still moves ≤ 0.4 bundles/tick, but each bundle now carries 4 units.
-        Assert.True(sim.Sold("iron_ore") > 0.4 * 300 * 3);
+        // Belt still moves ≤ 0.2 bundles/tick, but each bundle now carries 4 units.
+        Assert.True(sim.Sold("iron_ore") > 0.2 * 300 * 3);
     }
 
     [Fact]

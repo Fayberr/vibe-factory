@@ -7,7 +7,7 @@ public class TutorialTests
     [Fact]
     public void The_tutorial_can_be_played_through_with_the_starting_money()
     {
-        var sim = TestUtil.NewSim(sandbox: false, money: 200); // SimHost.StartingMoney
+        var sim = TestUtil.NewSim(sandbox: false, money: TestUtil.Content.StartingMoney);
         var steps = Tutorial.Steps.ToDictionary(s => s.Id);
         bool Done(string id) => steps[id].Done!(sim.World);
 

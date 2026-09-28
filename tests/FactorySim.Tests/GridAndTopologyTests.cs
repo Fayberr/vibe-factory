@@ -38,7 +38,7 @@ public class GridAndTopologyTests
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 100);
         sim.Place("ramp_up", 1, 1, 0, Dir.North);
-        Assert.Equal(95, sim.World.Money.ToDouble(), 9);
+        Assert.Equal(75, sim.World.Money.ToDouble(), 9);
 
         Assert.True(sim.Execute(new RemoveBuilding(new GridPos(1, 1, 1))).Ok); // remove via upper cell
         Assert.Null(sim.World.EntityAt(new GridPos(1, 1, 0)));

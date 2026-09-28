@@ -13,6 +13,9 @@
 //   model   procedural 3D model in the Godot client; accent = highlight colour
 //   glyph   ASCII view; description = build menu text; items: color + shape (mesh).
 {
+  // Money a new game starts with: a first drill, belt, smelter and depot line, with a little to spare.
+  "startingMoney": 250,
+
   "tiers": [
     { "name": "Basics",         "description": "Drill, smelt, sell.",                          "cost": 0,     "requiredEarnings": 0,     "plotSize": 24 },
     { "name": "Workshop",       "description": "Copper, wood, presses and polishers.",         "cost": 500,   "requiredEarnings": 750,   "plotSize": 30 },
@@ -78,57 +81,66 @@
 
   "buildings": [
     // ---- Logistics -----------------------------------------------------------------
+    // Throughput = speed × 20 / spacing items per second. Speed is capped at spacing, so nothing
+    // moves more than one item per tick (20/s). Belts: 4/s at level 1, 20/s at level 9.
+    // Splitters match belts. Mergers run a quarter faster (5/s at level 1) and reach 20/s at
+    // level 7, so the belt after a merger is what sets the pace.
     {
-      "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 1, "category": "logistics", "tier": 0,
+      "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 10, "category": "logistics", "tier": 0,
       "group": "belt", "replaces": [ "belt" ],
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
         { "kind": "out", "side": "front" }
       ],
-      "params": { "speed": 100, "spacing": 250 },
+      "upgrade": { "maxLevel": 9, "speedPerLevel": 0.5, "costFactor": 3, "costGrowth": 2 },
+      "params": { "speed": 50, "spacing": 250 },
       "meta": { "model": "belt", "glyph": "belt", "description": "Moves items. Curves when fed from one side. Drag to lay a line; dragging across another belt bridges over it." }
     },
     {
       // Occupies its cell and the one above; enters low at the back, leaves one level up at the front.
-      "id": "ramp_up", "name": "Ramp Up", "behavior": "conveyor", "cost": 5, "category": "logistics", "tier": 0,
+      "id": "ramp_up", "name": "Ramp Up", "behavior": "conveyor", "cost": 25, "category": "logistics", "tier": 0,
       "group": "ramp", "replaces": [ "belt", "ramp" ],
       "footprint": [ [0, 0, 0], [0, 0, 1] ],
       "ports": [
         { "kind": "in", "side": "back", "cell": [0, 0, 0] },
         { "kind": "out", "side": "front", "cell": [0, 0, 1] }
       ],
-      "params": { "speed": 100, "spacing": 250 },
+      "upgrade": { "maxLevel": 9, "speedPerLevel": 0.5, "costFactor": 3, "costGrowth": 2 },
+      "params": { "speed": 50, "spacing": 250 },
       "meta": { "model": "ramp", "glyph": "U", "description": "Lifts items one level. Belts one level up are bridges: other lines pass underneath." }
     },
     {
-      "id": "ramp_down", "name": "Ramp Down", "behavior": "conveyor", "cost": 5, "category": "logistics", "tier": 0,
+      "id": "ramp_down", "name": "Ramp Down", "behavior": "conveyor", "cost": 25, "category": "logistics", "tier": 0,
       "group": "ramp", "replaces": [ "belt", "ramp" ],
       "footprint": [ [0, 0, 0], [0, 0, 1] ],
       "ports": [
         { "kind": "in", "side": "back", "cell": [0, 0, 1] },
         { "kind": "out", "side": "front", "cell": [0, 0, 0] }
       ],
-      "params": { "speed": 100, "spacing": 250 },
+      "upgrade": { "maxLevel": 9, "speedPerLevel": 0.5, "costFactor": 3, "costGrowth": 2 },
+      "params": { "speed": 50, "spacing": 250 },
       "meta": { "model": "ramp", "glyph": "D", "description": "Brings items down one level. Placed on the ground it lands on the ground." }
     },
     {
-      "id": "splitter", "name": "Splitter", "behavior": "router", "cost": 15, "category": "logistics", "tier": 0,
+      "id": "splitter", "name": "Splitter", "behavior": "router", "cost": 200, "category": "logistics", "tier": 0,
       "group": "hub", "replaces": [ "belt", "hub" ],
       "ports": [
         { "kind": "in", "side": "back" },
         { "kind": "out", "side": "front" }, { "kind": "out", "side": "left" }, { "kind": "out", "side": "right" }
       ],
-      "params": { "speed": 100, "spacing": 250 },
+      "upgrade": { "maxLevel": 9, "speedPerLevel": 0.5, "costFactor": 1.5, "costGrowth": 2.2 },
+      "params": { "speed": 50, "spacing": 250 },
       "meta": { "model": "splitter", "glyph": "Y", "accent": "#4fb6ff", "description": "Distributes items evenly over up to three outputs; skips blocked ones. Drop it onto a belt." }
     },
     {
-      "id": "merger", "name": "Merger", "behavior": "router", "cost": 15, "category": "logistics", "tier": 0,
+      "id": "merger", "name": "Merger", "behavior": "router", "cost": 200, "category": "logistics", "tier": 0,
       "group": "hub", "replaces": [ "belt", "hub" ],
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
         { "kind": "out", "side": "front" }
       ],
-      "params": { "speed": 100, "spacing": 250 },
+      "upgrade": { "maxLevel": 7, "speedPerLevel": 0.5, "costFactor": 1.5, "costGrowth": 2.2 },
+      "params": { "speed": 50, "spacing": 200 },
       "meta": { "model": "merger", "glyph": "X", "accent": "#ffb347", "description": "Joins up to three lines fairly into one. Drop it onto a belt." }
     },
 

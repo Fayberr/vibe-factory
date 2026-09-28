@@ -33,9 +33,6 @@ public partial class SimHost : Node
     private const string SaveDir = "user://saves";
     private const string OldSavePath = "user://factory_save.json";
 
-    /// <summary>Enough for a first drill → smelter → depot line with a little to spare.</summary>
-    private static readonly BigNum StartingMoney = 200;
-
     private static readonly JsonSerializerOptions MetaJson = new() { WriteIndented = true };
 
     private readonly List<SimEvent> _events = new();
@@ -152,7 +149,7 @@ public partial class SimHost : Node
     public void NewGame(bool withDemo, int slot = 0, string? name = null)
     {
         Content ??= ContentRegistry.LoadDefault();
-        var sim = Simulation.CreateNew(Content, StartingMoney, seed: (uint)Random.Shared.Next());
+        var sim = Simulation.CreateNew(Content, Content.StartingMoney, seed: (uint)Random.Shared.Next());
         if (withDemo) DemoLayout.Build(sim, new GridPos(8, 8, 0));
         Slot = slot;
         FactoryName = name ?? (slot > 0 ? $"Factory {slot}" : "");

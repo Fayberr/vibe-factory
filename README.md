@@ -134,13 +134,15 @@ their choice.
   first robot, first satellite, a trillion earned…), each with a cash reward. The Progress
   window shows the next four with progress bars.
 - **Per-building upgrades.** There are no global upgrades. Every building has its own
-  level: drills and machines get faster (machines also add a little value), belts get
-  faster up to level 5, market depots pay more. Ten drills means ten upgrades. Levels
-  show as coloured trims (bronze, silver, gold, cyan, violet) and are kept by copy/paste.
+  level: drills and machines get faster (machines also add a little value), belts and
+  splitters go from 4 to 20 items/s over 9 levels, mergers from 5 to 20 over 7, market
+  depots pay more. Ten drills means ten upgrades. Levels show as coloured trims (bronze,
+  silver, gold, cyan, violet) and are kept by copy/paste.
 - **Raw resources sell for 25%.** Processing is what pays: an ingot sells for 8× what its
   ore fetches raw, and a robot is worth about 1600 iron ore.
 - **Build limits.** Extractors and depots are capped per tier (for example 4 iron drills
-  at the start and 2 more with every tier). Belts and machines are unlimited.
+  at the start and 2 more with every tier). Belts and machines are unlimited,
+  but logistics is not free: a belt tile costs $10, a ramp $25, a splitter or merger $200.
 - **Depots are the bottleneck.** A Market Depot costs $50, takes items in through one side
   only (the blue side, under its green canopy) and there are few of them: 2 at the start,
   one more every second tier. So instead of a depot per drill, you merge lines into them.
@@ -150,7 +152,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (128)
+dotnet test                                                     # core and save-file tests (129)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit
