@@ -19,7 +19,8 @@ public static class ItemMeshes
         "barrel" => 0.01f,
         "motor" => 0.08f,
         "gem" => 0.1f,
-        "toy" or "robot" => 0.01f,
+        "toy" or "robot" or "satellite" => 0.01f,
+        "drone" => 0.04f,
         _ => 0.11f,
     };
 
@@ -86,6 +87,12 @@ public static class ItemMeshes
             case "robot":
                 Robot(mb, mat);
                 break;
+            case "drone":
+                Drone(mb, mat);
+                break;
+            case "satellite":
+                Satellite(mb, mat);
+                break;
             default:
                 mb.Box(mat, Vector3.Zero, new Vector3(0.22f, 0.22f, 0.22f), 0.03f);
                 break;
@@ -125,6 +132,32 @@ public static class ItemMeshes
         foreach (int sz in new[] { -1, 1 })
             mb.With(new Transform3D(new Basis(Vector3.Right, Mathf.Pi / 2), new Vector3(sx * 0.07f, 0.035f, sz * 0.07f)),
                 b => b.Cylinder(m, new Vector3(0, -0.015f, 0), 0.035f, 0.03f, 8, capBottom: true));
+    }
+
+    /// <summary>Quadcopter: a body, four arms and four rotor discs.</summary>
+    private static void Drone(MeshBuilder mb, Material m)
+    {
+        mb.Box(m, Vector3.Zero, new Vector3(0.1f, 0.05f, 0.1f), 0.015f);
+        foreach (int sx in new[] { -1, 1 })
+        foreach (int sz in new[] { -1, 1 })
+        {
+            var tip = new Vector3(sx * 0.1f, 0.01f, sz * 0.1f);
+            mb.Beam(m, Vector3.Zero, tip, 0.02f);
+            mb.Cylinder(m, tip + new Vector3(0, 0.015f, 0), 0.05f, 0.008f, 10);
+        }
+    }
+
+    /// <summary>Satellite: a body, two solar panels and a dish.</summary>
+    private static void Satellite(MeshBuilder mb, Material m)
+    {
+        mb.Box(m, new Vector3(0, 0.08f, 0), new Vector3(0.09f, 0.12f, 0.09f), 0.01f);
+        foreach (int sx in new[] { -1, 1 })
+        {
+            mb.Beam(m, new Vector3(sx * 0.045f, 0.09f, 0), new Vector3(sx * 0.08f, 0.09f, 0), 0.012f);
+            mb.Box(m, new Vector3(sx * 0.15f, 0.09f, 0), new Vector3(0.14f, 0.008f, 0.08f), 0f);
+        }
+        mb.Cylinder(m, new Vector3(0, 0.14f, 0), 0.01f, 0.03f, 6);
+        mb.Cylinder(m, new Vector3(0, 0.16f, 0), 0.02f, 0.03f, 10, topRadius: 0.05f);
     }
 
     /// <summary>Boxy robot: legs, torso, arms and a head with an antenna.</summary>

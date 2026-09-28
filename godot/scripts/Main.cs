@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -8,16 +9,21 @@ public partial class Main : Node3D
 {
     public override void _Ready()
     {
+        var settings = GameSettings.Load();
         var host = new SimHost { Name = "SimHost" };
         var view = new WorldView { Name = "WorldView" };
         var camera = new CameraRig { Name = "CameraRig" };
         var tools = new BuildController { Name = "BuildController" };
         var thumbs = new Thumbnails { Name = "Thumbnails" };
-        var hud = new Hud { Name = "Hud" };
+        var hud = new Hud { Name = "Hud", Settings = settings };
+        var audio = new AudioManager { Name = "Audio", ProcessMode = ProcessModeEnum.Always };
+        var menus = new MenuLayer { Name = "Menus" };
+        var flow = new GameFlow { Name = "GameFlow", Host = host, Hud = hud, Tools = tools, Camera = camera, View = view, Menus = menus, Audio = audio, Settings = settings };
         // Wire before entering the tree: _Ready() of each node may already use its collaborators.
         view.Init(host);
         tools.Init(host, camera, view);
         hud.Init(host, tools, thumbs);
+        menus.Init(flow, settings);
         host.WorldReplaced += () => camera.Focus(FocusPoint(host.Sim.World), instant: true);
 
         AddChild(host);
@@ -25,20 +31,27 @@ public partial class Main : Node3D
         AddChild(camera);
         AddChild(tools);
         AddChild(thumbs);
+        AddChild(audio);
+        AddChild(flow);
+        AddChild(menus);
         AddChild(hud); // last: gets unhandled input first (hotbar/menu keys)
+        audio.Hook(host);
+        flow.Apply();
 
         var args = OS.GetCmdlineUserArgs();
         host.Autosave = System.Array.IndexOf(args, "--ui-test") < 0 && System.Array.IndexOf(args, "--smoke") < 0;
-        hud.AutoStartTutorial = host.Autosave; // scripted runs never pop up the tutorial
+        hud.AutoStartTutorial = host.Autosave; // scripted runs never touch the player's settings
+        flow.PersistSettings = host.Autosave;
         if (System.Array.IndexOf(args, "--ui-test") >= 0)
         {
-            AddChild(new UiScenario { Name = "UiScenario", Host = host, Tools = tools, Camera = camera, View = view, Hud = hud });
+            settings.TutorialDone = true; // in memory only: the scripted run opens the tutorial itself
+            AddChild(new UiScenario { Name = "UiScenario", Host = host, Tools = tools, Camera = camera, View = view, Hud = hud, Flow = flow, Menus = menus });
             return;
         }
 
-        bool smoke = System.Array.IndexOf(args, "--smoke") >= 0;
-        host.Start(loadSave: !smoke);
-        if (smoke) RunSmokeTest(host, camera, tools, hud);
+        host.Init();
+        if (System.Array.IndexOf(args, "--smoke") >= 0) RunSmokeTest(host, camera, tools, hud, flow, audio, menus);
+        else flow.ShowTitle();
     }
 
     /// <summary>Centre of the built area, or of the plot's first 16×16 cells when empty.</summary>
@@ -54,8 +67,18 @@ public partial class Main : Node3D
     /// `godot --headless -- --smoke`: build the demo, run at 16×, print stats, quit (CI check).
     /// With `--showcase` it lays out every building and item instead (for checking the models).
     /// </summary>
-    private void RunSmokeTest(SimHost host, CameraRig camera, BuildController tools, Hud hud)
+    private void RunSmokeTest(SimHost host, CameraRig camera, BuildController tools, Hud hud, GameFlow flow, AudioManager audio, MenuLayer menus)
     {
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--title") >= 0)
+        {
+            // The title screen over its live backdrop (for screenshots).
+            flow.ShowTitle();
+            foreach (var arg in OS.GetCmdlineUserArgs())
+                if (arg.StartsWith("--menu=")) menus.OpenWindow(arg["--menu=".Length..]);
+            ScreenshotAndQuit(host, 4.0, requireEarnings: false);
+            return;
+        }
+        audio.PlayGameMusic();
         bool showcase = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--showcase") >= 0;
         bool tutorial = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--tutorial") >= 0;
         host.NewGame(withDemo: !showcase && !tutorial);
@@ -67,16 +90,20 @@ public partial class Main : Node3D
             hud.Tutorial.Next();
         }
         host.TimeScale = 16;
-        string? screenshot = null;
         double wait = 3.0;
         foreach (var arg in OS.GetCmdlineUserArgs())
         {
-            if (arg.StartsWith("--screenshot=")) screenshot = arg["--screenshot=".Length..];
             if (arg.StartsWith("--wait=")) wait = double.Parse(arg["--wait=".Length..], System.Globalization.CultureInfo.InvariantCulture);
+            if (arg == "--pause") GetTree().CreateTimer(Math.Max(0.5, wait - 1)).Timeout += flow.Pause;
             if (arg == "--windows")
             {
                 hud.ProgressWindow.Visible = true;
                 hud.StatsWindow.Visible = true;
+            }
+            if (arg == "--orders")
+            {
+                hud.ProgressWindow.Visible = true;
+                hud.OrdersWindow.Visible = true;
             }
             if (arg.StartsWith("--select="))
             {
@@ -92,13 +119,22 @@ public partial class Main : Node3D
             }
         }
 
-        GetTree().CreateTimer(wait).Timeout += () =>
+        ScreenshotAndQuit(host, wait, requireEarnings: !showcase && !tutorial);
+    }
+
+    /// <summary>After <paramref name="wait"/> s: print stats, save --screenshot=path if given, quit (1 if nothing was earned).</summary>
+    private void ScreenshotAndQuit(SimHost host, double wait, bool requireEarnings)
+    {
+        string? screenshot = null;
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--screenshot=")) screenshot = arg["--screenshot=".Length..];
+        GetTree().CreateTimer(wait, processAlways: true).Timeout += () =>
         {
             var w = host.Sim.World;
             GD.Print($"SMOKE: {w.EntityCount} buildings, {w.Tick} ticks, money {w.Money.Format()}, " +
                      $"income {w.Stats.IncomePerSecond(10).Format()}/s");
             if (screenshot != null) GetViewport().GetTexture().GetImage().SavePng(screenshot);
-            GetTree().Quit(w.Stats.TotalEarned.IsZero && !showcase && !tutorial ? 1 : 0);
+            GetTree().Quit(requireEarnings && w.Stats.TotalEarned.IsZero ? 1 : 0);
         };
     }
 

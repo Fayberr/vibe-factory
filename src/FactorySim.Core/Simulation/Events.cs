@@ -17,6 +17,10 @@ public sealed record UpgradePurchased(long Tick, string UpgradeId, int Level, Bi
 public sealed record EntityLevelChanged(long Tick, int EntityId, int Level) : SimEvent(Tick);
 public sealed record EntitySelectionChanged(long Tick, int EntityId, string? Selection) : SimEvent(Tick);
 public sealed record TierUnlocked(long Tick, int Tier, string Name) : SimEvent(Tick);
+public sealed record ContractOffered(long Tick, Contract Contract) : SimEvent(Tick);
+public sealed record ContractCompleted(long Tick, Contract Contract) : SimEvent(Tick);
+public sealed record ContractExpired(long Tick, Contract Contract) : SimEvent(Tick);
+public sealed record MilestoneReached(long Tick, string Id, string Name, BigNum Reward) : SimEvent(Tick);
 
 /// <summary>Bounded buffer of pending events. Oldest events are dropped if nobody drains it.</summary>
 public sealed class EventQueue

@@ -47,6 +47,9 @@ public sealed record SetBuildingLevels(IReadOnlyList<LevelChange> Changes) : Com
 /// </summary>
 public sealed record SelectRecipe(GridPos Cell, string? Recipe) : Command;
 
+/// <summary>Swaps an open contract for a new one, for a fee (a tenth of its reward).</summary>
+public sealed record RerollContract(int ContractId) : Command;
+
 /// <summary>Unlocks the next progression tier (needs lifetime earnings and money).</summary>
 public sealed record UnlockTier : Command;
 

@@ -19,7 +19,9 @@
     { "name": "Industry",       "description": "Coal, steel, sand, glass and crates.",         "cost": 6000,  "requiredEarnings": 1e4,   "plotSize": 36 },
     { "name": "Petrochemicals", "description": "Oil, plastic, toys and export terminals.",     "cost": 8e4,   "requiredEarnings": 1.5e5, "plotSize": 44 },
     { "name": "Electronics",    "description": "Gold, circuits, motors and jewelry.",          "cost": 1e6,   "requiredEarnings": 2e6,   "plotSize": 52 },
-    { "name": "Robotics",       "description": "Robots: the crown of the chain.",              "cost": 1.5e7, "requiredEarnings": 3e7,   "plotSize": 64 }
+    { "name": "Robotics",       "description": "Robots from motors, circuits and glass.",      "cost": 1.5e7, "requiredEarnings": 3e7,   "plotSize": 64 },
+    { "name": "Aerospace",      "description": "Bauxite, aluminium and drones.",               "cost": 1.2e8, "requiredEarnings": 2.5e8, "plotSize": 72 },
+    { "name": "Space",          "description": "Rocket fuel and satellites.",                  "cost": 2e9,   "requiredEarnings": 4e9,   "plotSize": 80 }
   ],
 
   "items": [
@@ -30,6 +32,7 @@
     { "id": "sand",         "name": "Sand",         "baseValue": 3,   "raw": true, "meta": { "color": "#e4cc92", "shape": "pile" } },
     { "id": "crude_oil",    "name": "Crude Oil",    "baseValue": 25,  "raw": true, "meta": { "color": "#2c2838", "shape": "barrel" } },
     { "id": "gold_ore",     "name": "Gold Ore",     "baseValue": 80,  "raw": true, "meta": { "color": "#e8c547", "shape": "rock" } },
+    { "id": "bauxite",      "name": "Bauxite",      "baseValue": 400, "raw": true, "meta": { "color": "#b5613f", "shape": "rock" } },
     { "id": "iron_ingot",   "name": "Iron Ingot",   "baseValue": 0,                "meta": { "color": "#dfe6ee", "shape": "ingot" } },
     { "id": "copper_ingot", "name": "Copper Ingot", "baseValue": 0,                "meta": { "color": "#e8905a", "shape": "ingot" } },
     { "id": "gold_ingot",   "name": "Gold Ingot",   "baseValue": 0,                "meta": { "color": "#f6cf4a", "shape": "ingot" } },
@@ -44,7 +47,11 @@
     { "id": "circuit",      "name": "Circuit",      "baseValue": 0,                "meta": { "color": "#3fbf6a", "shape": "chip" } },
     { "id": "motor",        "name": "Motor",        "baseValue": 0,                "meta": { "color": "#9aa6b4", "shape": "motor" } },
     { "id": "jewelry",      "name": "Jewelry",      "baseValue": 0,                "meta": { "color": "#b86bff", "shape": "gem" } },
-    { "id": "robot",        "name": "Robot",        "baseValue": 0,                "meta": { "color": "#f2f4f7", "shape": "robot" } }
+    { "id": "robot",        "name": "Robot",        "baseValue": 0,                "meta": { "color": "#f2f4f7", "shape": "robot" } },
+    { "id": "aluminium",    "name": "Aluminium",    "baseValue": 0,                "meta": { "color": "#c9d3dc", "shape": "ingot" } },
+    { "id": "drone",        "name": "Drone",        "baseValue": 0,                "meta": { "color": "#ffb13b", "shape": "drone" } },
+    { "id": "rocket_fuel",  "name": "Rocket Fuel",  "baseValue": 0,                "meta": { "color": "#8ae05a", "shape": "barrel" } },
+    { "id": "satellite",    "name": "Satellite",    "baseValue": 0,                "meta": { "color": "#dfe8f2", "shape": "satellite" } }
   ],
 
   "recipes": [
@@ -62,7 +69,11 @@
     { "id": "make_circuit",   "inputs": [ { "item": "copper_wire", "count": 2 }, { "item": "plastic", "count": 1 } ], "outputs": [ { "item": "circuit", "count": 1 } ], "ticks": 40, "valueMultiplier": 3 },
     { "id": "make_motor",     "inputs": [ { "item": "steel", "count": 1 }, { "item": "circuit", "count": 1 }, { "item": "copper_wire", "count": 2 } ], "outputs": [ { "item": "motor", "count": 1 } ], "ticks": 60, "valueMultiplier": 2.5 },
     { "id": "make_jewelry",   "inputs": [ { "item": "gold_ingot", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "jewelry", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
-    { "id": "make_robot",     "inputs": [ { "item": "motor", "count": 1 }, { "item": "circuit", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "robot", "count": 1 } ], "ticks": 80, "valueMultiplier": 4 }
+    { "id": "make_robot",     "inputs": [ { "item": "motor", "count": 1 }, { "item": "circuit", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "robot", "count": 1 } ], "ticks": 80, "valueMultiplier": 4 },
+    { "id": "make_aluminium", "inputs": [ { "item": "bauxite", "count": 2 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "aluminium", "count": 1 } ], "ticks": 40, "valueMultiplier": 3 },
+    { "id": "make_drone",     "inputs": [ { "item": "aluminium", "count": 1 }, { "item": "motor", "count": 1 }, { "item": "circuit", "count": 1 } ], "outputs": [ { "item": "drone", "count": 1 } ], "ticks": 90, "valueMultiplier": 2.5 },
+    { "id": "make_fuel",      "inputs": [ { "item": "crude_oil", "count": 2 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "rocket_fuel", "count": 1 } ], "ticks": 40, "valueMultiplier": 4 },
+    { "id": "make_satellite", "inputs": [ { "item": "drone", "count": 1 }, { "item": "robot", "count": 1 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "satellite", "count": 1 } ], "ticks": 120, "valueMultiplier": 3 }
   ],
 
   "buildings": [
@@ -171,6 +182,14 @@
       "meta": { "model": "pump", "accent": "#e2513a", "glyph": "O", "description": "Pumps crude oil: 1 barrel every 2 s." }
     },
     {
+      "id": "bauxite_mine", "name": "Bauxite Mine", "behavior": "miner", "cost": 1e7, "category": "production", "tier": 6,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "limit": { "base": 2, "perTier": 2 },
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "bauxite", "interval": 40, "amount": 1 },
+      "meta": { "model": "drill", "accent": "#c8795a", "glyph": "A", "description": "Mines bauxite, the ore of aluminium: 1 every 2 s." }
+    },
+    {
       "id": "gold_miner", "name": "Gold Drill", "behavior": "miner", "cost": 7e4, "category": "production", "tier": 4,
       "group": "extractor", "replaces": [ "extractor" ],
       "limit": { "base": 2, "perTier": 2 },
@@ -268,6 +287,34 @@
       "params": { "recipes": [ "make_robot" ], "inputCapacity": 8, "outputCapacity": 8 },
       "meta": { "model": "assembler", "accent": "#e9eef5", "glyph": "Z", "description": "Builds robots from a motor, a circuit and glass." }
     },
+    {
+      "id": "electrolysis", "name": "Electrolysis Plant", "behavior": "processor", "cost": 2.5e7, "category": "processing", "tier": 6,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_aluminium" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "furnace", "accent": "#6ad0ff", "glyph": "e", "description": "Reduces 2 bauxite with coal into aluminium (3× value)." }
+    },
+    {
+      "id": "drone_factory", "name": "Drone Factory", "behavior": "processor", "cost": 6e7, "category": "crafting", "tier": 6,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_drone" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#ffb13b", "glyph": "d", "description": "Builds drones from aluminium, a motor and a circuit." }
+    },
+    {
+      "id": "fuel_plant", "name": "Fuel Plant", "behavior": "processor", "cost": 5e8, "category": "processing", "tier": 7,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_fuel" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "refinery", "accent": "#8ae05a", "glyph": "f", "description": "Brews rocket fuel from 2 crude oil and coal." }
+    },
+    {
+      "id": "launch_complex", "name": "Launch Complex", "behavior": "processor", "cost": 1.5e9, "category": "crafting", "tier": 7,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_satellite" ], "inputCapacity": 8, "outputCapacity": 4 },
+      "meta": { "model": "launchpad", "accent": "#ff8a3d", "glyph": "s", "description": "Assembles satellites from a drone, a robot and 2 rocket fuel." }
+    },
 
     // ---- Economy -------------------------------------------------------------------------
     {
@@ -293,5 +340,36 @@
     }
   ],
 
-  "upgrades": []
+  "upgrades": [],
+
+  // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, built,
+  // level, contracts, tier (see MilestoneDef).
+  "milestones": [
+    { "id": "first_sale",   "name": "Open for business", "description": "Sell your first item.",                  "kind": "sold",      "target": 1,      "reward": 25 },
+    { "id": "ingots_50",    "name": "Hot metal",         "description": "Produce 50 iron ingots.",                "kind": "produced",  "item": "iron_ingot", "target": 50, "reward": 60 },
+    { "id": "earn_1k",      "name": "First thousand",    "description": "Earn $1,000 in total.",                  "kind": "earned",    "target": 1000,   "reward": 150 },
+    { "id": "belts_50",     "name": "Belt builder",      "description": "Have 50 conveyors.",                     "kind": "built",     "building": "conveyor", "target": 50, "reward": 100 },
+    { "id": "level_5",      "name": "Tuned up",          "description": "Upgrade a building to level 5.",         "kind": "level",     "target": 5,      "reward": 300 },
+    { "id": "contract_1",   "name": "Contractor",        "description": "Complete an order.",                     "kind": "contracts", "target": 1,      "reward": 250 },
+    { "id": "tier_1",       "name": "Workshop",          "description": "Unlock the Workshop tier.",              "kind": "tier",      "target": 1,      "reward": 300 },
+    { "id": "earn_10k",     "name": "Ten grand",         "description": "Earn $10,000 in total.",                 "kind": "earned",    "target": 1e4,    "reward": 1500 },
+    { "id": "crate_1",      "name": "Boxed up",          "description": "Produce your first crate.",              "kind": "produced",  "item": "crate", "target": 1, "reward": 1000 },
+    { "id": "contract_10",  "name": "Reliable supplier", "description": "Complete 10 orders.",                    "kind": "contracts", "target": 10,     "reward": 5000 },
+    { "id": "level_10",     "name": "Fine tuned",        "description": "Upgrade a building to level 10.",        "kind": "level",     "target": 10,     "reward": 8000 },
+    { "id": "steel_100",    "name": "Steel works",       "description": "Produce 100 steel beams.",               "kind": "produced",  "item": "steel", "target": 100, "reward": 5000 },
+    { "id": "earn_100k",    "name": "Six figures",       "description": "Earn $100,000 in total.",                "kind": "earned",    "target": 1e5,    "reward": 15000 },
+    { "id": "toy_1",        "name": "Playtime",          "description": "Produce your first toy.",                "kind": "produced",  "item": "toy", "target": 1, "reward": 20000 },
+    { "id": "sold_10k",     "name": "Mass market",       "description": "Sell 10,000 items.",                     "kind": "sold",      "target": 1e4,    "reward": 40000 },
+    { "id": "earn_1m",      "name": "Millionaire",       "description": "Earn $1,000,000 in total.",              "kind": "earned",    "target": 1e6,    "reward": 150000 },
+    { "id": "circuit_100",  "name": "Chip maker",        "description": "Produce 100 circuits.",                  "kind": "produced",  "item": "circuit", "target": 100, "reward": 100000 },
+    { "id": "contract_50",  "name": "Trusted partner",   "description": "Complete 50 orders.",                    "kind": "contracts", "target": 50,     "reward": 400000 },
+    { "id": "level_25",     "name": "Maxed out",         "description": "Upgrade a building to level 25.",        "kind": "level",     "target": 25,     "reward": 1e6 },
+    { "id": "robot_1",      "name": "It's alive",        "description": "Produce your first robot.",              "kind": "produced",  "item": "robot", "target": 1, "reward": 2e6 },
+    { "id": "earn_100m",    "name": "Tycoon",            "description": "Earn $100 million in total.",            "kind": "earned",    "target": 1e8,    "reward": 1.5e7 },
+    { "id": "drone_1",      "name": "Liftoff",           "description": "Produce your first drone.",              "kind": "produced",  "item": "drone", "target": 1, "reward": 5e7 },
+    { "id": "sold_1m",      "name": "World market",      "description": "Sell a million items.",                  "kind": "sold",      "target": 1e6,    "reward": 2e8 },
+    { "id": "earn_10b",     "name": "Mogul",             "description": "Earn $10 billion in total.",             "kind": "earned",    "target": 1e10,   "reward": 1.5e9 },
+    { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },
+    { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 }
+  ]
 }

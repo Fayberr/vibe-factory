@@ -145,6 +145,7 @@ public sealed class TutorialPanel
                     {
                         _doneIn = 1.0; // a moment to see it worked
                         _status.Text = "Done!";
+                        AudioManager.Instance?.Play("step_done");
                         _status.AddThemeColorOverride("font_color", UiTheme.Money);
                         _bar.Value = _step + 1;
                     }

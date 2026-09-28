@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Godot;
 using FactorySim.Content;
 using FactorySim.Editing;
@@ -8,17 +9,34 @@ using FactorySim.Samples;
 
 namespace FactorySim.Client;
 
+/// <summary>What the menu shows about a save slot without loading the factory.</summary>
+public sealed class SlotInfo
+{
+    public string Name { get; set; } = "";
+    public DateTimeOffset SavedAtUtc { get; set; }
+    public int Tier { get; set; }
+    public string TierName { get; set; } = "";
+    public double Money { get; set; }
+    public double PlaySeconds { get; set; }
+    public int Buildings { get; set; }
+}
+
 /// <summary>
 /// Owns the <see cref="Simulation"/> and drives it from Godot's frame loop. Also handles
-/// saving, loading and offline catch-up. Other nodes read the world through
+/// save slots, loading, pausing and offline catch-up. Other nodes read the world through
 /// <see cref="Sim"/> and change it only through <see cref="Execute"/>.
+/// Slot 0 means "not saved anywhere" (the menu background, scripted tests).
 /// </summary>
 public partial class SimHost : Node
 {
-    private const string SavePath = "user://factory_save.json";
-    private const double AutosaveSeconds = 30;
+    public const int SlotCount = 5;
+    private const string SaveDir = "user://saves";
+    private const string OldSavePath = "user://factory_save.json";
+
     /// <summary>Enough for a first drill → smelter → depot line with a little to spare.</summary>
     private static readonly BigNum StartingMoney = 150;
+
+    private static readonly JsonSerializerOptions MetaJson = new() { WriteIndented = true };
 
     private readonly List<SimEvent> _events = new();
     private double _sinceSave;
@@ -32,8 +50,23 @@ public partial class SimHost : Node
     /// <summary>Periodic and on-quit saving; scripted tests turn it off so they never touch player saves.</summary>
     public bool Autosave { get; set; } = true;
 
+    /// <summary>Seconds between autosaves (0 = off). From the settings.</summary>
+    public double AutosaveSeconds { get; set; } = 60;
+
+    /// <summary>Slot the current factory saves to (1..SlotCount), or 0.</summary>
+    public int Slot { get; private set; }
+
+    /// <summary>Name of the current factory.</summary>
+    public string FactoryName { get; set; } = "";
+
+    /// <summary>Real time spent playing this factory.</summary>
+    public double PlaySeconds { get; private set; }
+
     /// <summary>Simulation speed multiplier (1 = real time).</summary>
     public int TimeScale { get; set; } = 1;
+
+    /// <summary>When true the simulation doesn't advance (building still works).</summary>
+    public bool Paused { get; set; }
 
     /// <summary>Raised after a new/loaded world replaces the current one.</summary>
     public event Action? WorldReplaced;
@@ -47,76 +80,166 @@ public partial class SimHost : Node
     /// <summary>Human-readable notices (command errors, offline reports).</summary>
     public event Action<string>? Notice;
 
-    /// <summary>Loads content and the last save (or starts fresh). Call after listeners are wired.</summary>
+    /// <summary>Something the player tried didn't work (for the error sound).</summary>
+    public event Action? Failed;
+
+    /// <summary>Loads content. Call after listeners are wired, before any game starts.</summary>
+    public void Init()
+    {
+        Content ??= ContentRegistry.LoadDefault();
+        if (Autosave)
+        {
+            CarryOverRenamedUserData();
+            MigrateSingleSave();
+        }
+    }
+
+    /// <summary>Legacy entry point: straight into the last save (or a fresh factory) without the menu.</summary>
     public void Start(bool loadSave = true)
     {
-        if (loadSave) CarryOverRenamedUserData();
-        Content = ContentRegistry.LoadDefault();
-        if (!loadSave || !TryLoad()) NewGame(withDemo: false);
+        Init();
+        int last = MostRecentSlot();
+        if (!loadSave || last == 0 || !TryLoad(last)) NewGame(withDemo: false);
     }
 
     public override void _Process(double delta)
     {
         if (Sim == null) return;
-        int ticks = Sim.Advance(delta * TimeScale, maxTicks: 20 * TimeScale);
+        int ticks = Paused ? 0 : Sim.Advance(delta * TimeScale, maxTicks: 20 * TimeScale);
 
         Sim.Events.Drain(_events);
         foreach (var ev in _events) EventRaised?.Invoke(ev);
         if (ticks > 0) TicksAdvanced?.Invoke(ticks);
 
+        if (Slot == 0) return;
+        if (!Paused) PlaySeconds += delta;
         _sinceSave += delta;
-        if (Autosave && _sinceSave >= AutosaveSeconds) Save(quiet: true);
+        if (Autosave && AutosaveSeconds > 0 && _sinceSave >= AutosaveSeconds) Save(quiet: true);
     }
 
     public override void _Notification(int what)
     {
-        if (what == NotificationWMCloseRequest && Sim != null && Autosave) Save(quiet: true);
+        if (what == NotificationWMCloseRequest && Sim != null && Autosave && Slot > 0) Save(quiet: true);
     }
 
-    /// <summary>Runs a non-undoable command (tier unlocks) and reports failures.</summary>
+    /// <summary>Runs a non-undoable command (tier unlocks, orders) and reports failures.</summary>
     public CommandResult Execute(Command command)
     {
         var result = Sim.Execute(command);
-        if (!result.Ok && result.Error != null) Notice?.Invoke(result.Error);
+        if (!result.Ok && result.Error != null) Fail(result.Error);
         return result;
     }
 
     public void Notify(string text) => Notice?.Invoke(text);
+
+    public void Fail(string text)
+    {
+        Notice?.Invoke(text);
+        Failed?.Invoke();
+    }
 
     private void Replace(Simulation sim)
     {
         Sim = sim;
         History = new EditHistory(sim);
         Sim.Events.Clear();
+        Paused = false;
+        _sinceSave = 0;
         WorldReplaced?.Invoke();
     }
 
-    public void NewGame(bool withDemo)
+    /// <summary>A new factory. With <paramref name="slot"/> 0 it is never saved (menu background, tests).</summary>
+    public void NewGame(bool withDemo, int slot = 0, string? name = null)
     {
+        Content ??= ContentRegistry.LoadDefault();
         var sim = Simulation.CreateNew(Content, StartingMoney, seed: (uint)Random.Shared.Next());
         if (withDemo) DemoLayout.Build(sim, new GridPos(8, 8, 0));
+        Slot = slot;
+        FactoryName = name ?? (slot > 0 ? $"Factory {slot}" : "");
+        PlaySeconds = 0;
         Replace(sim);
+        if (slot > 0) Save(quiet: true);
     }
+
+    /// <summary>The menu's live backdrop: the demo factory, in sandbox, never saved.</summary>
+    public void StartBackdrop()
+    {
+        NewGame(withDemo: true);
+        Sim.World.Sandbox = true;
+        Sim.World.Goals = false;
+    }
+
+    // ---- Slots ----------------------------------------------------------------
+
+    private static string SlotPath(int slot) => $"{SaveDir}/slot{slot}.json";
+    private static string MetaPath(int slot) => $"{SaveDir}/slot{slot}.meta.json";
 
     public void Save(bool quiet = false)
     {
+        if (Slot == 0 || Sim == null) return;
         _sinceSave = 0;
-        using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
-        if (file == null)
+        DirAccess.MakeDirRecursiveAbsolute(SaveDir);
+        using (var file = FileAccess.Open(SlotPath(Slot), FileAccess.ModeFlags.Write))
         {
-            Notice?.Invoke($"Save failed: {FileAccess.GetOpenError()}");
-            return;
+            if (file == null)
+            {
+                Fail($"Save failed: {FileAccess.GetOpenError()}");
+                return;
+            }
+            file.StoreString(SaveSystem.Serialize(Sim, DateTimeOffset.UtcNow));
         }
-        file.StoreString(SaveSystem.Serialize(Sim, DateTimeOffset.UtcNow));
+        var w = Sim.World;
+        var info = new SlotInfo
+        {
+            Name = FactoryName,
+            SavedAtUtc = DateTimeOffset.UtcNow,
+            Tier = w.UnlockedTier,
+            TierName = Content.Tiers[w.UnlockedTier].Name,
+            Money = w.Money.ToDouble(),
+            PlaySeconds = PlaySeconds,
+            Buildings = w.EntityCount,
+        };
+        using (var meta = FileAccess.Open(MetaPath(Slot), FileAccess.ModeFlags.Write))
+            meta?.StoreString(JsonSerializer.Serialize(info, MetaJson));
         if (!quiet) Notice?.Invoke("Saved.");
     }
 
-    public bool TryLoad()
+    public static SlotInfo? ReadSlot(int slot)
     {
-        if (!FileAccess.FileExists(SavePath)) return false;
+        if (!FileAccess.FileExists(SlotPath(slot))) return null;
+        if (!FileAccess.FileExists(MetaPath(slot))) return new SlotInfo { Name = $"Factory {slot}" };
+        using var f = FileAccess.Open(MetaPath(slot), FileAccess.ModeFlags.Read);
+        try { return JsonSerializer.Deserialize<SlotInfo>(f.GetAsText()) ?? new SlotInfo { Name = $"Factory {slot}" }; }
+        catch (JsonException) { return new SlotInfo { Name = $"Factory {slot}" }; }
+    }
+
+    /// <summary>The slot saved most recently, or 0 when there are none.</summary>
+    public static int MostRecentSlot()
+    {
+        int best = 0;
+        DateTimeOffset when = DateTimeOffset.MinValue;
+        for (int s = 1; s <= SlotCount; s++)
+            if (ReadSlot(s) is { } info && info.SavedAtUtc >= when)
+            {
+                best = s;
+                when = info.SavedAtUtc;
+            }
+        return best;
+    }
+
+    public static void DeleteSlot(int slot)
+    {
+        foreach (var path in new[] { SlotPath(slot), MetaPath(slot) })
+            if (FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+    }
+
+    public bool TryLoad(int slot)
+    {
+        Content ??= ContentRegistry.LoadDefault();
+        if (!FileAccess.FileExists(SlotPath(slot))) return false;
         try
         {
-            using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
+            using var file = FileAccess.Open(SlotPath(slot), FileAccess.ModeFlags.Read);
             var result = SaveSystem.Deserialize(file.GetAsText(), Content);
             var sim = result.Simulation;
             foreach (var w in result.Warnings) GD.PushWarning(w);
@@ -129,10 +252,14 @@ public partial class SimHost : Node
                 {
                     var report = sim.CatchUp(away);
                     if (!report.Earned.IsZero)
-                    welcome = $"Welcome back! {FormatDuration(away)} offline: earned ${report.Earned.Format()} " +
-                              $"({report.IncomePerSecond.Format()}/s)";
+                        welcome = $"Welcome back! {FormatDuration(away)} offline: earned ${report.Earned.Format()} " +
+                                  $"({report.IncomePerSecond.Format()}/s)";
                 }
             }
+            var info = ReadSlot(slot);
+            Slot = slot;
+            FactoryName = info?.Name ?? $"Factory {slot}";
+            PlaySeconds = info?.PlaySeconds ?? 0;
             Replace(sim);
             if (welcome != null) Notice?.Invoke(welcome);
             return true;
@@ -140,9 +267,20 @@ public partial class SimHost : Node
         catch (Exception ex)
         {
             GD.PushError($"Could not load save: {ex.Message}");
-            Notice?.Invoke("Save could not be loaded; starting fresh.");
+            Fail("That save could not be loaded.");
             return false;
         }
+    }
+
+    /// <summary>Before slots there was a single save file: it becomes slot 1.</summary>
+    private static void MigrateSingleSave()
+    {
+        if (!FileAccess.FileExists(OldSavePath) || FileAccess.FileExists(SlotPath(1))) return;
+        DirAccess.MakeDirRecursiveAbsolute(SaveDir);
+        var err = DirAccess.RenameAbsolute(ProjectSettings.GlobalizePath(OldSavePath), ProjectSettings.GlobalizePath(SlotPath(1)));
+        if (err != Error.Ok) return;
+        using var meta = FileAccess.Open(MetaPath(1), FileAccess.ModeFlags.Write);
+        meta?.StoreString(JsonSerializer.Serialize(new SlotInfo { Name = "My factory", SavedAtUtc = DateTimeOffset.UtcNow }, MetaJson));
     }
 
     /// <summary>
@@ -165,7 +303,7 @@ public partial class SimHost : Node
                 if (System.IO.File.Exists(from) && !System.IO.File.Exists(to)) System.IO.File.Copy(from, to);
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             GD.PushWarning($"Could not carry over data from the old game folder: {ex.Message}");
         }
@@ -180,6 +318,6 @@ public partial class SimHost : Node
         TicksAdvanced?.Invoke(1);
     }
 
-    private static string FormatDuration(double seconds) =>
+    public static string FormatDuration(double seconds) =>
         seconds >= 3600 ? $"{seconds / 3600:F1} h" : seconds >= 60 ? $"{seconds / 60:F0} min" : $"{seconds:F0} s";
 }

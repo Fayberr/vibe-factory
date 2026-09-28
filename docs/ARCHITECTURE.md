@@ -5,7 +5,7 @@
 ```
 ┌───────────────────────────── frontends (replaceable) ─────────────────────────────┐
 │  godot/ (Godot 4 .NET)          src/FactorySim.Cli (ASCII, bench)     future: server │
-│  SimHost · WorldView · BuildController · Hud                                        │
+│  SimHost · GameFlow · WorldView · BuildController · Hud · AudioManager              │
 └───────────────┬──────────────────────────────────────────────┬─────────────────────┘
        reads    │ World queries, View/*, drained SimEvents      │ writes: Execute(Command) / EditHistory
 ┌───────────────▼──────────────────────────────────────────────▼─────────────────────┐
@@ -14,6 +14,7 @@
 │  World ─────── sparse 3D grid, entities, money, upgrades→stats, stats, RNG           │
 │  Behaviors ─── conveyor · router · miner · processor · seller  (state on entity)    │
 │  Editing ───── blueprints, batch commands, undo/redo, BuildPlanner (drags, bridges) │
+│  Progression ─ customer orders (contracts), milestones                             │
 │  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes)   │
 │  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │
 └──────────────────────────────────────────────────────────────────────────────────────┘
@@ -122,6 +123,23 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - `StatsTracker` keeps lifetime totals and a rolling 60 s income window.
   `Snapshot()` is the deterministic summary for leaderboards and shared stats.
 
+### Orders and goals
+
+`Progression/Goals.cs` runs once per simulated second while `World.Goals` is on (it is off
+for the title-screen backdrop and in most unit tests, which count money exactly):
+
+- **Orders** (`ContractBoard`, three slots). Every 30 s, once the factory has sold
+  something, a free slot gets a new `Contract`: a non-raw item from an unlocked tier
+  (newer tiers weighted 3/2/1), a quantity worth 45 to 90 s of current income rounded to a
+  nice number, a 6 to 12 minute deadline, and a reward of 2 to 2.5 times its value.
+  `TickContext.Sell` calls `Deliver`, so items still sell normally and also count
+  toward the oldest open order for that item. `RerollContract` swaps one for 10% of its
+  reward. Everything is drawn from the seeded `Rng`, so orders are deterministic.
+- **Milestones** (`MilestoneDef` in the content pack, kinds `earned`, `sold`, `produced`,
+  `built`, `level`, `contracts`, `tier`). `MilestoneProgress` gives 0..1 for the UI;
+  reaching one pays its reward and raises `MilestoneReached`.
+- Both are saved (`SaveData.Contracts`, `Milestones`), and rewards count as earnings.
+
 ### Determinism
 
 Identical content + save + command sequence ⇒ identical results. The simulation
@@ -178,7 +196,7 @@ through with commands and the starting money.
 
 ### Persistence
 
-`SaveSystem` writes versioned JSON: world scalars, upgrades, stats, and entities
+`SaveSystem` writes versioned JSON: world scalars, orders and reached goals, upgrades, stats, and entities
 with their behavior state (each serialized through the behavior's own state type,
 so new behaviors need no central registration). Caches such as the grid index,
 links and stat cache are rebuilt on load. Unknown content is dropped with warnings
@@ -210,6 +228,17 @@ instead of failing. `Migrate()` is the hook for version bumps.
 | `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip), `HudWindow` (draggable windows, several open at once), `ManageWindow` (the selection: stats, upgrade, recipe choice), build menu with locks and limits, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders building and item icons from the 3D models) |
 | `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
 | `UI/TutorialPanel` | Presents the tutorial steps with a pulsing outline on the control each step is about |
+| `UI/Menus` | `MenuLayer`: title screen, pause menu, save slots, name and confirm dialogs, `SettingsPanel`, credits. It keeps processing while the tree is paused |
+| `UI/HudPanels` | Progress (tiers, limits, next goals), `OrdersPanel` (order cards with a swap button), statistics |
+| `Audio/` | `AudioManager`: Music, Effects (positional) and Interface buses; random clip and pitch per play, per-sound cool-downs, crossfading playlists; maps `SimEvent`s to sounds and gives every button a click |
+| `GameFlow` | Title → playing ⇄ paused. The title runs a demo factory with goals off behind the menu and an orbiting camera; the pause menu pauses the whole tree, `Space` only the simulation |
+| `GameSettings` | Preferences in `user://settings.json` (volumes, window mode, vsync, quality, UI scale, autosave, tutorial seen) |
+| `SimHost` | Owns the `Simulation`: five save slots (`user://saves/slotN.json` plus a small `.meta.json` for the slot list), autosave, play time, offline catch-up on load, and moving saves from older versions into slot 1 |
+
+**Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
+of its files at random. Adding a variation is dropping in another numbered file. Music is
+`godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);
+`godot/audio/CREDITS.md` lists them.
 
 Scene graph order matters for input: the HUD is the last child, so it sees unhandled
 keys first (hotbar, menus, Esc for panels). Everything else falls through to the
@@ -218,9 +247,8 @@ keys first (hotbar, menus, Esc for panels). Everything else falls through to the
 ## Roadmap (suggested next steps)
 
 1. **Logistics depth:** filters/sorters, lifts, belt tiers, and hotbar drag-and-drop.
-2. **Active loop:** per-entity overclock (a stat scoped to an entity), anomalies
-   (seeded `Rng` events that spawn on machines and reward a click), and timed
-   production contracts (a `Contract` system reading `ItemSold` events).
+2. **Active loop:** per-entity overclock (a stat scoped to an entity) and anomalies
+   (seeded `Rng` events that spawn on machines and reward a click).
 3. **Status effects:** a heat model on items (`heat` tag + decay), heaters,
    coolers, and quench recipes that require a tag.
 4. **Compression:** "blueprint → condensed machine". Measure a sub-layout's
@@ -228,7 +256,7 @@ keys first (hotbar, menus, Esc for panels). Everything else falls through to the
    `BuildingDef` (a processor with a synthesized recipe) that replaces it on a
    single footprint.
 5. **Progression:** research-style global unlocks on top of tiers (the stat-upgrade
-   mechanism is still there for it), prestige-free long-term goals.
+   mechanism is still there for it), and orders from named customers with reputation.
 6. **Online:** record `CommandLog` + seed, submit with `StatsSnapshot`, and verify
    server-side by replaying with the same core (ASP.NET or a CLI worker).
 7. **Performance, when needed:** belt segments (Factorio-style transport lines),

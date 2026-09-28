@@ -49,6 +49,14 @@ public sealed class World
     public Rng Rng { get; }
     public StatsTracker Stats { get; internal set; } = new();
 
+    /// <summary>Contracts and milestones run (off in scripted tests that check exact money).</summary>
+    public bool Goals { get; set; } = true;
+
+    public ContractBoard Contracts { get; internal set; } = new();
+
+    /// <summary>Ids of reached milestones.</summary>
+    public HashSet<string> Milestones { get; internal set; } = new();
+
     internal Dictionary<string, int> UpgradeLevels { get; } = new();
     internal int NextEntityId { get; set; } = 1;
     internal long NextItemUid { get; set; } = 1;

@@ -47,6 +47,7 @@ public sealed class TickContext
         _sim.World.AddMoney(payout);
         _sim.World.Stats.RecordSale(item.Type, item.Count, payout);
         if (_sim.Events.Enabled) _sim.Events.Add(new ItemSold(Tick, seller.Id, item.Type, item.Count, payout));
+        if (_sim.World.Goals) _sim.Deliver(item.Type, item.Count);
     }
 
     public void RecordProduced(Entity producer, ItemStack item)

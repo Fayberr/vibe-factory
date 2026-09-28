@@ -215,6 +215,26 @@ public static class StatIds
 }
 
 /// <summary>A set of definitions, e.g. one JSON file. Later packs override earlier ones by id.</summary>
+/// <summary>
+/// A long-term goal with a cash reward. <see cref="Kind"/> picks what is measured:
+/// earned (lifetime $), sold / produced (units of <see cref="Item"/>, or of everything),
+/// built (current count of <see cref="Building"/>, or of everything), level (highest
+/// building level), contracts (completed), tier (unlocked tier).
+/// </summary>
+public sealed class MilestoneDef
+{
+    public static readonly string[] Kinds = { "earned", "sold", "produced", "built", "level", "contracts", "tier" };
+
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public string Description { get; init; } = "";
+    public string Kind { get; init; } = "";
+    public string? Item { get; init; }
+    public string? Building { get; init; }
+    public double Target { get; init; } = 1;
+    public BigNum Reward { get; init; }
+}
+
 public sealed class ContentPack
 {
     public List<ItemDef> Items { get; init; } = new();
@@ -224,4 +244,6 @@ public sealed class ContentPack
 
     /// <summary>Progression tiers in order; a pack that defines tiers replaces the whole list.</summary>
     public List<TierDef> Tiers { get; init; } = new();
+
+    public List<MilestoneDef> Milestones { get; init; } = new();
 }

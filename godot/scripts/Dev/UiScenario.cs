@@ -18,6 +18,8 @@ public partial class UiScenario : Node
     public CameraRig Camera = null!;
     public WorldView View = null!;
     public Hud Hud = null!;
+    public GameFlow Flow = null!;
+    public MenuLayer Menus = null!;
 
     private string? _shots;
     private int _failures, _checks;
@@ -119,8 +121,7 @@ public partial class UiScenario : Node
         Check(w.GetEntity(anyId)?.Pos == before + new GridPos(0, -2, 0), "move keeps ids and shifts by (0,-2)");
 
         // 7. Pipette.
-        await Key(Godot.Key.Escape);
-        await Key(Godot.Key.Escape);
+        await CancelAll();
         await Move(Cell(3, 3));
         await Key(Godot.Key.F);
         Check(Tools.Mode == ToolMode.Build && Tools.Tool?.Id == "iron_miner", "F picks the hovered building");
@@ -257,8 +258,54 @@ public partial class UiScenario : Node
         await Shot("09-progress");
         await Key(Godot.Key.P);
 
+        // 14. Pausing: Space freezes the simulation only; Esc with nothing to cancel opens the
+        //     pause menu, which freezes the whole game until Esc again.
+        Hud.BuildMenu!.Visible = false;
+        await CancelAll();
+        Check(!Menus.PauseVisible, "cancelling tools with Esc never opens the pause menu");
+        await Key(Godot.Key.Space);
+        long tick = w.Tick;
+        await Frames(20);
+        Check(Host.Paused && w.Tick == tick, "Space pauses the simulation");
+        await Key(Godot.Key.Space);
+        Check(!Host.Paused, "Space again resumes it");
+        await Key(Godot.Key.Escape);
+        await Frames(5);
+        Check(Menus.PauseVisible && GetTree().Paused, "Esc with nothing to cancel opens the pause menu");
+        await Shot("12-pause");
+        await Key(Godot.Key.Escape);
+        await Frames(5);
+        Check(!Menus.PauseVisible && !GetTree().Paused, "Esc closes the pause menu");
+        Menus.OpenSettings();
+        await Frames(5);
+        await Shot("14-settings");
+        await Key(Godot.Key.Escape);
+        await Frames(5);
+        Check(!Menus.SettingsVisible && !Menus.PauseVisible, "Esc closes Settings opened in game, without pausing");
+
+        // 15. Title screen: the demo runs behind it; starting a factory hands the screen back.
+        Flow.ShowTitle();
+        await Frames(30);
+        Check(Menus.TitleVisible && !Hud.Visible && !Tools.Enabled, "the title screen hides the HUD and the tools");
+        await Shot("13-title");
+        var audio = AudioManager.Instance;
+        var missing = audio?.MissingSounds() ?? new System.Collections.Generic.List<string> { "(no audio manager)" };
+        Check(missing.Count == 0, $"every game sound has a recorded clip (missing: {string.Join(", ", missing)})");
+        Check(audio?.Track == "dreamer", $"the title screen plays the menu music (got {audio?.Track ?? "nothing"})");
+        Flow.NewGame(0, "Test", withDemo: false);
+        await Frames(10);
+        Check(!Menus.TitleVisible && Hud.Visible && Tools.Enabled && Host.Sim.World.EntityCount == 0, "a new factory starts empty with the HUD back");
+        Check(audio?.Track is "airport_lounge" or "chill_wave" or "lobby_time", $"the game switches to the game music (got {audio?.Track ?? "nothing"})");
+
         GD.Print($"UI TEST: {_checks - _failures}/{_checks} checks passed");
         GetTree().Quit(_failures == 0 ? 0 : 1);
+    }
+
+    /// <summary>Esc until back to plain selecting with nothing selected, and no further (one more would open the pause menu).</summary>
+    private async Task CancelAll()
+    {
+        for (int i = 0; i < 4 && (Tools.Mode != ToolMode.Select || Tools.Selection.Count > 0); i++)
+            await Key(Godot.Key.Escape);
     }
 
     private void Check(bool ok, string what)

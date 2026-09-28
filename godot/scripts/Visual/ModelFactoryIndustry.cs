@@ -325,4 +325,63 @@ public static partial class ModelFactory
         StatusLamp(rig, rig.Root, new Vector3(0.3f, 0.72f, -0.25f));
         rig.Height = 1.0f;
     }
+
+    /// <summary>Launch pad: concrete deck, lattice gantry and a rocket whose engine glows while it works.</summary>
+    private static void LaunchPad(ModelRig rig, BuildingDef def, Color accent, bool effects)
+    {
+        Add(rig, rig.Root, Cached($"launchpad:{def.Id}", () =>
+        {
+            var mb = new MeshBuilder();
+            Plinth(mb);
+            mb.Box(Palette.Solid(Palette.Concrete, 0.9f), new Vector3(0, 0.15f, 0), new Vector3(0.9f, 0.05f, 0.9f), 0.015f);
+            mb.Box(Palette.Solid(Palette.Dark), new Vector3(0, 0.176f, 0.02f), new Vector3(0.3f, 0.01f, 0.3f), 0f);
+            foreach (int sx in new[] { -1, 1 })
+            foreach (int sz in new[] { -1, 1 })
+                mb.Box(Palette.Solid(Palette.Hazard), new Vector3(sx * 0.38f, 0.18f, sz * 0.38f), new Vector3(0.08f, 0.012f, 0.08f), 0f);
+
+            // Gantry tower beside the rocket, with an access arm.
+            var lattice = Palette.Solid(accent, 0.55f, 0.2f);
+            const float gx = -0.3f, gz = 0.28f, h = 1.55f;
+            foreach (int sx in new[] { -1, 1 })
+            foreach (int sz in new[] { -1, 1 })
+                mb.Beam(lattice, new Vector3(gx + sx * 0.08f, 0.17f, gz + sz * 0.08f), new Vector3(gx + sx * 0.08f, h, gz + sz * 0.08f), 0.03f);
+            for (float y = 0.4f; y < h; y += 0.3f)
+            {
+                mb.Beam(lattice, new Vector3(gx - 0.08f, y, gz - 0.08f), new Vector3(gx + 0.08f, y + 0.25f, gz - 0.08f), 0.02f);
+                mb.Beam(lattice, new Vector3(gx + 0.08f, y, gz + 0.08f), new Vector3(gx - 0.08f, y + 0.25f, gz + 0.08f), 0.02f);
+            }
+            mb.Box(Palette.Solid(Palette.Graphite), new Vector3(gx, h + 0.03f, gz), new Vector3(0.22f, 0.06f, 0.22f), 0.01f);
+            mb.Beam(Palette.Solid(Palette.Graphite), new Vector3(gx + 0.08f, 1.05f, gz - 0.02f), new Vector3(-0.08f, 1.05f, 0.05f), 0.035f);
+
+            // The rocket.
+            var body = Palette.Solid(Palette.Body);
+            var baseY = 0.2f;
+            mb.Cylinder(body, new Vector3(0.05f, baseY, 0.02f), 0.12f, 1.0f, 14);
+            foreach (float y in new[] { 0.25f, 0.75f })
+                mb.Cylinder(Palette.Solid(accent), new Vector3(0.05f, baseY + y, 0.02f), 0.123f, 0.05f, 14);
+            mb.Cylinder(Palette.Solid(Palette.Glass, 0.2f), new Vector3(0.05f, baseY + 0.9f, 0.02f), 0.1f, 0.001f, 14);
+            mb.Cylinder(Palette.Solid(accent), new Vector3(0.05f, baseY + 1.0f, 0.02f), 0.12f, 0.3f, 14, topRadius: 0f);
+            for (int i = 0; i < 3; i++)
+            {
+                float a = Mathf.Tau * i / 3 + 0.4f;
+                var d = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                mb.Beam(Palette.Solid(Palette.Graphite), new Vector3(0.05f, baseY + 0.02f, 0.02f) + d * 0.12f, new Vector3(0.05f, baseY + 0.25f, 0.02f) + d * 0.12f, 0.05f);
+                mb.Box(Palette.Solid(Palette.Graphite), new Vector3(0.05f, baseY + 0.08f, 0.02f) + d * 0.17f, new Vector3(0.06f, 0.14f, 0.06f), 0.01f);
+            }
+            Sockets(mb, def);
+            return mb.Commit();
+        }));
+
+        var flame = Palette.GlowInstance(new Color("#ffb24a"), 3.5f);
+        Add(rig, rig.Root, Cached("launchpad:flame", () =>
+        {
+            var mb = new MeshBuilder();
+            mb.Cylinder(Palette.Solid(Colors.White), new Vector3(0.05f, 0.1f, 0.02f), 0.02f, 0.1f, 10, topRadius: 0.09f);
+            return mb.Commit();
+        })).MaterialOverride = flame;
+        rig.Glows.Add((flame, 3.5f));
+        StatusLamp(rig, rig.Root, new Vector3(0.36f, 0.25f, -0.36f));
+        if (effects) Smoke(rig, rig.Root, new Vector3(0.05f, 0.2f, 0.02f), 1.4f);
+        rig.Height = 1.6f;
+    }
 }

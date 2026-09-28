@@ -75,6 +75,7 @@ public sealed class HudWindow
             if (Root.Visible == value) return;
             Root.Visible = value;
             if (value) Root.MoveToFront();
+            AudioManager.Instance?.Play(value ? "open" : "close");
             Activated?.Invoke();
         }
     }

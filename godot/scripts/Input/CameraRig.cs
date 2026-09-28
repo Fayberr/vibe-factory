@@ -37,6 +37,12 @@ public partial class CameraRig : Node3D
     /// <summary>Zoom distance the camera is heading to.</summary>
     public float Distance => _distanceTarget;
 
+    /// <summary>Slowly circles the focus point (title screen backdrop).</summary>
+    public bool AutoOrbit { get; set; }
+
+    /// <summary>Player control of the camera (off behind menus).</summary>
+    public bool Interactive { get; set; } = true;
+
     /// <summary>Jumps to an exact view (used by scripted screenshots).</summary>
     public void SetView(float yaw, float pitch, float distance, Vector3 focus)
     {
@@ -48,8 +54,9 @@ public partial class CameraRig : Node3D
 
     public override void _Process(double delta)
     {
+        if (AutoOrbit) _yawTarget += (float)delta * 2.5f;
         float dt = (float)delta;
-        if (!Input.IsKeyPressed(Key.Ctrl))
+        if (Interactive && !Input.IsKeyPressed(Key.Ctrl))
         {
             var move = Vector2.Zero;
             if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) move.Y -= 1;
@@ -81,6 +88,7 @@ public partial class CameraRig : Node3D
 
     public override void _UnhandledInput(InputEvent ev)
     {
+        if (!Interactive) return;
         switch (ev)
         {
             case InputEventMouseButton { Pressed: true } mb when mb.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown:

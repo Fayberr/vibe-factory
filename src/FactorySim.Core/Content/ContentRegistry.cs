@@ -38,14 +38,19 @@ public sealed class ContentRegistry
     /// <summary>Progression tiers; index 0 is available from the start.</summary>
     public IReadOnlyList<TierDef> Tiers { get; }
 
+    /// <summary>Long-term goals in declaration order.</summary>
+    public IReadOnlyList<MilestoneDef> Milestones { get; }
+
     private ContentRegistry(
         BehaviorRegistry behaviors,
         List<ItemDef> items,
         List<BuildingDef> buildings,
         List<RecipeDef> recipes,
         List<UpgradeDef> upgrades,
-        List<TierDef> tiers)
+        List<TierDef> tiers,
+        List<MilestoneDef> milestones)
     {
+        Milestones = milestones;
         Behaviors = behaviors;
         Items = items.ToDictionary(x => x.Id);
         Buildings = buildings.ToDictionary(x => x.Id);
@@ -84,6 +89,7 @@ public sealed class ContentRegistry
         var recipes = new OrderedById<RecipeDef>(x => x.Id);
         var upgrades = new OrderedById<UpgradeDef>(x => x.Id);
         var tiers = new List<TierDef>();
+        var milestones = new OrderedById<MilestoneDef>(x => x.Id);
         foreach (var pack in packs)
         {
             if (pack.Tiers.Count > 0)
@@ -95,9 +101,10 @@ public sealed class ContentRegistry
             pack.Buildings.ForEach(buildings.Put);
             pack.Recipes.ForEach(recipes.Put);
             pack.Upgrades.ForEach(upgrades.Put);
+            pack.Milestones.ForEach(milestones.Put);
         }
 
-        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers);
+        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List);
         registry.Validate();
         return registry;
     }
@@ -116,6 +123,14 @@ public sealed class ContentRegistry
                 if (!Items.ContainsKey(a.Item)) throw new ContentException($"Recipe '{r.Id}': unknown item '{a.Item}'.");
                 if (a.Count <= 0) throw new ContentException($"Recipe '{r.Id}': counts must be > 0.");
             }
+        }
+
+        foreach (var m in Milestones)
+        {
+            if (Array.IndexOf(MilestoneDef.Kinds, m.Kind) < 0)
+                throw new ContentException($"Milestone '{m.Id}': unknown kind '{m.Kind}'. Known: {string.Join(", ", MilestoneDef.Kinds)}.");
+            if (m.Item != null && !Items.ContainsKey(m.Item)) throw new ContentException($"Milestone '{m.Id}': unknown item '{m.Item}'.");
+            if (m.Building != null && !Buildings.ContainsKey(m.Building)) throw new ContentException($"Milestone '{m.Id}': unknown building '{m.Building}'.");
         }
 
         foreach (var u in Upgrades.Values)

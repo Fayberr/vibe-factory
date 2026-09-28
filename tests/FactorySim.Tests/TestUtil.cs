@@ -33,10 +33,12 @@ internal static class TestUtil
         },
     });
 
-    public static Simulation NewSim(ContentRegistry? content = null, bool sandbox = true, BigNum? money = null)
+    /// <summary>A fresh world. Contracts and milestones are off unless <paramref name="goals"/>, so money stays exact.</summary>
+    public static Simulation NewSim(ContentRegistry? content = null, bool sandbox = true, BigNum? money = null, bool goals = false)
     {
         var sim = Simulation.CreateNew(content ?? Content, money ?? BigNum.Zero);
         sim.World.Sandbox = sandbox;
+        sim.World.Goals = goals;
         return sim;
     }
 

@@ -253,6 +253,8 @@ public sealed class ProgressPanel
     private readonly Button _unlock;
     private readonly Label _limits = Ui.Label("", 13);
     private readonly VBoxContainer _nextBox = new();
+    private readonly Label _goalsTitle = Ui.Label("", 11, UiTheme.Muted);
+    private readonly VBoxContainer _goals = new();
 
     public ProgressPanel(Action unlock)
     {
@@ -276,6 +278,11 @@ public sealed class ProgressPanel
         body.AddChild(Ui.Label("BUILD LIMITS", 11, UiTheme.Muted));
         body.AddChild(_limits);
         body.AddChild(Ui.Label("Upgrades are per building: select one and press U.", 12, UiTheme.Muted));
+        body.AddChild(new HSeparator());
+        _goalsTitle.AddThemeFontOverride("font", UiTheme.Bold);
+        body.AddChild(_goalsTitle);
+        _goals.AddThemeConstantOverride("separation", 8);
+        body.AddChild(_goals);
         Root = Ui.Pad(body, 14, 12);
     }
 
@@ -306,6 +313,137 @@ public sealed class ProgressPanel
             .Where(b => b.Limit != null && b.Tier <= t)
             .Select(b => $"{b.Name,-16} {Ui.LimitText(world, b)}");
         _limits.Text = string.Join("\n", lines);
+        RefreshGoals(sim);
+    }
+
+    /// <summary>The next few milestones with their progress and reward.</summary>
+    private void RefreshGoals(Simulation sim)
+    {
+        var all = sim.Content.Milestones;
+        var open = all.Where(m => !sim.World.Milestones.Contains(m.Id)).Take(4).ToList();
+        _goalsTitle.Text = $"GOALS · {sim.World.Milestones.Count} of {all.Count} reached";
+        while (_goals.GetChildCount() < open.Count)
+        {
+            var row = new VBoxContainer();
+            row.AddThemeConstantOverride("separation", 2);
+            var head = new HBoxContainer();
+            var name = Ui.Label("", 14);
+            name.AddThemeFontOverride("font", UiTheme.Bold);
+            head.AddChild(name);
+            head.AddChild(Ui.Spacer());
+            head.AddChild(Ui.Label("", 13, UiTheme.Money));
+            row.AddChild(head);
+            row.AddChild(Ui.Label("", 12, UiTheme.Muted));
+            row.AddChild(new ProgressBar { CustomMinimumSize = new Vector2(0, 5), ShowPercentage = false, MaxValue = 1 });
+            _goals.AddChild(row);
+        }
+        for (int i = 0; i < _goals.GetChildCount(); i++)
+        {
+            var row = (VBoxContainer)_goals.GetChild(i);
+            row.Visible = i < open.Count;
+            if (i >= open.Count) continue;
+            var m = open[i];
+            var head = (HBoxContainer)row.GetChild(0);
+            ((Label)head.GetChild(0)).Text = m.Name;
+            ((Label)head.GetChild(2)).Text = "+$" + m.Reward.Format();
+            double have = sim.MilestoneProgress(m);
+            ((Label)row.GetChild(1)).Text = $"{m.Description} ({Short(Math.Min(have, m.Target))} / {Short(m.Target)})";
+            ((ProgressBar)row.GetChild(2)).Value = m.Target <= 0 ? 1 : Math.Min(1, have / m.Target);
+        }
+    }
+
+    private static string Short(double v) => v >= 1000 ? ((BigNum)v).Format() : $"{v:0}";
+}
+
+/// <summary>
+/// Orders (O): up to three deliveries with a deadline, each paying a bonus on top of what the
+/// items sell for. Sell the item at any depot to fill an order; swap one you can't make.
+/// </summary>
+public sealed class OrdersPanel
+{
+    public readonly Control Root;
+    private readonly VBoxContainer _cards = new();
+    private readonly Label _empty = Ui.Label("", 14, UiTheme.Muted);
+    private readonly Label _summary = Ui.Label("", 12, UiTheme.Muted);
+    private readonly Action<int> _reroll;
+
+    public OrdersPanel(Action<int> reroll)
+    {
+        _reroll = reroll;
+        var col = new VBoxContainer();
+        col.AddThemeConstantOverride("separation", 0);
+        _empty.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _empty.CustomMinimumSize = new Vector2(340, 0);
+        col.AddChild(Ui.Pad(_empty, 16, 12));
+        _cards.AddThemeConstantOverride("separation", 0);
+        col.AddChild(_cards);
+        col.AddChild(Ui.Pad(_summary, 16, 8));
+        Root = col;
+    }
+
+    public void Refresh(Simulation sim, Thumbnails thumbs)
+    {
+        var board = sim.World.Contracts;
+        _empty.Visible = board.Open.Count == 0;
+        _empty.Text = sim.World.Stats.TotalEarned.IsZero
+            ? "Orders arrive once your factory sells something."
+            : "New orders arrive every half minute.";
+        _summary.Text = $"{board.Completed} completed · ${board.EarnedFromContracts.Format()} in bonuses · sell the item at any depot";
+
+        while (_cards.GetChildCount() < board.Open.Count) _cards.AddChild(Card());
+        for (int i = 0; i < _cards.GetChildCount(); i++)
+        {
+            var card = (Control)_cards.GetChild(i);
+            card.Visible = i < board.Open.Count;
+            if (i < board.Open.Count) Fill(card, board.Open[i], sim, thumbs);
+        }
+    }
+
+    private Control Card()
+    {
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 0);
+        box.AddChild(new HSeparator());
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
+        row.AddChild(new TextureRect { CustomMinimumSize = new Vector2(64, 64), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered });
+        var text = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        text.AddThemeConstantOverride("separation", 3);
+        var title = Ui.Label("", 16);
+        title.AddThemeFontOverride("font", UiTheme.Bold);
+        text.AddChild(title);
+        text.AddChild(new ProgressBar { CustomMinimumSize = new Vector2(0, 7), ShowPercentage = false, MaxValue = 1 });
+        var info = new HBoxContainer();
+        info.AddChild(Ui.Label("", 12, UiTheme.Muted));
+        info.AddChild(Ui.Spacer());
+        info.AddChild(Ui.Label("", 13, UiTheme.Money));
+        text.AddChild(info);
+        row.AddChild(text);
+        var swap = new Button { ThemeTypeVariation = "FlatButton", FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(92, 40), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        swap.AddThemeFontSizeOverride("font_size", 13);
+        swap.Pressed += () => _reroll((int)swap.GetMeta("contract"));
+        row.AddChild(swap);
+        box.AddChild(Ui.Pad(row, 14, 10));
+        return box;
+    }
+
+    private void Fill(Control card, Contract c, Simulation sim, Thumbnails thumbs)
+    {
+        var row = (HBoxContainer)((MarginContainer)card.GetChild(1)).GetChild(0);
+        ((TextureRect)row.GetChild(0)).Texture = thumbs.GetItem(c.Item);
+        var text = (VBoxContainer)row.GetChild(1);
+        string item = sim.Content.Items[c.Item].Name;
+        ((Label)text.GetChild(0)).Text = $"Deliver {c.Quantity} {item}";
+        ((ProgressBar)text.GetChild(1)).Value = (double)c.Delivered / c.Quantity;
+        var info = (HBoxContainer)text.GetChild(2);
+        double left = Math.Max(0, (c.ExpiresAtTick - sim.World.Tick) / (double)Simulation.TicksPerSecond);
+        ((Label)info.GetChild(0)).Text = $"{c.Delivered} / {c.Quantity} · {(int)left / 60}:{(int)left % 60:00} left";
+        var reward = (Label)info.GetChild(2);
+        reward.Text = "+$" + c.Reward.Format();
+        var swap = (Button)row.GetChild(2);
+        swap.Text = $"Swap ${(c.Reward * 0.1).Format()}";
+        swap.TooltipText = "Replace this order with a new one (costs a tenth of its reward)";
+        swap.SetMeta("contract", c.Id);
     }
 }
 

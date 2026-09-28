@@ -87,6 +87,30 @@ public partial class BuildController : Node3D
     /// <summary>Mode, tool, facing, height or selection changed.</summary>
     public event Action? Changed;
 
+    /// <summary>Esc with nothing to cancel (no tool, no selection): the game opens its pause menu.</summary>
+    public event Action? EscapeIdle;
+
+    /// <summary>Off while menus own the screen: no input, no previews, no highlights.</summary>
+    public bool Enabled
+    {
+        get => ProcessMode != ProcessModeEnum.Disabled;
+        set
+        {
+            if (value == Enabled) return;
+            if (!value)
+            {
+                SetMode(ToolMode.Select);
+                Selection.Clear();
+                _ghosts.HideAll();
+                _rect.Visible = false;
+                foreach (var id in _applied.Keys) _view.SetHighlight(id, Highlight.None);
+                _applied.Clear();
+                CursorInfo = null;
+            }
+            ProcessMode = value ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+        }
+    }
+
     private World World => _host.Sim.World;
     private EditHistory History => _host.History;
 
@@ -506,7 +530,8 @@ public partial class BuildController : Node3D
                     Selection.Clear();
                     Changed?.Invoke();
                 }
-                else return false; // let the HUD use Esc (menus)
+                else if (EscapeIdle != null) EscapeIdle();
+                else return false;
                 return true;
         }
         return false;
@@ -884,7 +909,7 @@ public partial class BuildController : Node3D
 
     private bool Report(CommandResult r)
     {
-        if (!r.Ok && r.Error != null) Notice(r.Error);
+        if (!r.Ok && r.Error != null) _host.Fail(r.Error);
         return r.Ok;
     }
 

@@ -20,6 +20,9 @@ public sealed class SaveData
     public int UnlockedTier { get; set; }
     public Dictionary<string, int> Upgrades { get; set; } = new();
     public StatsTracker Stats { get; set; } = new();
+    public bool Goals { get; set; } = true;
+    public ContractBoard Contracts { get; set; } = new();
+    public List<string> Milestones { get; set; } = new();
     public List<EntitySave> Entities { get; set; } = new();
 }
 
@@ -61,6 +64,9 @@ public static class SaveSystem
         UnlockedTier = world.UnlockedTier,
         Upgrades = new Dictionary<string, int>(world.UpgradeLevels),
         Stats = world.Stats,
+        Goals = world.Goals,
+        Contracts = world.Contracts,
+        Milestones = world.Milestones.OrderBy(id => id, StringComparer.Ordinal).ToList(),
         Entities = world.Entities.OrderBy(e => e.Id).Select(e => new EntitySave
         {
             Id = e.Id,
@@ -92,6 +98,9 @@ public static class SaveSystem
             Sandbox = data.Sandbox,
             UnlockedTier = Math.Clamp(data.UnlockedTier, 0, content.Tiers.Count - 1),
             Stats = data.Stats,
+            Goals = data.Goals,
+            Contracts = data.Contracts,
+            Milestones = data.Milestones.ToHashSet(),
         };
         foreach (var (id, level) in data.Upgrades)
         {

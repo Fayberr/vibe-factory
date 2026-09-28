@@ -28,6 +28,7 @@ public enum Icon
     Clock,
     Search,
     Auto,
+    Orders,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -198,6 +199,13 @@ public partial class IconView : Control
             case Icon.Search:
                 Arc(10, 10, 6.5f, 0, Mathf.Tau, 2.6f);
                 L(14.8f, 14.8f, 20.5f, 20.5f, 3.2f);
+                break;
+            case Icon.Orders:
+                Outline(2, 5.5f, 4.5f, 18.5f, 4.5f, 18.5f, 21, 5.5f, 21);
+                DrawRect(new Rect2(P(9, 2.5f), new Vector2(6, 4) * s), _color);
+                L(8.5f, 10, 15.5f, 10, 1.8f);
+                L(8.5f, 13.5f, 15.5f, 13.5f, 1.8f);
+                L(8.5f, 17, 13, 17, 1.8f);
                 break;
             case Icon.Auto:
                 Arc(12, 12, 7.5f, -Mathf.Pi * 0.2f, Mathf.Pi * 0.75f, 2.2f);

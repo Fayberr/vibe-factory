@@ -17,7 +17,6 @@ namespace FactorySim.Client;
 public partial class Hud : CanvasLayer
 {
     private const string HotbarPath = "user://hotbar.json";
-    private const string SettingsPath = "user://settings.json";
     private static readonly string[] DefaultHotbar =
         { "conveyor", "splitter", "merger", "ramp_up", "ramp_down", "iron_miner", "smelter", "polisher", "seller", "copper_miner" };
     private static readonly int[] Speeds = { 1, 4, 16 };
@@ -42,12 +41,13 @@ public partial class Hud : CanvasLayer
     private ManageWindow _manage = null!;
     private ProgressPanel _progress = null!;
     private StatsPanel _stats = null!;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!;
+    private OrdersPanel _orders = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last (Esc closes it)
     private TutorialPanel _tutorial = null!;
     private Button _progressButton = null!;
     private Control _ladder = null!;
-    private bool _tutorialChecked;
+    private PanelContainer _pausedBadge = null!;
     private Control _windows = null!;
     private PanelContainer _help = null!;
     private Toasts _toasts = null!;
@@ -59,10 +59,17 @@ public partial class Hud : CanvasLayer
     public TutorialPanel Tutorial => _tutorial;
     public Control? BuildMenu => _menu?.Root;
 
-    /// <summary>Open the tutorial on a player's first new factory (off for scripted runs).</summary>
+    /// <summary>Remember finishing the tutorial (off for scripted runs, which must not touch settings).</summary>
     public bool AutoStartTutorial { get; set; } = true;
+
+    public GameSettings Settings { get; set; } = new();
+
+    /// <summary>Hooks into the surrounding game (menus); unset in scripted runs.</summary>
+    public Action? OpenSettings { get; set; }
+    public Action? QuitToMenu { get; set; }
     public HudWindow ProgressWindow => _progressWindow;
     public HudWindow StatsWindow => _statsWindow;
+    public HudWindow OrdersWindow => _ordersWindow;
 
     public void Init(SimHost host, BuildController tools, Thumbnails thumbs)
     {
@@ -74,6 +81,22 @@ public partial class Hud : CanvasLayer
         host.EventRaised += ev =>
         {
             if (ev is EntityPlaced or EntityRemoved) _slotsDirty = true; // build limits changed
+            string Item(string id) => host.Content.Items[id].Name;
+            switch (ev)
+            {
+                case ContractOffered o when !_ordersWindow.Visible:
+                    _toasts.Show(this, $"New order: {o.Contract.Quantity} {Item(o.Contract.Item)} for +${o.Contract.Reward.Format()} (O)");
+                    return;
+                case ContractCompleted c:
+                    _toasts.Show(this, $"Order complete: {c.Contract.Quantity} {Item(c.Contract.Item)}, +${c.Contract.Reward.Format()}");
+                    return;
+                case ContractExpired x:
+                    _toasts.Show(this, $"Order for {Item(x.Contract.Item)} ran out of time");
+                    return;
+                case MilestoneReached m:
+                    _toasts.Show(this, $"Goal reached: {m.Name}, +${m.Reward.Format()}");
+                    return;
+            }
             if (ev is not TierUnlocked t) return;
             var b = host.Sim.World.Bounds;
             _toasts.Show(this, $"Tier {t.Tier} unlocked: {t.Name}! Plot is now {b.Max.X - b.Min.X + 1}×{b.Max.Y - b.Min.Y + 1}, new buildings in the build menu.");
@@ -103,6 +126,14 @@ public partial class Hud : CanvasLayer
 
         _toasts = new Toasts();
         _root.AddChild(Ui.Anchor(_toasts.Root, 0.5f, 0, 0, 72, Control.GrowDirection.Both, Control.GrowDirection.End));
+
+        var paused = Ui.Label("PAUSED · Space to resume", 15);
+        paused.AddThemeFontOverride("font", UiTheme.Bold);
+        _pausedBadge = Ui.Panel(paused);
+        _pausedBadge.AddThemeStyleboxOverride("panel", UiTheme.Box(new Color(UiTheme.Primary, 0.9f), 8, 14, 6));
+        _pausedBadge.Visible = false;
+        _pausedBadge.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _root.AddChild(Ui.Anchor(_pausedBadge, 0.5f, 0, 0, 72, Control.GrowDirection.Both, Control.GrowDirection.End));
 
         _cursorText = Ui.Label("", 13);
         _cursorTip = Ui.Panel(_cursorText);
@@ -144,6 +175,7 @@ public partial class Hud : CanvasLayer
         col.AddChild(Ui.IconButton(Icon.Build, "Build menu (B)", ToggleBuildMenu, 44));
         _progressButton = Ui.IconButton(Icon.Progress, "Progress: tiers and build limits (P)", () => ToggleWindow(_progressWindow), 44);
         col.AddChild(_progressButton);
+        col.AddChild(Ui.IconButton(Icon.Orders, "Orders: deliveries for bonus cash (O)", () => ToggleWindow(_ordersWindow), 44));
         col.AddChild(Ui.IconButton(Icon.Stats, "Statistics (I)", () => ToggleWindow(_statsWindow), 44));
         col.AddChild(Ui.IconButton(Icon.Game, "Game: save, load, speed (G)", () => ToggleWindow(_gameWindow), 44));
         col.AddChild(Ui.IconButton(Icon.Help, "Controls (F1)", () => _help.Visible = !_help.Visible, 44));
@@ -270,6 +302,11 @@ public partial class Hud : CanvasLayer
         _progressWindow.Body.AddChild(_progress.Root);
         AddWindow(_progressWindow);
 
+        _orders = new OrdersPanel(id => _host.Execute(new RerollContract(id)));
+        _ordersWindow = new HudWindow("Orders", Icon.Orders, 420);
+        _ordersWindow.Body.AddChild(_orders.Root);
+        AddWindow(_ordersWindow);
+
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300);
         _statsWindow.Body.AddChild(_stats.Root);
@@ -277,9 +314,7 @@ public partial class Hud : CanvasLayer
 
         var game = new VBoxContainer();
         game.AddChild(Ui.TextButton("Save", () => _host.Save()));
-        game.AddChild(Ui.TextButton("Load last save", () => { if (!_host.TryLoad()) _toasts.Show(this, "No save found"); }));
-        game.AddChild(Ui.TextButton("New factory (empty)", () => _host.NewGame(withDemo: false)));
-        game.AddChild(Ui.TextButton("New factory (demo layout)", () => _host.NewGame(withDemo: true)));
+        game.AddChild(Ui.TextButton("Pause / resume (Space)", TogglePause));
         _speedButton = Ui.TextButton("Speed ×1", CycleSpeed, "Simulation speed");
         game.AddChild(_speedButton);
         _sandbox = new CheckButton { Text = "Sandbox (free building)", FocusMode = Control.FocusModeEnum.None };
@@ -287,12 +322,19 @@ public partial class Hud : CanvasLayer
         game.AddChild(_sandbox);
         game.AddChild(Ui.TextButton("Simulate 1 h offline", () => _host.SimulateOffline(3600), "Test the offline catch-up"));
         game.AddChild(Ui.TextButton("Start the tutorial", StartTutorial, "A short guided first factory"));
+        game.AddChild(Ui.TextButton("Settings", () => { _gameWindow.Visible = false; OpenSettings?.Invoke(); }));
+        game.AddChild(Ui.TextButton("Save and quit to menu", () => QuitToMenu?.Invoke()));
         _gameWindow = new HudWindow("Vibe Factory", Icon.Game, 280);
         _gameWindow.Body.AddChild(Ui.Pad(game, 14, 12));
         AddWindow(_gameWindow);
 
         _tutorial = new TutorialPanel(FocusTarget);
-        _tutorial.Ended += () => { if (AutoStartTutorial) SaveSettings(tutorialDone: true); };
+        _tutorial.Ended += () =>
+        {
+            if (!AutoStartTutorial) return;
+            Settings.TutorialDone = true;
+            Settings.Save();
+        };
         AddWindow(_tutorial.Window);
         _root.AddChild(_tutorial.Highlight);
     }
@@ -321,19 +363,6 @@ public partial class Hud : CanvasLayer
         };
     }
 
-    private bool TutorialDone()
-    {
-        if (!FileAccess.FileExists(SettingsPath)) return false;
-        using var f = FileAccess.Open(SettingsPath, FileAccess.ModeFlags.Read);
-        try { return JsonSerializer.Deserialize<Dictionary<string, bool>>(f.GetAsText())?.GetValueOrDefault("tutorialDone") == true; }
-        catch (JsonException) { return false; }
-    }
-
-    private static void SaveSettings(bool tutorialDone)
-    {
-        using var f = FileAccess.Open(SettingsPath, FileAccess.ModeFlags.Write);
-        f?.StoreString(JsonSerializer.Serialize(new Dictionary<string, bool> { ["tutorialDone"] = tutorialDone }));
-    }
 
     private void AddWindow(HudWindow w)
     {
@@ -362,6 +391,7 @@ public partial class Hud : CanvasLayer
             : w == _tutorial.Window ? new Vector2(screen.X - w.Root.Size.X - 12, screen.Y - w.Root.Size.Y - 128)
             : w == _progressWindow ? new Vector2(84, 70)
             : w == _statsWindow ? new Vector2(84 + 350, 70)
+            : w == _ordersWindow ? new Vector2(84, screen.Y - w.Root.Size.Y - 200)
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
@@ -395,8 +425,10 @@ public partial class Hud : CanvasLayer
             ("Ctrl+A", "Select all"), ("Esc / RMB click", "Cancel tool"),
             ("WASD", "Pan (Shift = fast)"), ("RMB drag", "Orbit camera"),
             ("MMB drag", "Pan"), ("Wheel", "Zoom to cursor"),
-            ("P", "Progress: tiers & limits"), ("I", "Statistics"),
+            ("P", "Progress: tiers, limits, goals"), ("O", "Orders"),
+            ("I", "Statistics"), ("Space", "Pause the simulation"),
             ("G", "Game menu"), ("F1", "This help"),
+            ("Esc (nothing to cancel)", "Pause menu"), ("", ""),
             ("Click building", "Manage: upgrade, recipe"), ("Drag title bar", "Move a window"),
         };
         foreach (var (key, action) in keys)
@@ -433,16 +465,9 @@ public partial class Hud : CanvasLayer
             _thumbs.RenderAll(content.BuildingList, content.Items.Values);
         }
         _sandbox.SetPressedNoSignal(_host.Sim.World.Sandbox);
+        _pausedBadge.Visible = _host.Paused;
         RefreshHotbar();
         RefreshToolState();
-
-        // First launch with a fresh factory: offer the guided start.
-        if (!_tutorialChecked)
-        {
-            _tutorialChecked = true;
-            if (AutoStartTutorial && _host.Sim.World.EntityCount == 0 && _host.Sim.World.Stats.TotalEarned.IsZero && !TutorialDone())
-                CallDeferred(nameof(StartTutorial));
-        }
     }
 
     private string KeyOf(BuildingDef def)
@@ -502,6 +527,13 @@ public partial class Hud : CanvasLayer
         RefreshToolState();
     }
 
+    /// <summary>Freezes or resumes the simulation; building still works while it's frozen.</summary>
+    public void TogglePause()
+    {
+        _host.Paused = !_host.Paused;
+        _pausedBadge.Visible = _host.Paused;
+    }
+
     private void CycleSpeed()
     {
         int i = Array.IndexOf(Speeds, _host.TimeScale);
@@ -539,11 +571,17 @@ public partial class Hud : CanvasLayer
             case Key.I:
                 ToggleWindow(_statsWindow);
                 break;
+            case Key.O:
+                ToggleWindow(_ordersWindow);
+                break;
             case Key.G:
                 ToggleWindow(_gameWindow);
                 break;
             case Key.F1:
                 _help.Visible = !_help.Visible;
+                break;
+            case Key.Space:
+                TogglePause();
                 break;
             case Key.Escape:
                 if (_help.Visible) _help.Visible = false;
@@ -616,7 +654,8 @@ public partial class Hud : CanvasLayer
         _manage.Show(_host.Sim, _tools.SelectedEntities().ToList(), _thumbs);
         if (_progressWindow.Visible) _progress.Refresh(_host.Sim);
         if (_statsWindow.Visible) _stats.Refresh(world);
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow })
+        if (_ordersWindow.Visible) _orders.Refresh(_host.Sim, _thumbs);
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;

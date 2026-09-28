@@ -72,6 +72,9 @@ public static partial class ModelFactory
             case "assembler":
                 Assembler(rig, def, accent);
                 break;
+            case "launchpad":
+                LaunchPad(rig, def, accent, effects);
+                break;
             default:
                 Add(rig, rig.Root, Cached($"box:{def.Id}", () =>
                 {

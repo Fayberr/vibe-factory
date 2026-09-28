@@ -100,6 +100,24 @@ public partial class WorldView : Node3D
 
     public bool IsVisible(int z) => !_cutaway || z <= _layer;
 
+    /// <summary>Graphics preset: Low turns off shadows, ambient occlusion and glow; Medium keeps crisp shadows.</summary>
+    public void ApplyQuality(string quality)
+    {
+        foreach (var child in GetChildren())
+        {
+            if (child is WorldEnvironment { Environment: { } env })
+            {
+                env.SsaoEnabled = quality == "High";
+                env.GlowEnabled = quality != "Low";
+            }
+            if (child is DirectionalLight3D sun)
+            {
+                sun.ShadowEnabled = quality != "Low";
+                sun.ShadowBlur = quality == "High" ? 1.5f : 0.5f;
+            }
+        }
+    }
+
     public Highlight HighlightOf(int entityId) => _visuals.TryGetValue(entityId, out var v) ? v.Highlight : Highlight.None;
 
     public void SetHighlight(int entityId, Highlight h)

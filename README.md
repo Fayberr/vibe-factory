@@ -16,6 +16,17 @@ Every 3D model is **generated in code**: beveled low-poly bodies, belt profiles 
 along curves, lattice towers, and smoking chimneys. Build-menu and hotbar icons are
 rendered from those same models, so new content gets art and icons with no asset work.
 
+The sound is the opposite: **every sound is a real recording**. Placing, removing,
+upgrading and selling come from Kenney's CC0 packs (positional, with a little pitch
+variation so repeats don't sound mechanical), and chilled lounge music by Kevin MacLeod
+plays underneath. See [Credits](#credits).
+
+**A full game around it:** a title screen with your factory running behind it, five save
+slots (autosave, play time, last played), settings (volumes for music, effects and
+interface, fullscreen, vsync, graphics quality, interface size, autosave interval), a
+pause menu, a tutorial, and a long progression of eight tiers, customer orders and 26
+goals.
+
 ## Repository layout
 
 Assemblies and namespaces keep the code name `FactorySim`; the game is called Vibe Factory.
@@ -28,7 +39,9 @@ tests/FactorySim.Tests/  xUnit tests for the core (belt physics, splitting/mergi
 godot/                   Godot 4.7 (.NET) client. Presentation and input only.
   scripts/Visual/          procedural models (MeshBuilder, ModelFactory), world view, shaders
   scripts/Input/           camera, build tools, ghost previews
-  scripts/UI/              HUD, build menu, inspector, icons, thumbnails
+  scripts/UI/              HUD, build menu, windows, title and pause menus, icons, thumbnails
+  scripts/Audio/           sound effects and music (AudioManager)
+  audio/                   recorded sounds and music (see audio/CREDITS.md)
   scripts/Dev/             scripted end-to-end UI test
 docs/ARCHITECTURE.md     How the pieces fit, and where to extend them.
 ```
@@ -50,8 +63,10 @@ dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, sta
 **New to it?** A short tutorial walks you through your first factory (drill, belt, smelter,
 depot, first upgrade) the first time you play. Reopen it any time from the Game menu (`G`).
 
-**Play from source:** open `godot/project.godot` in Godot 4.7 .NET and press Play. Pick
-*New factory (demo layout)* in the game menu (`G`) to spawn the demo, or start building.
+**Play from source:** open `godot/project.godot` in Godot 4.7 .NET and press Play. The
+title screen has *Continue*, *New factory* (tick *Start with the example factory* for a
+ready-made factory), *Load factory*, *Settings* and *Credits*. Saves live in five slots
+under Godot's user folder (`user://saves/`); older single saves move into slot 1.
 
 ## Building controls
 
@@ -76,7 +91,9 @@ Building is designed to be fast from the keyboard. Press `F1` in game for this t
 | `Ctrl+A` | Select all |
 | `Esc` / right-click | Cancel the tool, then clear the selection |
 | `WASD`, MMB drag · RMB drag · wheel | Pan · orbit · zoom toward the cursor |
-| `P` · `I` · `G` · `F1` | Progress (tiers, limits) · statistics · game menu · help. Windows can be open together; drag them by the title bar, `Esc` closes the last one |
+| `P` · `O` · `I` · `G` · `F1` | Progress (tiers, limits, goals) · orders · statistics · game menu · help. Windows can be open together; drag them by the title bar, `Esc` closes the last one |
+| `Space` | Pause or resume the factory (you can keep building while it is paused) |
+| `Esc` (nothing to cancel) | Pause menu: resume, save, settings, quit to the title screen or to the desktop |
 
 **Heights.** Everything is built at the current build height, shown on the ladder next
 to the hotbar and next to the cursor. `G` is the ground plate: nothing can go below it.
@@ -97,10 +114,18 @@ their choice.
 
 ## Progression and balance
 
-- **Tiers.** Six tiers (Basics, Workshop, Industry, Petrochemicals, Electronics,
-  Robotics). Each needs lifetime earnings plus a price, unlocks new extractors and
-  machines, grows the plot and raises build limits. The factory card always shows the
-  next goal; `P` opens the details.
+- **Tiers.** Eight tiers (Basics, Workshop, Industry, Petrochemicals, Electronics,
+  Robotics, Aerospace, Space). Each needs lifetime earnings plus a price, unlocks new
+  extractors and machines, grows the plot and raises build limits. The factory card
+  always shows the next goal; `P` opens the details. The late game adds bauxite,
+  aluminium, drones, rocket fuel and satellites, and ends at a launch complex.
+- **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
+  before the deadline for about twice its value on top of the normal sale. Orders ask
+  for things you can already make, sized to your current income, and newer products are
+  asked for more often. Don't like one? Swap it for a small fee.
+- **Goals.** 26 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+  first robot, first satellite, a trillion earned…), each with a cash reward. The Progress
+  window shows the next four with progress bars.
 - **Per-building upgrades.** There are no global upgrades. Every building has its own
   level: drills and machines get faster (machines also add a little value), belts get
   faster up to level 5, market depots pay more. Ten drills means ten upgrades. Levels
@@ -113,7 +138,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core tests (94)
+dotnet test                                                     # core tests (102)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit
@@ -121,7 +146,8 @@ godot --headless --path godot -- --smoke
 
 # Scripted end-to-end UI test: injects real mouse/keyboard input (line drag, undo,
 # box select, copy/paste, delete, move, pipette, replace-on-place, auto-bridge, build
-# height, upgrades) and checks the results. Needs a display (e.g. xvfb-run).
+# height, upgrades, Manage window, windows, pause, title screen, audio) and checks the
+# results. Needs a display (e.g. xvfb-run).
 # Add --shots=/abs/dir to save screenshots.
 godot --path godot -- --ui-test
 
@@ -129,7 +155,9 @@ godot --path godot -- --ui-test
 godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # Screenshot options: --wait=seconds, --view=yaw,pitch,distance,x,z, --select=x,y (opens
 # the Manage window for that cell), --windows (opens Progress and Statistics),
-# --tutorial (an empty factory at the tutorial's first step).
+# --orders (opens Progress and Orders), --tutorial (an empty factory at the tutorial's
+# first step), --pause (opens the pause menu), --title (the title screen; add
+# --menu=settings|new|load|credits to open one of its windows).
 ```
 
 ## Continuous integration and downloads
@@ -173,3 +201,16 @@ var content = ContentRegistry.LoadDefault(null, ContentRegistry.ParsePack(File.R
 New *kinds* of behavior are a class deriving from `Behavior<TParams, TState>`. New
 *looks* are a case in `godot/scripts/Visual/ModelFactory.cs`. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Credits
+
+- **Music:** "Dreamer", "Airport Lounge", "Chill Wave" and "Lobby Time" by Kevin MacLeod
+  (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License,
+  http://creativecommons.org/licenses/by/4.0/
+- **Sound effects:** [Kenney](https://www.kenney.nl) (Interface Sounds, Impact Sounds,
+  Casino Audio, Music Jingles), CC0 1.0.
+- **Engine:** [Godot](https://godotengine.org) 4.7 (.NET).
+
+Which clip is used for what, and how the files were converted:
+[godot/audio/CREDITS.md](godot/audio/CREDITS.md). The same credits are in the game
+(title screen, *Credits*).

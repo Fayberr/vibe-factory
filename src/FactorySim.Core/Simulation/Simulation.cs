@@ -10,7 +10,7 @@ public sealed record LoggedCommand(long Tick, Command Command);
 /// feeds it real time via <see cref="Advance"/> or calls <see cref="Step()"/> directly;
 /// the simulation itself never reads a clock, so identical inputs give identical results.
 /// </summary>
-public sealed class Simulation
+public sealed partial class Simulation
 {
     public const int TicksPerSecond = 20;
     public const double SecondsPerTick = 1.0 / TicksPerSecond;
@@ -54,6 +54,7 @@ public sealed class Simulation
             e.Behavior.Tick(_ctx, e);
         }
         World.Stats.EndTick(World.Tick);
+        if (World.Goals && World.Tick % TicksPerSecond == 0) UpdateGoals();
         World.Tick++;
     }
 
@@ -96,6 +97,7 @@ public sealed class Simulation
             MoveBuildings c => Move(c),
             SetBuildingLevels c => SetLevels(c),
             SelectRecipe c => Choose(c),
+            RerollContract c => Reroll(c),
             UnlockTier => Unlock(),
             _ => CommandResult.Fail($"Unknown command {command.GetType().Name}"),
         };
