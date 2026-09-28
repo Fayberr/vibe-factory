@@ -1,0 +1,25 @@
+; Godot 4 project for the Factory Sim client.
+; The game logic lives in ../src/FactorySim.Core (engine-agnostic .NET library);
+; everything in this folder is presentation and input only.
+
+config_version=5
+
+[application]
+
+config/name="Factory Sim"
+config/description="Modular factory/tycoon prototype: deterministic C# simulation core + Godot presentation."
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[dotnet]
+
+project/assembly_name="FactorySim.Client"
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2

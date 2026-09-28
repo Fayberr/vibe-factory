@@ -1,0 +1,4 @@
+<Project>
+  <!-- Intentionally empty: stops the repository-root Directory.Build.props
+       (warnings-as-errors, implicit usings) from applying to the Godot project. -->
+</Project>

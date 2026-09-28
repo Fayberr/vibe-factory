@@ -1,0 +1,168 @@
+using FactorySim.Content;
+
+namespace FactorySim;
+
+/// <summary>Inclusive cell bounds of the buildable plot. Expanding it is a progression hook.</summary>
+public readonly record struct GridBounds(GridPos Min, GridPos Max)
+{
+    public bool Contains(GridPos p) =>
+        p.X >= Min.X && p.X <= Max.X && p.Y >= Min.Y && p.Y <= Max.Y && p.Z >= Min.Z && p.Z <= Max.Z;
+
+    public static GridBounds Default => new(new GridPos(0, 0, -2), new GridPos(31, 31, 6));
+}
+
+public readonly record struct PlacementCheck(bool Ok, string? Reason = null)
+{
+    public static readonly PlacementCheck Success = new(true);
+    public static PlacementCheck Fail(string reason) => new(false, reason);
+}
+
+/// <summary>
+/// All simulation state: grid, entities, economy, upgrades, stats, RNG. Pure data plus
+/// queries — mutate it through <see cref="Simulation.Execute"/> so every change is a
+/// validated, loggable, replayable command.
+/// </summary>
+public sealed class World
+{
+    private readonly Dictionary<int, Entity> _entities = new();
+    private readonly Dictionary<GridPos, Entity> _grid = new();
+    private readonly Dictionary<string, double> _statCache = new();
+    private List<Entity> _updateOrder = new();
+    private bool _topologyDirty = true;
+
+    public ContentRegistry Content { get; }
+
+    /// <summary>Ticks simulated since the world was created.</summary>
+    public long Tick { get; internal set; }
+
+    public BigNum Money { get; internal set; }
+    public GridBounds Bounds { get; set; } = GridBounds.Default;
+
+    /// <summary>Free building and upgrades — for prototyping and level design.</summary>
+    public bool Sandbox { get; set; }
+
+    public Rng Rng { get; }
+    public StatsTracker Stats { get; internal set; } = new();
+
+    internal Dictionary<string, int> UpgradeLevels { get; } = new();
+    internal int NextEntityId { get; set; } = 1;
+    internal long NextItemUid { get; set; } = 1;
+
+    public World(ContentRegistry content, uint seed = 1)
+    {
+        Content = content;
+        Rng = new Rng(seed);
+    }
+
+    public IReadOnlyCollection<Entity> Entities => _entities.Values;
+    public int EntityCount => _entities.Count;
+
+    public Entity? GetEntity(int id) => _entities.GetValueOrDefault(id);
+    public Entity? EntityAt(GridPos cell) => _grid.GetValueOrDefault(cell);
+
+    // ---- Stats & upgrades -------------------------------------------------
+
+    public int UpgradeLevel(string upgradeId) => UpgradeLevels.GetValueOrDefault(upgradeId);
+
+    public IReadOnlyDictionary<string, int> AllUpgradeLevels => UpgradeLevels;
+
+    /// <summary>
+    /// Current value of a stat: 1 × all Multiply upgrades + all Add upgrades targeting it.
+    /// Cached until an upgrade level changes.
+    /// </summary>
+    public double Stat(string stat)
+    {
+        if (_statCache.TryGetValue(stat, out var cached)) return cached;
+        double mult = 1, add = 0;
+        foreach (var u in Content.Upgrades.Values)
+        {
+            if (u.Stat != stat) continue;
+            int level = UpgradeLevel(u.Id);
+            if (level == 0) continue;
+            if (u.Effect == UpgradeEffectKind.Multiply) mult *= PowInt(u.PerLevel, level);
+            else add += u.PerLevel * level;
+        }
+        return _statCache[stat] = mult + add;
+    }
+
+    internal void SetUpgradeLevel(string upgradeId, int level)
+    {
+        UpgradeLevels[upgradeId] = level;
+        _statCache.Clear();
+    }
+
+    /// <summary>Deterministic integer power (no Math.Pow).</summary>
+    private static double PowInt(double b, int n)
+    {
+        double r = 1;
+        while (n > 0)
+        {
+            if ((n & 1) != 0) r *= b;
+            b *= b;
+            n >>= 1;
+        }
+        return r;
+    }
+
+    // ---- Placement ---------------------------------------------------------
+
+    public PlacementCheck CanPlace(BuildingDef def, GridPos pos, Dir facing, Entity? ignore = null)
+    {
+        foreach (var cell in Entity.CellsFor(def, pos, facing))
+        {
+            if (!Bounds.Contains(cell)) return PlacementCheck.Fail($"{cell} is outside the plot");
+            var occupant = EntityAt(cell);
+            if (occupant != null && occupant != ignore) return PlacementCheck.Fail($"{cell} is occupied by {occupant.Def.Name}");
+        }
+        return PlacementCheck.Success;
+    }
+
+    internal Entity AddEntity(BuildingDef def, GridPos pos, Dir facing, int? id = null, object? state = null)
+    {
+        if (!Content.Behaviors.TryGet(def.Behavior, out var behavior))
+            throw new InvalidOperationException($"No behavior '{def.Behavior}'.");
+        var e = new Entity(id ?? NextEntityId, def, behavior, pos, facing, state ?? behavior.CreateState(def));
+        NextEntityId = Math.Max(NextEntityId, e.Id + 1);
+        _entities.Add(e.Id, e);
+        foreach (var cell in e.Cells()) _grid[cell] = e;
+        _topologyDirty = true;
+        return e;
+    }
+
+    internal void RemoveEntity(Entity e)
+    {
+        foreach (var cell in e.Cells()) _grid.Remove(cell);
+        _entities.Remove(e.Id);
+        _topologyDirty = true;
+    }
+
+    internal void Reorient(Entity e, GridPos pos, Dir facing)
+    {
+        foreach (var cell in e.Cells()) _grid.Remove(cell);
+        e.Pos = pos;
+        e.Facing = facing;
+        foreach (var cell in e.Cells()) _grid[cell] = e;
+        _topologyDirty = true;
+    }
+
+    // ---- Topology ----------------------------------------------------------
+
+    /// <summary>Entities in tick order (downstream first). Rebuilds links if the layout changed.</summary>
+    public IReadOnlyList<Entity> UpdateOrder
+    {
+        get
+        {
+            if (_topologyDirty)
+            {
+                _updateOrder = Topology.Rebuild(this);
+                _topologyDirty = false;
+            }
+            return _updateOrder;
+        }
+    }
+
+    internal ItemStack CreateItem(string type, long count, BigNum unitValue) =>
+        new() { Uid = NextItemUid++, Type = type, Count = count, UnitValue = unitValue };
+
+    internal void AddMoney(BigNum amount) => Money += amount;
+}

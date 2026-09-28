@@ -1,0 +1,116 @@
+// Base content pack. Everything here is data: tweak numbers, add machines that
+// reuse existing behaviors, or layer another pack on top (later packs override by id).
+//
+// Units: 20 ticks = 1 second. Conveyor tile = 1000 units.
+// Ports: "side" is relative to the building facing north; "cell" is a footprint cell.
+// "meta" is ignored by the simulation — renderers/tools use it (color, shape, glyph, height).
+{
+  "items": [
+    { "id": "iron_ore",   "name": "Iron Ore",     "baseValue": 1,   "meta": { "color": "#8b7d74" } },
+    { "id": "copper_ore", "name": "Copper Ore",   "baseValue": 1.5, "meta": { "color": "#c8733c" } },
+    { "id": "iron_ingot", "name": "Iron Ingot",   "baseValue": 0,   "meta": { "color": "#d3dae2" } },
+    { "id": "bronze",     "name": "Bronze Alloy", "baseValue": 0,   "meta": { "color": "#d9a441" } }
+  ],
+
+  "recipes": [
+    {
+      "id": "smelt_iron",
+      "inputs":  [ { "item": "iron_ore", "count": 1 } ],
+      "outputs": [ { "item": "iron_ingot", "count": 1 } ],
+      "ticks": 16,
+      "valueMultiplier": 2
+    },
+    {
+      "id": "alloy_bronze",
+      "inputs":  [ { "item": "iron_ingot", "count": 1 }, { "item": "copper_ore", "count": 1 } ],
+      "outputs": [ { "item": "bronze", "count": 2 } ],
+      "ticks": 30,
+      "valueMultiplier": 3
+    }
+  ],
+
+  "buildings": [
+    {
+      "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 1, "category": "logistics",
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
+        { "kind": "out", "side": "front" }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "shape": "belt", "color": "#3b3f46", "glyph": "belt" }
+    },
+    {
+      // Occupies its cell and the one above; enters low at the back, leaves one layer up at the front.
+      "id": "ramp_up", "name": "Ramp Up", "behavior": "conveyor", "cost": 5, "category": "logistics",
+      "footprint": [ [0, 0, 0], [0, 0, 1] ],
+      "ports": [
+        { "kind": "in", "side": "back", "cell": [0, 0, 0] },
+        { "kind": "out", "side": "front", "cell": [0, 0, 1] }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "shape": "ramp", "color": "#4a5260", "glyph": "U" }
+    },
+    {
+      // Mirror of ramp_up: enters at the upper layer, leaves at the lower one.
+      "id": "ramp_down", "name": "Ramp Down", "behavior": "conveyor", "cost": 5, "category": "logistics",
+      "footprint": [ [0, 0, 0], [0, 0, 1] ],
+      "ports": [
+        { "kind": "in", "side": "back", "cell": [0, 0, 1] },
+        { "kind": "out", "side": "front", "cell": [0, 0, 0] }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "shape": "ramp", "color": "#4a5260", "glyph": "D" }
+    },
+    {
+      "id": "iron_miner", "name": "Iron Miner", "behavior": "miner", "cost": 25, "category": "production",
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "iron_ore", "interval": 20, "amount": 1 },
+      "meta": { "shape": "box", "height": "0.8", "color": "#6b5b4f", "glyph": "M" }
+    },
+    {
+      "id": "copper_miner", "name": "Copper Miner", "behavior": "miner", "cost": 60, "category": "production",
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "copper_ore", "interval": 30, "amount": 1 },
+      "meta": { "shape": "box", "height": "0.8", "color": "#9a5a32", "glyph": "C" }
+    },
+    {
+      "id": "smelter", "name": "Smelter", "behavior": "processor", "cost": 80, "category": "processing",
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "smelt_iron" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "shape": "box", "height": "0.9", "color": "#b3502d", "glyph": "S" }
+    },
+    {
+      // Same behavior as the smelter, different recipe and three inputs: merging is just data.
+      "id": "alloy_forge", "name": "Alloy Forge", "behavior": "processor", "cost": 400, "category": "processing",
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
+        { "kind": "out", "side": "front" }
+      ],
+      "params": { "recipes": [ "alloy_bronze" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "shape": "box", "height": "1.0", "color": "#8e6b2e", "glyph": "A" }
+    },
+    {
+      // An in-line upgrader is a conveyor with an effect: ×1.5 value, once per item.
+      "id": "polisher", "name": "Polisher", "behavior": "conveyor", "cost": 150, "category": "processing",
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
+      "params": { "speed": 100, "spacing": 250, "effect": { "tag": "polished", "valueMultiplier": 1.5, "once": true } },
+      "meta": { "shape": "belt", "color": "#2f7f8f", "glyph": "P" }
+    },
+    {
+      "id": "seller", "name": "Seller", "behavior": "seller", "cost": 10, "category": "economy",
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" },
+        { "kind": "in", "side": "right" }, { "kind": "in", "side": "front" }
+      ],
+      "meta": { "shape": "box", "height": "0.5", "color": "#2e8b57", "glyph": "$" }
+    }
+  ],
+
+  "upgrades": [
+    { "id": "belt_speed",   "name": "Belt Speed",   "stat": "conveyor.speed",      "effect": "multiply", "perLevel": 1.1,  "baseCost": 100, "costGrowth": 1.6, "maxLevel": 9 },
+    { "id": "miner_rate",   "name": "Miner Rate",   "stat": "miner.rate",          "effect": "multiply", "perLevel": 1.15, "baseCost": 50,  "costGrowth": 1.5 },
+    { "id": "machine_speed","name": "Machine Speed","stat": "machine.speed",       "effect": "multiply", "perLevel": 1.15, "baseCost": 150, "costGrowth": 1.55 },
+    { "id": "sell_price",   "name": "Sell Price",   "stat": "sell.multiplier",     "effect": "multiply", "perLevel": 1.25, "baseCost": 250, "costGrowth": 1.8 },
+    { "id": "stack_size",   "name": "Stack Size",   "stat": "logistics.stackSize", "effect": "add",      "perLevel": 1,    "baseCost": 500, "costGrowth": 2.2 }
+  ]
+}

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The simulation core: pure .NET, no engine references. Consumed by the
+       Godot client, the headless CLI, tests, and (later) a server for
+       leaderboard verification. Keep it free of Godot/Unity/IO dependencies. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>FactorySim</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Content/Data/*.json" LogicalName="FactorySim.Content.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

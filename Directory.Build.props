@@ -1,0 +1,12 @@
+<Project>
+  <!-- Shared settings for the engine-agnostic projects (core, CLI, tests).
+       The Godot client has its own Directory.Build.props so these do not leak into it. -->
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D24F9818-71D3-475F-94BB-AFAF2EC103EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactorySim.Core", "src\FactorySim.Core\FactorySim.Core.csproj", "{106DD576-81D0-4B29-B7DA-97840070BE59}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactorySim.Cli", "src\FactorySim.Cli\FactorySim.Cli.csproj", "{22F8F951-7B86-4A10-B640-18D01B847E47}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{992C28E5-F172-483D-8ED8-742FFBAC585D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactorySim.Tests", "tests\FactorySim.Tests\FactorySim.Tests.csproj", "{50CEC2E7-920F-4B51-9FD5-24B38B78CE11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactorySim.Client", "godot\FactorySim.Client.csproj", "{5F0B872D-682E-466D-A2AF-B30016E717EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{106DD576-81D0-4B29-B7DA-97840070BE59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{106DD576-81D0-4B29-B7DA-97840070BE59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{106DD576-81D0-4B29-B7DA-97840070BE59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{106DD576-81D0-4B29-B7DA-97840070BE59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22F8F951-7B86-4A10-B640-18D01B847E47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22F8F951-7B86-4A10-B640-18D01B847E47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22F8F951-7B86-4A10-B640-18D01B847E47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22F8F951-7B86-4A10-B640-18D01B847E47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50CEC2E7-920F-4B51-9FD5-24B38B78CE11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50CEC2E7-920F-4B51-9FD5-24B38B78CE11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50CEC2E7-920F-4B51-9FD5-24B38B78CE11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50CEC2E7-920F-4B51-9FD5-24B38B78CE11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F0B872D-682E-466D-A2AF-B30016E717EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F0B872D-682E-466D-A2AF-B30016E717EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F0B872D-682E-466D-A2AF-B30016E717EF}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F0B872D-682E-466D-A2AF-B30016E717EF}.Release|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{106DD576-81D0-4B29-B7DA-97840070BE59} = {D24F9818-71D3-475F-94BB-AFAF2EC103EA}
+		{22F8F951-7B86-4A10-B640-18D01B847E47} = {D24F9818-71D3-475F-94BB-AFAF2EC103EA}
+		{50CEC2E7-920F-4B51-9FD5-24B38B78CE11} = {992C28E5-F172-483D-8ED8-742FFBAC585D}
+	EndGlobalSection
+EndGlobal
