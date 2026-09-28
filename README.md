@@ -37,7 +37,7 @@ Assemblies and namespaces keep the code name `FactorySim`; the game is called Vi
 ```
 src/FactorySim.Core/     Simulation: grid, transport, machines, economy, blueprints, undo, saves, offline.
                          Plain .NET 8. No engine references (a test enforces this).
-src/FactorySim.Cli/      Headless host: demo walkthrough, ASCII view, benchmark.
+src/FactorySim.Cli/      Headless host: demo walkthrough, ASCII view, benchmark, balance report.
 tests/FactorySim.Tests/  xUnit tests for the core (belt physics, splitting/merging, editing, determinism…)
                          and the client's crash-safe save files.
 godot/                   Godot 4.7 (.NET) client. Presentation and input only.
@@ -58,7 +58,16 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download). The client nee
 ```bash
 dotnet test                                   # core test suite
 dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, stats, save/load, offline catch-up
+dotnet run --project src/FactorySim.Cli -- balance          # economy report over the content file
+dotnet run --project src/FactorySim.Cli -- balance item robot   # what a robot line needs, ore to depot
 ```
+
+**Balance tool.** `balance` is a calculator over `base.json`: `balance tiers` estimates how long
+each tier takes, `balance items` lists what everything is worth and what uses it, and
+`balance item <name> [rate]` breaks down one production line (machines, ores per second, build
+cost, payback). Options: `--level N` (every building at level N), `--polish none|products|all`,
+`--tier N` (what is unlocked), `--pack extra.json` (repeatable). It reads content only, so it can
+check a balance change before it ships.
 
 **Download (Windows):** the newest build is always the
 [latest release](https://github.com/Fayberr/vibe-factory/releases/latest), direct link:
@@ -152,7 +161,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (129)
+dotnet test                                                     # core and save-file tests (143)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit

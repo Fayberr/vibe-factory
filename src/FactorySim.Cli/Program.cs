@@ -9,6 +9,7 @@ using FactorySim.Samples;
 // Headless host: runs the exact same simulation the Godot client runs, without any engine.
 //   dotnet run --project src/FactorySim.Cli              → demo walkthrough
 //   dotnet run --project src/FactorySim.Cli -- bench 200 → throughput benchmark with 200 lines
+//   dotnet run --project src/FactorySim.Cli -- balance   → balance report (see BalanceCommand)
 
 var content = ContentRegistry.LoadDefault();
 var mode = args.Length > 0 ? args[0] : "demo";
@@ -21,8 +22,10 @@ switch (mode)
     case "bench":
         RunBench(content, args.Length > 1 ? int.Parse(args[1], CultureInfo.InvariantCulture) : 100);
         break;
+    case "balance":
+        return BalanceCommand.Run(args[1..]);
     default:
-        Console.WriteLine("usage: FactorySim.Cli [demo | bench <lines>]");
+        Console.WriteLine("usage: FactorySim.Cli [demo | bench <lines> | balance ...]");
         return 1;
 }
 return 0;

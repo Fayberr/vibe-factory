@@ -4,7 +4,7 @@
 
 ```
 ┌───────────────────────────── frontends (replaceable) ─────────────────────────────┐
-│  godot/ (Godot 4 .NET)          src/FactorySim.Cli (ASCII, bench)     future: server │
+│  godot/ (Godot 4 .NET)     src/FactorySim.Cli (ASCII, bench, balance)  future: server │
 │  SimHost · GameFlow · WorldView · BuildController · Hud · AudioManager              │
 └───────────────┬──────────────────────────────────────────────┬─────────────────────┘
        reads    │ World queries, View/*, drained SimEvents      │ writes: Execute(Command) / EditHistory
@@ -16,6 +16,8 @@
 │  Editing ───── blueprints, batch commands, undo/redo, BuildPlanner (drags, bridges) │
 │  Progression ─ customer orders (contracts), milestones                             │
 │  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes)   │
+│  Balance ───── the content as an economy: recipe book, production chains, tier      │
+│                pacing. Calculates only, never runs; used by the CLI's balance report │
 │  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```

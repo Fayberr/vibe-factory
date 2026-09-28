@@ -18,6 +18,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <ProjectReference Include="..\..\src\FactorySim.Core\FactorySim.Core.csproj" />
+    <ProjectReference Include="..\..\src\FactorySim.Cli\FactorySim.Cli.csproj" />
   </ItemGroup>
 
   <ItemGroup>
