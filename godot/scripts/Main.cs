@@ -55,7 +55,7 @@ public partial class Main : Node3D
     }
 
     /// <summary>Centre of the built area, or of the plot's first 16×16 cells when empty.</summary>
-    private static Vector3 FocusPoint(World world)
+    internal static Vector3 FocusPoint(World world)
     {
         if (world.EntityCount == 0) return new Vector3(world.Bounds.Min.X + 16, 0, world.Bounds.Min.Y + 16);
         var sum = Vector3.Zero;

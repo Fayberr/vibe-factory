@@ -19,6 +19,28 @@ public static class UiTheme
     /// <summary>Emboldened default font for titles and numbers.</summary>
     public static FontVariation Bold => _bold ??= new FontVariation { BaseFont = ThemeDB.FallbackFont, VariationEmbolden = 0.75f };
 
+    /// <summary>A rounded on/off switch (track and knob), drawn once with soft edges.</summary>
+    private static ImageTexture Switch(bool on, float alpha)
+    {
+        const int w = 40, h = 22;
+        const float r = h / 2f;
+        var img = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
+        var track = on ? Primary : new Color(0.32f, 0.36f, 0.42f);
+        float knobX = on ? w - r : r;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                var p = new Vector2(x + 0.5f, y + 0.5f);
+                float dTrack = p.DistanceTo(new Vector2(Mathf.Clamp(p.X, r, w - r), r));
+                float aTrack = Mathf.Clamp(r - 0.5f - dTrack, 0, 1);
+                float aKnob = Mathf.Clamp(r - 3.5f - p.DistanceTo(new Vector2(knobX, r)), 0, 1);
+                var c = track.Lerp(Colors.White, aKnob);
+                c.A = Mathf.Max(aTrack, aKnob) * alpha;
+                img.SetPixel(x, y, c);
+            }
+        return ImageTexture.CreateFromImage(img);
+    }
+
     public static Theme Create()
     {
         var t = new Theme { DefaultFontSize = 15 };
@@ -57,6 +79,14 @@ public static class UiTheme
             t.SetColor("icon_hover_color", type, Colors.White);
             t.SetColor("icon_pressed_color", type, Colors.White);
         }
+
+        // Switches: the knob shows the state, so an "on" row stays calm instead of lighting up.
+        t.SetStylebox("pressed", "CheckButton", normal);
+        t.SetStylebox("hover_pressed", "CheckButton", hover);
+        t.SetIcon("checked", "CheckButton", Switch(true, 1));
+        t.SetIcon("unchecked", "CheckButton", Switch(false, 1));
+        t.SetIcon("checked_disabled", "CheckButton", Switch(true, 0.4f));
+        t.SetIcon("unchecked_disabled", "CheckButton", Switch(false, 0.4f));
 
         // Windows: sections run edge to edge, separated by thin lines.
         t.SetTypeVariation("HudWindowPanel", "PanelContainer");

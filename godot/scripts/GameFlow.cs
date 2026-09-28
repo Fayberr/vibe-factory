@@ -42,7 +42,7 @@ public partial class GameFlow : Node, IMenuActions
         Tools.Enabled = false;
         Camera.Interactive = false;
         Camera.AutoOrbit = true;
-        Camera.SetView(40, -38, 24, new Vector3(14, 0, 15));
+        Camera.SetView(40, -38, 26, Main.FocusPoint(Host.Sim.World));
         Audio.WorldSounds = false;
         Audio.PlayMenuMusic();
         Menus.ShowTitle();

@@ -379,7 +379,7 @@ public partial class Hud : CanvasLayer
         };
     }
 
-    /// <summary>First time a window opens: Manage on the right, the others side by side next to the sidebar.</summary>
+    /// <summary>First time a window opens: Manage on the right; Progress, Statistics and Orders side by side next to the sidebar.</summary>
     private void PlaceWindow(HudWindow w)
     {
         if (w.Placed) return;
@@ -391,7 +391,7 @@ public partial class Hud : CanvasLayer
             : w == _tutorial.Window ? new Vector2(screen.X - w.Root.Size.X - 12, screen.Y - w.Root.Size.Y - 128)
             : w == _progressWindow ? new Vector2(84, 70)
             : w == _statsWindow ? new Vector2(84 + 350, 70)
-            : w == _ordersWindow ? new Vector2(84, screen.Y - w.Root.Size.Y - 200)
+            : w == _ordersWindow ? new Vector2(84 + 350 + 320, 70)
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
