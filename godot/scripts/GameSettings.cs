@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
@@ -75,8 +76,14 @@ public sealed class GameSettings
 
     public void Save()
     {
-        using var f = FileAccess.Open(Path, FileAccess.ModeFlags.Write);
-        f?.StoreString(JsonSerializer.Serialize(this, Json));
+        try
+        {
+            SafeFile.Write(ProjectSettings.GlobalizePath(Path), JsonSerializer.Serialize(this, Json), keepBackup: false);
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"Could not save settings: {ex.Message}");
+        }
     }
 
     /// <summary>The HUD is laid out for at least 1280×720; the interface size shrinks to fit smaller windows.</summary>

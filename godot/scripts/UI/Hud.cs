@@ -520,8 +520,14 @@ public partial class Hud : CanvasLayer
 
     private void SaveHotbar()
     {
-        using var f = FileAccess.Open(HotbarPath, FileAccess.ModeFlags.Write);
-        f?.StoreString(JsonSerializer.Serialize(_hotbar));
+        try
+        {
+            SafeFile.Write(ProjectSettings.GlobalizePath(HotbarPath), JsonSerializer.Serialize(_hotbar), keepBackup: false);
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"Could not save the hotbar: {ex.Message}");
+        }
     }
 
     private void RefreshHotbar()

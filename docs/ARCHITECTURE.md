@@ -209,6 +209,13 @@ so new behaviors need no central registration). Caches such as the grid index,
 links and stat cache are rebuilt on load. Unknown content is dropped with warnings
 instead of failing. `Migrate()` is the hook for version bumps.
 
+The client writes every file through `SafeFile` (`godot/scripts/Persistence`): the new
+contents go to a `.tmp` file, are flushed to disk, and only then replace the real file,
+so a crash, kill or power cut mid-save can't leave a truncated save. Save slots also keep
+the previous save as `slotN.json.bak`; if a slot fails to load, the backup is loaded and
+restored, with a notice to the player. A save from a newer game version fails instead of
+falling back, so the next save can't overwrite it with the older backup.
+
 ## Extending
 
 - **New building with existing behavior:** JSON only (footprint, ports, params, meta).

@@ -38,7 +38,8 @@ Assemblies and namespaces keep the code name `FactorySim`; the game is called Vi
 src/FactorySim.Core/     Simulation: grid, transport, machines, economy, blueprints, undo, saves, offline.
                          Plain .NET 8. No engine references (a test enforces this).
 src/FactorySim.Cli/      Headless host: demo walkthrough, ASCII view, benchmark.
-tests/FactorySim.Tests/  xUnit tests for the core (belt physics, splitting/merging, editing, determinism…).
+tests/FactorySim.Tests/  xUnit tests for the core (belt physics, splitting/merging, editing, determinism…)
+                         and the client's crash-safe save files.
 godot/                   Godot 4.7 (.NET) client. Presentation and input only.
   scripts/Visual/          procedural models (MeshBuilder, ModelFactory), world view, shaders
   scripts/Input/           camera, build tools, ghost previews
@@ -149,7 +150,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core tests (102)
+dotnet test                                                     # core and save-file tests (128)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit

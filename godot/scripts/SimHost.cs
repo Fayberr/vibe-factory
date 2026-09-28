@@ -171,22 +171,23 @@ public partial class SimHost : Node
 
     // ---- Slots ----------------------------------------------------------------
 
-    private static string SlotPath(int slot) => $"{SaveDir}/slot{slot}.json";
-    private static string MetaPath(int slot) => $"{SaveDir}/slot{slot}.meta.json";
+    // Operating-system paths: slot files go through SafeFile (crash-safe writes with a backup).
+    private static string SlotPath(int slot) => ProjectSettings.GlobalizePath($"{SaveDir}/slot{slot}.json");
+    private static string MetaPath(int slot) => ProjectSettings.GlobalizePath($"{SaveDir}/slot{slot}.meta.json");
 
     public void Save(bool quiet = false)
     {
         if (Slot == 0 || Sim == null) return;
         _sinceSave = 0;
-        DirAccess.MakeDirRecursiveAbsolute(SaveDir);
-        using (var file = FileAccess.Open(SlotPath(Slot), FileAccess.ModeFlags.Write))
+        try
         {
-            if (file == null)
-            {
-                Fail($"Save failed: {FileAccess.GetOpenError()}");
-                return;
-            }
-            file.StoreString(SaveSystem.Serialize(Sim, DateTimeOffset.UtcNow));
+            SafeFile.Write(SlotPath(Slot), SaveSystem.Serialize(Sim, DateTimeOffset.UtcNow));
+        }
+        catch (Exception ex)
+        {
+            GD.PushError($"Save failed: {ex}");
+            Fail($"Save failed: {ex.Message}");
+            return;
         }
         var w = Sim.World;
         var info = new SlotInfo
@@ -199,18 +200,35 @@ public partial class SimHost : Node
             PlaySeconds = PlaySeconds,
             Buildings = w.EntityCount,
         };
-        using (var meta = FileAccess.Open(MetaPath(Slot), FileAccess.ModeFlags.Write))
-            meta?.StoreString(JsonSerializer.Serialize(info, MetaJson));
+        WriteMeta(Slot, info);
         if (!quiet) Notice?.Invoke("Saved.");
+    }
+
+    /// <summary>The slot list's summary. Losing it only costs the name and play time, so no backup.</summary>
+    private static void WriteMeta(int slot, SlotInfo info)
+    {
+        try
+        {
+            SafeFile.Write(MetaPath(slot), JsonSerializer.Serialize(info, MetaJson), keepBackup: false);
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"Could not write the slot summary: {ex.Message}");
+        }
     }
 
     public static SlotInfo? ReadSlot(int slot)
     {
-        if (!FileAccess.FileExists(SlotPath(slot))) return null;
-        if (!FileAccess.FileExists(MetaPath(slot))) return new SlotInfo { Name = $"Factory {slot}" };
-        using var f = FileAccess.Open(MetaPath(slot), FileAccess.ModeFlags.Read);
-        try { return JsonSerializer.Deserialize<SlotInfo>(f.GetAsText()) ?? new SlotInfo { Name = $"Factory {slot}" }; }
-        catch (JsonException) { return new SlotInfo { Name = $"Factory {slot}" }; }
+        if (!SafeFile.Exists(SlotPath(slot))) return null;
+        try
+        {
+            return SafeFile.Read(MetaPath(slot), text => JsonSerializer.Deserialize<SlotInfo>(text))?.Value
+                   ?? new SlotInfo { Name = $"Factory {slot}" };
+        }
+        catch (Exception)
+        {
+            return new SlotInfo { Name = $"Factory {slot}" };
+        }
     }
 
     /// <summary>The slot saved most recently, or 0 when there are none.</summary>
@@ -230,19 +248,35 @@ public partial class SimHost : Node
     public static void DeleteSlot(int slot)
     {
         foreach (var path in new[] { SlotPath(slot), MetaPath(slot) })
-            if (FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+        {
+            try { SafeFile.Delete(path); }
+            catch (Exception ex) { GD.PushWarning($"Could not delete {path}: {ex.Message}"); }
+        }
     }
 
     public bool TryLoad(int slot)
     {
         Content ??= ContentRegistry.LoadDefault();
-        if (!FileAccess.FileExists(SlotPath(slot))) return false;
+        string path = SlotPath(slot);
+        if (!SafeFile.Exists(path)) return false;
         try
         {
-            using var file = FileAccess.Open(SlotPath(slot), FileAccess.ModeFlags.Read);
-            var result = SaveSystem.Deserialize(file.GetAsText(), Content);
+            // A damaged save falls back to the one before it. A save from a newer version of the
+            // game does not: loading the older backup would let the next save overwrite the newer one.
+            var read = SafeFile.Read(path, json => SaveSystem.Deserialize(json, Content),
+                                     fallBackOn: ex => ex is not NotSupportedException)!;
+            var result = read.Value;
             var sim = result.Simulation;
             foreach (var w in result.Warnings) GD.PushWarning(w);
+
+            string? restored = null;
+            if (read.FromBackup)
+            {
+                GD.PushWarning($"Save slot {slot} was damaged ({read.PrimaryError?.Message}); loaded its backup.");
+                restored = "The last save was damaged, so the one before it was loaded.";
+                try { SafeFile.RestoreBackup(path); }
+                catch (Exception ex) { GD.PushWarning($"Could not restore the backup over the damaged save: {ex.Message}"); }
+            }
 
             string? welcome = null;
             if (result.SavedAtUtc is DateTimeOffset savedAt)
@@ -261,6 +295,7 @@ public partial class SimHost : Node
             FactoryName = info?.Name ?? $"Factory {slot}";
             PlaySeconds = info?.PlaySeconds ?? 0;
             Replace(sim);
+            if (restored != null) Notice?.Invoke(restored);
             if (welcome != null) Notice?.Invoke(welcome);
             return true;
         }
@@ -275,12 +310,11 @@ public partial class SimHost : Node
     /// <summary>Before slots there was a single save file: it becomes slot 1.</summary>
     private static void MigrateSingleSave()
     {
-        if (!FileAccess.FileExists(OldSavePath) || FileAccess.FileExists(SlotPath(1))) return;
+        if (!FileAccess.FileExists(OldSavePath) || SafeFile.Exists(SlotPath(1))) return;
         DirAccess.MakeDirRecursiveAbsolute(SaveDir);
-        var err = DirAccess.RenameAbsolute(ProjectSettings.GlobalizePath(OldSavePath), ProjectSettings.GlobalizePath(SlotPath(1)));
+        var err = DirAccess.RenameAbsolute(ProjectSettings.GlobalizePath(OldSavePath), SlotPath(1));
         if (err != Error.Ok) return;
-        using var meta = FileAccess.Open(MetaPath(1), FileAccess.ModeFlags.Write);
-        meta?.StoreString(JsonSerializer.Serialize(new SlotInfo { Name = "My factory", SavedAtUtc = DateTimeOffset.UtcNow }, MetaJson));
+        WriteMeta(1, new SlotInfo { Name = "My factory", SavedAtUtc = DateTimeOffset.UtcNow });
     }
 
     /// <summary>

@@ -20,4 +20,9 @@
     <ProjectReference Include="..\..\src\FactorySim.Core\FactorySim.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Client code with no Godot types, compiled in directly so it can be tested here. -->
+    <Compile Include="..\..\godot\scripts\Persistence\SafeFile.cs" Link="Client\SafeFile.cs" />
+  </ItemGroup>
+
 </Project>
