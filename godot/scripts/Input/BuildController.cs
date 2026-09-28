@@ -720,6 +720,8 @@ public partial class BuildController : Node3D
         if (_host.Sim == null) return;
         UpdateHover();
         if (_lmbDown && !_dragging && _mouse.DistanceTo(_lmbPressPos) > DragThreshold) _dragging = true;
+        // The grid shows while placing, and while a box is dragged (select, delete, upgrade) so it lines up with cells.
+        _view.ShowGrid(Mode is ToolMode.Build or ToolMode.Move or ToolMode.Paste || (_dragging && Mode is ToolMode.Select or ToolMode.Delete or ToolMode.Upgrade));
         if (_lmbDown && _hoverCell is { } over && _trail.Count > 0) BuildPlanner.ExtendTrail(_trail, over with { Z = _trail[0].Z });
         UpdatePreview();
         UpdateHighlights();
