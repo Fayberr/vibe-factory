@@ -41,7 +41,11 @@ dotnet test                                   # core test suite
 dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, stats, save/load, offline catch-up
 ```
 
-**Play:** open `godot/project.godot` in Godot 4.7 .NET and press Play. Pick
+**Download (Windows):** the newest build is always the
+[latest release](https://github.com/Fayberr/factory-sim/releases/latest), direct link:
+[FactorySim-Windows.zip](https://github.com/Fayberr/factory-sim/releases/latest/download/FactorySim-Windows.zip).
+
+**Play from source:** open `godot/project.godot` in Godot 4.7 .NET and press Play. Pick
 *New factory (demo layout)* in the game menu (`G`) to spawn the demo, or start building.
 
 ## Building controls
@@ -121,8 +125,10 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 1. Runs the unit tests (`dotnet test`) and builds the client (`dotnet build godot -c Release`).
 2. Exports the Windows build headlessly with Godot 4.7.2 .NET on Linux, using preset
    **Windows Desktop** in `godot/export_presets.cfg`, into `build/`.
-3. Uploads `FactorySim-Windows.zip` as a workflow artifact and publishes it on the
-   rolling **`latest-build`** pre-release. The latest push from any of those branches wins.
+3. Uploads `FactorySim-Windows.zip` as a workflow artifact and publishes it as the
+   repository's **Latest** release (tag `latest-build`, named after the run number and
+   commit). The previous one is deleted first, so the repo page always shows exactly one
+   current build. The latest push from any of those branches wins.
 
 The export is self-contained (it bundles the .NET runtime). Unzip and run `FactorySim.exe`,
 keeping the `.pck` and the `data_*` folder next to it. Godot's C# export needs a solution
