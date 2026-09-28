@@ -32,8 +32,8 @@ public class MachineAndEconomyTests
 
         var crates = sim.DrainEvents().OfType<ItemSold>().Where(s => s.Item == "crate").ToList();
         Assert.NotEmpty(crates);
-        // plank = log 1.2 × 1.8 / 2 = 1.08, plate = ore 1 × 2 × 1.5 = 3 → crate = (2 × 1.08 + 3) × 2.
-        Assert.All(crates, s => Assert.Equal(10.32, s.Payout.ToDouble() / s.Count, 9));
+        // plank = log 1.5 × 1.8 / 2 = 1.35, plate = ore 1 × 2 × 1.5 = 3 → crate = (2 × 1.35 + 3) × 2.
+        Assert.All(crates, s => Assert.Equal(11.4, s.Payout.ToDouble() / s.Count, 9));
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class MachineAndEconomyTests
     [Fact]
     public void Upgrades_cost_money_scale_stats_and_respect_caps()
     {
-        var sim = TestUtil.NewSim(sandbox: false, money: 1_000_000);
+        var sim = TestUtil.NewSim(TestUtil.FastContent, sandbox: false, money: 1_000_000);
         var def = sim.Content.Upgrades["belt_speed"];
 
         Assert.True(sim.Execute(new BuyUpgrade("belt_speed")).Ok);
@@ -90,15 +90,39 @@ public class MachineAndEconomyTests
     [Fact]
     public void Seller_pays_value_times_multipliers()
     {
-        var sim = TestUtil.NewSim();
-        sim.Execute(new BuyUpgrade("sell_price")); // ×1.25
+        var sim = TestUtil.NewSim(TestUtil.FastContent);
+        sim.Execute(new BuyUpgrade("sell_price")); // research ×1.25
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
         sim.Place("seller", 1, 0, 0, Dir.East);
+        Assert.True(sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(1, 0, 0), 3) })).Ok); // ×1.2
         sim.Step(20 * 10);
 
         Assert.Equal(10, sim.Sold("iron_ore"));
-        Assert.Equal(12.5, sim.World.Money.ToDouble(), 9);
+        // 10 ore × value 1 × raw 0.25 × research 1.25 × depot level 1.2
+        Assert.Equal(3.75, sim.World.Money.ToDouble(), 9);
         Assert.Equal(sim.World.Money, sim.World.Stats.TotalEarned);
+    }
+
+    [Fact]
+    public void Raw_resources_sell_for_a_quarter_so_ringing_a_depot_with_drills_does_not_pay()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Place("seller", 1, 1, 0, Dir.East);
+        sim.Place("iron_miner", 0, 1, 0, Dir.East);
+        sim.Place("iron_miner", 2, 1, 0, Dir.West);
+        sim.Place("iron_miner", 1, 0, 0, Dir.South);
+        sim.Place("iron_miner", 1, 2, 0, Dir.North);
+        sim.Step(20 * 20);
+        var raw = sim.World.Money.ToDouble();
+
+        var smelted = TestUtil.NewSim();
+        smelted.Place("iron_miner", 0, 0, 0, Dir.East);
+        smelted.Place("smelter", 1, 0, 0, Dir.East);
+        smelted.Place("seller", 2, 0, 0, Dir.East);
+        smelted.Step(20 * 20);
+
+        Assert.Equal(4 * 20 * 0.25, raw, 9);                       // four drills, raw: $1/s
+        Assert.True(smelted.World.Money.ToDouble() > 1.5 * raw);  // one drill, smelted: ~$2/s
     }
 
     [Fact]
@@ -108,6 +132,6 @@ public class MachineAndEconomyTests
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
         sim.Place("seller", 1, 0, 0, Dir.East);
         sim.Step(20 * 30);
-        Assert.Equal(1.0, sim.World.Stats.IncomePerSecond(10).ToDouble(), 9);
+        Assert.Equal(0.25, sim.World.Stats.IncomePerSecond(10).ToDouble(), 9); // 1 raw ore/s at 25%
     }
 }

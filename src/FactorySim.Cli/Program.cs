@@ -37,16 +37,17 @@ static void RunDemo(ContentRegistry content)
     Console.WriteLine("Line A crosses over line B on a bridge (ramp up, z=1 belt, ramp down).\n");
     Console.WriteLine(AsciiView.RenderLayer(sim.World, 0));
     Console.WriteLine(AsciiView.RenderLayer(sim.World, 1));
-    Console.WriteLine("M/C miners  S smelter  A alloy forge  P polisher  $ seller  U/D ramps  : ramp upper half\n");
+    Console.WriteLine("M/C/L extractors  S smelter  R press  W sawmill  w workshop  P polisher  $ depot  U/D ramps  : ramp upper half\n");
 
     sim.Step(120 * Simulation.TicksPerSecond);
     PrintStats("After 2 minutes", sim);
 
-    // Buy a few upgrades with the earnings, through commands like any player would.
-    foreach (var id in new[] { "miner_rate", "miner_rate", "machine_speed", "sell_price" })
+    // Level up individual buildings with the earnings, through commands like any player would.
+    foreach (var (cell, level) in new[] { (new GridPos(0, 4, 0), 3), (new GridPos(4, 4, 0), 2), (new GridPos(11, 4, 0), 3), (new GridPos(0, 13, 0), 2) })
     {
-        var r = sim.Execute(new BuyUpgrade(id));
-        Console.WriteLine($"  buy {id,-14} → {(r.Ok ? "ok" : r.Error)}");
+        var e = sim.World.EntityAt(cell)!;
+        var r = sim.Execute(new SetBuildingLevels(new[] { new LevelChange(cell, level) }));
+        Console.WriteLine($"  {e.Def.Name,-14} {cell} → level {level}: {(r.Ok ? "ok" : r.Error)}");
     }
     sim.Step(120 * Simulation.TicksPerSecond);
     PrintStats("After 2 more minutes", sim);
@@ -79,7 +80,7 @@ static void RunBench(ContentRegistry content, int lines)
 {
     var sim = Simulation.CreateNew(content, 0);
     sim.World.Sandbox = true;
-    sim.World.Bounds = new GridBounds(new GridPos(0, 0, -2), new GridPos(40, lines * 2 + 2, 6));
+    sim.World.Bounds = new GridBounds(new GridPos(0, 0, 0), new GridPos(40, lines * 2 + 2, 4));
     sim.Events.Enabled = false;
 
     for (int i = 0; i < lines; i++)

@@ -15,6 +15,9 @@ public sealed class ItemDef
     /// <summary>Value per unit when freshly mined. Processed items derive value from their inputs.</summary>
     public double BaseValue { get; init; }
 
+    /// <summary>Unprocessed resource (ore, logs, sand, oil). Markets pay only a fraction for these.</summary>
+    public bool Raw { get; init; }
+
     public Dictionary<string, string> Meta { get; init; } = new();
 }
 
@@ -29,7 +32,7 @@ public enum PortKind : byte
 /// An output on side S of cell C delivers into the neighbouring cell C+S, and
 /// connects only if the building there has an input on the facing side of that cell.
 /// Vertical logistics (ramps, lifts) are just buildings whose ports sit on different
-/// footprint layers — no special cases in the transport code.
+/// footprint layers, so there are no special cases in the transport code.
 /// </summary>
 public sealed class PortDef
 {
@@ -62,6 +65,9 @@ public sealed class BuildingDef
 
     /// <summary>How the building levels up. Filled from the behavior's default when omitted.</summary>
     public UpgradeTrack? Upgrade { get; set; }
+
+    /// <summary>How many of this building may exist (null = unlimited). Grows with later tiers.</summary>
+    public BuildLimit? Limit { get; init; }
 
     /// <summary>Replacement group this building belongs to (e.g. "belt", "machine").</summary>
     public string Group { get; init; } = "";
@@ -129,6 +135,15 @@ public sealed class UpgradeTrack
         for (int l = 1; l < level; l++) total += UpgradeCost(def, l);
         return total;
     }
+}
+
+/// <summary>Cap on a building's count: Base once its tier is unlocked, plus PerTier for every later tier.</summary>
+public sealed class BuildLimit
+{
+    public int Base { get; init; } = 1;
+    public int PerTier { get; init; }
+
+    public int At(BuildingDef def, int unlockedTier) => Base + PerTier * Math.Max(0, unlockedTier - def.Tier);
 }
 
 /// <summary>A progression tier: unlocking it costs money, needs lifetime earnings, and grows the plot.</summary>

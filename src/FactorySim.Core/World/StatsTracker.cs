@@ -2,7 +2,7 @@ namespace FactorySim;
 
 /// <summary>
 /// Production/economy statistics: lifetime totals plus a rolling per-second income
-/// window. This is the hook for throughput leaderboards and shared statistics —
+/// window. This is the hook for throughput leaderboards and shared statistics:
 /// <see cref="Snapshot"/> is a deterministic, serializable summary.
 /// </summary>
 public sealed class StatsTracker

@@ -8,7 +8,7 @@ namespace FactorySim;
 /// which idle/tycoon progression reaches quickly.
 ///
 /// Determinism: only IEEE-754 basic arithmetic (correctly rounded on every .NET
-/// platform) and a precomputed power-of-ten table are used — never Math.Log10/Pow —
+/// platform) and a precomputed power-of-ten table are used (never Math.Log10/Pow),
 /// so results are bit-identical across machines. That keeps replays and server-side
 /// verification of leaderboard runs possible.
 /// </summary>

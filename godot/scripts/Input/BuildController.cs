@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using FactorySim.Behaviors;
 using FactorySim.Content;
 using FactorySim.Editing;
 using FactorySim.View;
@@ -12,6 +13,7 @@ public enum ToolMode
 {
     Select,
     Build,
+    Upgrade,
     Delete,
     Move,
     Paste,
@@ -19,11 +21,16 @@ public enum ToolMode
 
 /// <summary>
 /// Turns mouse and keyboard into simulation commands. One mode at a time:
-///  • Select — click, Shift/Ctrl-click, drag a box; R rotates, M moves, Del deletes, Ctrl+C/V/X.
-///  • Build  — click to place, drag to lay an L-shaped line (belts orient and curve themselves).
-///  • Delete — click or drag a box.
-///  • Move / Paste — a blueprint follows the cursor; R rotates it; click to drop.
-/// All edits go through the undo history (Ctrl+Z / Ctrl+Y).
+///  • Select:  click, Shift/Ctrl-click, drag a box; R rotates, M moves, U upgrades, Del deletes.
+///  • Build:   click to place, drag to lay a line. Placing onto a compatible building replaces
+///              it (polisher onto a belt, splitter into a line); a belt dragged across another
+///              line bridges over it by itself.
+///  • Upgrade: click or drag a box to raise building levels; Shift-click upgrades a whole line.
+///  • Delete:  click or drag a box.
+///  • Move / Paste: a blueprint follows the cursor; R rotates it; click to drop.
+/// Height: everything is built at the current build height (0 = ground, the lowest there is).
+/// Q/E, PageDown/PageUp or Shift+wheel change it; ramps carry it along (a ramp up leaves you
+/// one level higher). Tab hides everything above it. All edits go through the undo history.
 /// </summary>
 public partial class BuildController : Node3D
 {
@@ -35,6 +42,7 @@ public partial class BuildController : Node3D
     private GhostLayer _ghosts = null!;
     private MeshInstance3D _rect = null!;
     private StandardMaterial3D _rectMat = null!;
+    private BuildPlanner _planner = null!;
 
     private Vector2 _mouse;
     private bool _overWorld;
@@ -54,18 +62,29 @@ public partial class BuildController : Node3D
 
     private readonly Dictionary<int, Highlight> _applied = new();
     private readonly List<GhostSpec> _specs = new();
+    private readonly HashSet<int> _replacing = new();
+    private readonly HashSet<int> _lineHover = new();
+    private readonly List<Entity> _scratch = new();
 
     public ToolMode Mode { get; private set; } = ToolMode.Select;
     public BuildingDef? Tool { get; private set; }
     public Dir Facing { get; private set; } = Dir.East;
-    public int Layer { get; private set; }
-    public bool Cutaway { get; private set; }
+
+    /// <summary>Build height: 0 = ground (nothing goes lower), each level up is one bridge level.</summary>
+    public int Height { get; private set; }
+
+    /// <summary>Everything above <see cref="Height"/> is hidden (to see and reach what is underneath).</summary>
+    public bool HideAbove { get; private set; }
+
+    public int MaxHeight => _host.Sim?.World.Bounds.Max.Z ?? 0;
     public HashSet<int> Selection { get; } = new();
     public Blueprint? Clipboard { get; private set; }
     public Entity? HoverEntity => _hoverEntity;
-    public GridPos? HoverCell => _hoverCell;
 
-    /// <summary>Mode, tool, facing, layer or selection changed.</summary>
+    /// <summary>What a click would do right now (shown next to the cursor), or null.</summary>
+    public (string Text, bool Ok)? CursorInfo { get; private set; }
+
+    /// <summary>Mode, tool, facing, height or selection changed.</summary>
     public event Action? Changed;
 
     private World World => _host.Sim.World;
@@ -78,10 +97,12 @@ public partial class BuildController : Node3D
         _view = view;
         host.WorldReplaced += () =>
         {
+            _planner = new BuildPlanner(host.Sim);
             Selection.Clear();
             _applied.Clear();
+            Height = 0;
             SetMode(ToolMode.Select);
-            SetLayer(0);
+            _view.SetLayer(Height, HideAbove);
         };
         host.EventRaised += ev =>
         {
@@ -104,6 +125,8 @@ public partial class BuildController : Node3D
         };
         AddChild(_rect);
     }
+
+    public static string HeightName(int h) => h == 0 ? "Ground" : $"Height {h}";
 
     // ---- Public actions (also used by the HUD) ------------------------------
 
@@ -129,19 +152,27 @@ public partial class BuildController : Node3D
         Changed?.Invoke();
     }
 
-    public void SetLayer(int layer)
+    public void SetHeight(int height)
     {
         if (_host.Sim == null) return;
-        var b = World.Bounds;
-        Layer = Math.Clamp(layer, b.Min.Z, b.Max.Z);
-        _view.SetLayer(Layer, Cutaway);
+        int h = Math.Clamp(height, World.Bounds.Min.Z, World.Bounds.Max.Z);
+        if (h == Height)
+        {
+            if (height < h) Notice("Already on the ground. Nothing can be built below it");
+            else if (height > h) Notice($"Maximum height is {h}");
+            return;
+        }
+        Height = h;
+        _view.SetLayer(Height, HideAbove);
         Changed?.Invoke();
     }
 
-    public void ToggleCutaway()
+    public void ToggleHideAbove()
     {
-        Cutaway = !Cutaway;
-        SetLayer(Layer);
+        HideAbove = !HideAbove;
+        _view.SetLayer(Height, HideAbove);
+        Notice(HideAbove ? $"Hiding everything above {HeightName(Height).ToLowerInvariant()} (Tab to show)" : "Showing all heights");
+        Changed?.Invoke();
     }
 
     public void Rotate(int turns)
@@ -167,6 +198,88 @@ public partial class BuildController : Node3D
         Changed?.Invoke();
     }
 
+    /// <summary>U: upgrade the selection; with nothing selected, toggle the upgrade tool.</summary>
+    public void UpgradeKey()
+    {
+        if (Mode == ToolMode.Select && Selection.Count > 0) UpgradeEntities(SelectedEntities().ToList());
+        else SetMode(Mode == ToolMode.Upgrade ? ToolMode.Select : ToolMode.Upgrade);
+    }
+
+    /// <summary>Raises each building one level, cheapest first, as far as the money goes. One undo step.</summary>
+    public void UpgradeEntities(IReadOnlyCollection<Entity> entities)
+    {
+        var candidates = entities
+            .Where(e => e.Def.Upgrade?.CanUpgrade(e.Level) == true)
+            .Select(e => (Entity: e, Cost: e.Def.Upgrade!.UpgradeCost(e.Def, e.Level)))
+            .OrderBy(x => x.Cost.ToDouble())
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            Notice(entities.Count == 1 ? "Already at max level" : "Everything here is at max level");
+            return;
+        }
+
+        var changes = new List<LevelChange>();
+        BigNum total = BigNum.Zero;
+        foreach (var (e, cost) in candidates)
+        {
+            if (!World.Sandbox && total + cost > World.Money) break;
+            total += cost;
+            changes.Add(new LevelChange(e.Pos, e.Level + 1));
+        }
+        if (changes.Count == 0)
+        {
+            Notice($"Need ${candidates[0].Cost.Format()} to upgrade");
+            return;
+        }
+        if (!Report(History.Execute(new SetBuildingLevels(changes)))) return;
+        string rest = changes.Count < candidates.Count ? $" ({candidates.Count - changes.Count} need more money)" : "";
+        Notice(changes.Count == 1 && entities.Count == 1
+            ? $"{candidates[0].Entity.Def.Name} → level {candidates[0].Entity.Level} (${total.Format()})"
+            : $"Upgraded {changes.Count} buildings for ${total.Format()}{rest}");
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Pieces of the same kind connected to <paramref name="start"/> along the item flow (a whole
+    /// belt line), passing through other transport pieces (ramps, splitters) without taking them.
+    /// </summary>
+    public List<Entity> ConnectedLine(Entity start)
+    {
+        World.EnsureTopology();
+        bool IsTransport(Entity e) => World.Content.Behaviors.Get(e.Def.Behavior) is ConveyorBehavior or RouterBehavior;
+        var result = new List<Entity>();
+        if (!IsTransport(start)) return new List<Entity> { start };
+
+        var neighbours = new Dictionary<Entity, List<Entity>>();
+        void Link(Entity a, Entity b)
+        {
+            if (!neighbours.TryGetValue(a, out var list)) neighbours[a] = list = new List<Entity>();
+            list.Add(b);
+        }
+        foreach (var e in World.Entities)
+        {
+            if (!IsTransport(e)) continue;
+            foreach (int port in e.Def.OutputPorts)
+                if (e.Link(port).Target is { } t && IsTransport(t))
+                {
+                    Link(e, t);
+                    Link(t, e);
+                }
+        }
+        var seen = new HashSet<Entity> { start };
+        var queue = new Queue<Entity>();
+        queue.Enqueue(start);
+        while (queue.Count > 0)
+        {
+            var e = queue.Dequeue();
+            if (e.Def == start.Def) result.Add(e);
+            foreach (var n in neighbours.GetValueOrDefault(e) ?? new List<Entity>())
+                if (seen.Add(n)) queue.Enqueue(n);
+        }
+        return result;
+    }
+
     public void DeleteSelection()
     {
         if (Selection.Count == 0) return;
@@ -185,7 +298,7 @@ public partial class BuildController : Node3D
         }
         var entities = SelectedEntities().ToList();
         Clipboard = Blueprint.FromEntities(entities, Blueprint.CenterOf(entities));
-        Notice($"Copied {Clipboard.Count} building(s)" + (enterPaste ? " — click to paste" : ""));
+        Notice($"Copied {Clipboard.Count} building(s)" + (enterPaste ? ". Click to paste" : ""));
         if (enterPaste) BeginPaste();
         else Changed?.Invoke();
     }
@@ -194,10 +307,9 @@ public partial class BuildController : Node3D
     {
         if (Clipboard == null)
         {
-            Notice("Clipboard is empty — select buildings and press Ctrl+C");
+            Notice("Clipboard is empty. Select buildings and press Ctrl+C");
             return;
         }
-        _floating = Clipboard;
         _floatingOrigin = GridPos.Zero;
         _floatingTurns = 0;
         SetMode(ToolMode.Paste);
@@ -218,13 +330,16 @@ public partial class BuildController : Node3D
         _floatingTurns = 0;
         SetMode(ToolMode.Move);
         _floating = bp;
+        SetHeight(_floatingOrigin.Z); // Q/E while moving lifts or lowers the selection
     }
 
+    /// <summary>Pick the hovered building as the tool, with its direction and height.</summary>
     public void Pipette()
     {
-        var e = _hoverEntity ?? (_hoverCell is { } c ? World.EntityAt(c) : null);
+        var e = _hoverEntity;
         if (e == null) return;
         Facing = e.Facing;
+        SetHeight(BuildPlanner.HeightOf(e));
         SelectTool(e.Def);
     }
 
@@ -286,8 +401,10 @@ public partial class BuildController : Node3D
             case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false } mb:
                 if (mb.Position.DistanceTo(_rmbPressPos) < DragThreshold) OnRightClick();
                 break;
-            case InputEventMouseButton { Pressed: true, ShiftPressed: true } mb when mb.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown:
-                SetLayer(Layer + (mb.ButtonIndex == MouseButton.WheelUp ? 1 : -1));
+            case InputEventMouseButton { Pressed: true, ShiftPressed: true } wheel
+                when wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown:
+                SetHeight(Height + (wheel.ButtonIndex == MouseButton.WheelUp ? 1 : -1));
+                GetViewport().SetInputAsHandled();
                 break;
             case InputEventKey { Pressed: true } key:
                 if (OnKey(key)) GetViewport().SetInputAsHandled();
@@ -327,14 +444,20 @@ public partial class BuildController : Node3D
             case Key.R:
                 Rotate(key.ShiftPressed ? -1 : 1);
                 return true;
-            case Key.Q or Key.Pagedown:
-                SetLayer(Layer - 1);
+            case Key.F:
+                Pipette();
                 return true;
             case Key.E or Key.Pageup:
-                SetLayer(Layer + 1);
+                SetHeight(Height + 1);
                 return true;
-            case Key.Tab:
-                ToggleCutaway();
+            case Key.Q or Key.Pagedown:
+                SetHeight(Height - 1);
+                return true;
+            case Key.U:
+                UpgradeKey();
+                return true;
+            case Key.Tab or Key.H:
+                ToggleHideAbove();
                 return true;
             case Key.X:
                 SetMode(Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete);
@@ -344,9 +467,6 @@ public partial class BuildController : Node3D
                 return true;
             case Key.M:
                 BeginMove();
-                return true;
-            case Key.F:
-                Pipette();
                 return true;
             case Key.Delete or Key.Backspace:
                 DeleteSelection();
@@ -410,6 +530,13 @@ public partial class BuildController : Node3D
             case ToolMode.Build:
                 CommitPlacement();
                 break;
+            case ToolMode.Upgrade:
+                var toUpgrade = wasDrag ? EntitiesInBox()
+                    : _hoverEntity == null ? new List<Entity>()
+                    : Input.IsKeyPressed(Key.Shift) ? ConnectedLine(_hoverEntity)
+                    : new List<Entity> { _hoverEntity };
+                if (toUpgrade.Count > 0) UpgradeEntities(toUpgrade);
+                break;
             case ToolMode.Delete:
                 var targets = wasDrag ? EntitiesInBox() : _hoverEntity != null ? new List<Entity> { _hoverEntity } : new List<Entity>();
                 if (targets.Count > 0 && Report(History.Execute(new RemoveBuildings(targets.Select(e => e.Pos).ToList()))) && targets.Count > 1)
@@ -469,111 +596,46 @@ public partial class BuildController : Node3D
 
     // ---- Placement ------------------------------------------------------------
 
-    private bool IsLineTool => Tool != null && Tool.MetaOr("model", "") is "belt" or "polisher";
-
-    /// <summary>
-    /// Multi-layer buildings (ramps) are anchored so their input sits on the current layer:
-    /// a ramp down placed on layer 1 spans layers 0–1, one placed on the ground digs a tunnel.
-    /// </summary>
-    private static GridPos AnchorFor(BuildingDef def, GridPos cell) =>
-        def.InputPorts.Count > 0 ? cell with { Z = cell.Z - def.Ports[def.InputPorts[0]].Cell.Z } : cell;
-
-    /// <summary>Layer where a building's output continues (ramps change it; others keep it).</summary>
-    private static int OutputLayer(BuildingDef def, GridPos anchor) =>
-        def.OutputPorts.Count > 0 ? anchor.Z + def.Ports[def.OutputPorts[0]].Cell.Z : anchor.Z;
-
-    /// <summary>Cells and facings for a drag: an L from the press cell to the hover cell (or just the hover cell).</summary>
-    private List<(GridPos Cell, Dir Facing)> PlacementPath(bool fromPress)
+    /// <summary>What a click (or the drag so far) would build.</summary>
+    private BuildPlan? PlanNow(bool fromPress)
     {
-        var path = new List<(GridPos, Dir)>();
-        if (_hoverCell is not { } end) return path;
-        var start = fromPress && _dragStart is { } s ? s : end;
-        start = start with { Z = Layer };
-        end = end with { Z = Layer };
-        if (start == end)
-        {
-            path.Add((start, Facing));
-            return path;
-        }
-
-        int dx = end.X - start.X, dy = end.Y - start.Y;
-        _firstLegX ??= Math.Abs(dx) >= Math.Abs(dy);
-        var cells = new List<GridPos> { start };
-        var p = start;
-        void Walk(bool alongX, int target)
-        {
-            while ((alongX ? p.X : p.Y) != target)
-            {
-                p = alongX ? p with { X = p.X + Math.Sign(target - p.X) } : p with { Y = p.Y + Math.Sign(target - p.Y) };
-                cells.Add(p);
-            }
-        }
-        if (_firstLegX.Value) { Walk(true, end.X); Walk(false, end.Y); }
-        else { Walk(false, end.Y); Walk(true, end.X); }
-
-        // Line tools face along the path (each tile toward the next); others keep the chosen facing.
-        for (int i = 0; i < cells.Count; i++)
-        {
-            var facing = !IsLineTool ? Facing
-                : i + 1 < cells.Count ? Toward(cells[i], cells[i + 1])
-                : Toward(cells[i - 1], cells[i]);
-            path.Add((cells[i], facing));
-        }
-        return path;
-    }
-
-    private static Dir Toward(GridPos from, GridPos to)
-    {
-        var d = to - from;
-        return d.X > 0 ? Dir.East : d.X < 0 ? Dir.West : d.Y > 0 ? Dir.South : Dir.North;
+        if (Tool == null || _hoverCell is not { } hover) return null;
+        int z = _planner.AnchorHeight(Tool, Height);
+        var end = hover with { Z = z };
+        var start = (fromPress && _dragStart is { } s ? s : hover) with { Z = z };
+        if (start == end) return _planner.Click(Tool, end, Facing);
+        _firstLegX ??= Math.Abs(end.X - start.X) >= Math.Abs(end.Y - start.Y);
+        return _planner.Drag(Tool, BuildPlanner.LPath(start, end, _firstLegX.Value), Facing);
     }
 
     private void CommitPlacement()
     {
-        if (Tool == null) return;
-        var path = PlacementPath(fromPress: true);
-        if (path.Count == 0) return;
-        int placed = 0, turned = 0, failed = 0;
-        string? firstError = null;
+        if (Tool is not { } tool || PlanNow(fromPress: true) is not { } plan) return;
+        if (!plan.Changes.Any())
+        {
+            if (plan.Steps.Count == 1) Notice($"{tool.Name} is already here");
+            return;
+        }
 
         History.BeginGroup();
-        GridPos? lastPlaced = null;
-        foreach (var (cell, facing) in path)
-        {
-            var existing = World.EntityAt(cell);
-            CommandResult r;
-            if (existing == null)
-            {
-                var anchor = AnchorFor(Tool, cell);
-                r = History.Execute(new PlaceBuilding(Tool.Id, anchor, facing));
-                if (r.Ok) lastPlaced = anchor;
-            }
-            else if (IsLineTool && existing.Def == Tool && existing.Pos == cell && existing.Facing != facing)
-            {
-                r = History.Execute(new RotateBuilding(cell, facing));
-                if (r.Ok) turned++;
-                continue;
-            }
-            else continue;
-
-            if (r.Ok) placed++;
-            else
-            {
-                failed++;
-                firstError ??= r.Error;
-            }
-        }
+        var (changed, failed, error) = BuildPlanner.Apply(plan, History.Execute);
         History.EndGroup();
 
-        if (path.Count > 1 && IsLineTool) Facing = path[^1].Facing;
+        if (plan.Steps.Count > 1 && _planner.IsLineTool(tool)) Facing = plan.Steps[^1].Facing; // keep going the same way
+        if (failed > 0) Notice(changed > 0 ? $"Placed {changed}, {failed} blocked: {error}" : error ?? "Can't place here");
+        else if (plan.Bridges > 0) Notice(plan.Bridges == 1 ? "Bridged over the crossing line" : $"Bridged over {plan.Bridges} crossings");
+        else if (plan.BridgeProblem != null) Notice(plan.BridgeProblem);
 
-        // Ramps carry the build layer with them, so bridges and tunnels are built in one flow.
-        if (lastPlaced is { } a && OutputLayer(Tool, a) != Layer)
+        // A ramp takes you along: after a ramp up you keep building one level higher.
+        if (changed > 0 && plan.Steps.Count == 1 && BuildPlanner.IsRamp(tool))
         {
-            SetLayer(OutputLayer(Tool, a));
-            Notice(Layer == 0 ? "Back on the ground" : Layer > 0 ? $"Building on layer +{Layer}" : $"Building in tunnel layer {Layer}");
+            int next = _planner.OutputHeight(tool, plan.Steps[0].Pos.Z);
+            if (next != Height)
+            {
+                SetHeight(next);
+                Notice($"Now building at {HeightName(next).ToLowerInvariant()} (Q/E to change)");
+            }
         }
-        if (failed > 0) Notice(placed + turned > 0 ? $"Placed {placed}, {failed} blocked: {firstError}" : firstError ?? "Can't place here");
         Changed?.Invoke();
     }
 
@@ -599,71 +661,160 @@ public partial class BuildController : Node3D
         var cam = _camera.Camera;
         var origin = cam.ProjectRayOrigin(_mouse);
         var dir = cam.ProjectRayNormal(_mouse);
+
+        // The cursor sits on the build height's plane, so ghosts appear right under it.
         _hoverCell = null;
-        if (new Plane(Vector3.Up, Layer * GridMapping.LayerHeight).IntersectsRay(origin, dir) is { } p)
+        if (new Plane(Vector3.Up, Height * GridMapping.LayerHeight).IntersectsRay(origin, dir) is { } p)
         {
-            var cell = new GridPos(Mathf.FloorToInt(p.X), Mathf.FloorToInt(p.Z), Layer);
+            var cell = new GridPos(Mathf.FloorToInt(p.X), Mathf.FloorToInt(p.Z), Height);
             if (World.Bounds.Contains(cell)) _hoverCell = cell;
         }
-        _hoverEntity = Mode is ToolMode.Select or ToolMode.Delete
-            ? _view.Pick(origin, dir)
-            : _hoverCell is { } c ? World.EntityAt(c) : null;
+        _hoverEntity = _view.Pick(origin, dir);
     }
 
     private void UpdatePreview()
     {
         _specs.Clear();
+        _replacing.Clear();
+        _lineHover.Clear();
+        CursorInfo = null;
         bool ports = false;
         switch (Mode)
         {
-            case ToolMode.Build when Tool != null && _hoverCell != null:
-                var path = PlacementPath(fromPress: _lmbDown);
-                for (int i = 0; i < path.Count; i++)
-                {
-                    var (cell, facing) = path[i];
-                    var existing = World.EntityAt(cell);
-                    if (existing != null && IsLineTool && existing.Def == Tool) continue; // will be re-oriented
-                    var anchor = AnchorFor(Tool, cell);
-                    bool ok = World.CanPlace(Tool, anchor, facing).Ok && (World.Sandbox || World.Money >= Tool.Cost);
-                    _specs.Add(new GhostSpec(Tool, anchor, facing, PreviewShape(Tool, path, i), ok));
-                }
-                ports = path.Count == 1;
+            case ToolMode.Build when Tool != null && PlanNow(fromPress: _lmbDown) is { } plan:
+                PreviewPlan(Tool, plan);
+                ports = plan.Steps.Count == 1;
                 break;
+
             case ToolMode.Move or ToolMode.Paste when _floating != null && _hoverCell is { } at:
                 var moving = Mode == ToolMode.Move ? Selection : null;
-                foreach (var (defId, pos, facing) in _floating.Placements(at, _floatingTurns))
+                bool allOk = true;
+                foreach (var (defId, pos, facing, _) in _floating.Placements(at, _floatingTurns))
                 {
                     if (!World.Content.Buildings.TryGetValue(defId, out var def)) continue;
                     bool ok = Entity.CellsFor(def, pos, facing).All(c =>
                         World.Bounds.Contains(c) && (World.EntityAt(c) is not { } o || (moving != null && moving.Contains(o.Id))));
+                    allOk &= ok;
                     _specs.Add(new GhostSpec(def, pos, facing, ModelFactory.ShapeFromPorts(def), ok));
                 }
+                CursorInfo = !allOk ? ("Blocked: find a free spot", false)
+                    : Mode == ToolMode.Paste ? ($"Paste {_floating.Count}  ${_floating.Cost(World.Content).Format()}{AtHeight()}", true)
+                    : ($"Move {_floating.Count} here{AtHeight()}", true);
+                break;
+
+            case ToolMode.Upgrade when !_dragging && _hoverEntity is { } up:
+                var line = Input.IsKeyPressed(Key.Shift) ? ConnectedLine(up) : null;
+                if (line is { Count: > 1 })
+                {
+                    foreach (var e in line) _lineHover.Add(e.Id);
+                    var next = line.Where(e => e.Def.Upgrade?.CanUpgrade(e.Level) == true).ToList();
+                    var sum = next.Aggregate(BigNum.Zero, (s, e) => s + e.Def.Upgrade!.UpgradeCost(e.Def, e.Level));
+                    CursorInfo = next.Count == 0 ? ($"Line of {line.Count} {up.Def.Name}s: all at max level", false)
+                        : ($"Upgrade {next.Count} {up.Def.Name}s one level  ${sum.Format()}", World.Sandbox || World.Money >= sum);
+                    break;
+                }
+                var track = up.Def.Upgrade;
+                if (track == null || !track.CanUpgrade(up.Level)) CursorInfo = ($"{up.Def.Name}: max level {up.Level}", false);
+                else
+                {
+                    var cost = track.UpgradeCost(up.Def, up.Level);
+                    string hint = World.Content.Behaviors.Get(up.Def.Behavior) is ConveyorBehavior or RouterBehavior ? "  (Shift: whole line)" : "";
+                    CursorInfo = ($"Upgrade {up.Def.Name} → level {up.Level + 1}  ${cost.Format()}{hint}", World.Sandbox || World.Money >= cost);
+                }
+                break;
+
+            case ToolMode.Delete when !_dragging && _hoverEntity is { } del:
+                CursorInfo = ($"Remove {del.Def.Name}  +${World.InvestedIn(del).Format()}", true);
+                break;
+
+            case ToolMode.Upgrade or ToolMode.Delete when _dragging:
+                var box = EntitiesInBox();
+                CursorInfo = (Mode == ToolMode.Delete ? $"Remove {box.Count} buildings" : $"Upgrade {box.Count} buildings", true);
                 break;
         }
         _ghosts.Show(_specs, ports);
 
-        // Selection / delete rectangle on the build layer.
-        if (_dragging && Mode is ToolMode.Select or ToolMode.Delete && BoxCells() is var (min, max))
+        // Selection / action rectangle on the build plane.
+        if (_dragging && Mode is ToolMode.Select or ToolMode.Delete or ToolMode.Upgrade && BoxCells() is var (min, max))
         {
             _rect.Visible = true;
-            _rectMat.AlbedoColor = Mode == ToolMode.Delete ? new Color(Palette.Danger, 0.22f) : new Color(Palette.Select, 0.18f);
+            _rectMat.AlbedoColor = Mode switch
+            {
+                ToolMode.Delete => new Color(Palette.Danger, 0.22f),
+                ToolMode.Upgrade => new Color(Palette.Upgrade, 0.22f),
+                _ => new Color(Palette.Select, 0.18f),
+            };
             _rect.Scale = new Vector3(max.X - min.X + 1, 1, max.Y - min.Y + 1);
-            _rect.Position = new Vector3((min.X + max.X + 1) / 2f, Layer * GridMapping.LayerHeight + 0.03f, (min.Y + max.Y + 1) / 2f);
+            _rect.Position = new Vector3((min.X + max.X + 1) / 2f, Height * GridMapping.LayerHeight + 0.03f, (min.Y + max.Y + 1) / 2f);
         }
         else _rect.Visible = false;
     }
 
-    /// <summary>Belt previews bend at the corner of an L drag, like the real belts will.</summary>
-    private static PathShape PreviewShape(BuildingDef def, List<(GridPos Cell, Dir Facing)> path, int i)
+    private string AtHeight() => Height > 0 ? $"  · height {Height}" : "";
+
+    /// <summary>Ghosts, cost, replaced buildings and the cursor text for a build plan.</summary>
+    private void PreviewPlan(BuildingDef tool, BuildPlan plan)
     {
-        var straight = ModelFactory.ShapeFromPorts(def);
-        if (def.MetaOr("model", "") != "belt" || i == 0) return straight;
-        var travelIn = path[i - 1].Facing;
-        var side = (Side)(((int)travelIn.Opposite() - (int)path[i].Facing + 4) & 3);
+        BigNum total = BigNum.Zero;
+        string? problem = null;
+        string? replacedName = null;
+        var counts = new Dictionary<BuildingDef, int>();
+        foreach (var step in plan.Steps)
+        {
+            if (step.Action == PlanAction.Keep) continue;
+            bool ok = true;
+            if (step.Action == PlanAction.Place)
+            {
+                var check = World.CanPlaceReplacing(step.Def, step.Pos, step.Facing, _scratch);
+                int count = counts[step.Def] = counts.GetValueOrDefault(step.Def) + 1;
+                string? why = !check.Ok ? check.Reason
+                    : _host.Sim.LockReason(step.Def) ?? _host.Sim.LimitReason(step.Def, count, _scratch.Count(r => r.Def == step.Def));
+                ok = why == null;
+                problem ??= why;
+                if (ok)
+                {
+                    foreach (var r in _scratch)
+                    {
+                        _replacing.Add(r.Id);
+                        replacedName ??= r.Def.Name;
+                        total -= World.InvestedIn(r) * _host.Sim.RefundFraction;
+                    }
+                    total += step.Def.Cost;
+                }
+            }
+            _specs.Add(new GhostSpec(step.Def, step.Pos, step.Facing, ShapeFor(step), ok));
+        }
+
+        int valid = _specs.Count(s => s.Valid);
+        bool affordable = World.Sandbox || World.Money >= total;
+        if (!affordable) for (int i = 0; i < _specs.Count; i++) _specs[i] = _specs[i] with { Valid = false };
+        string price = total.Sign < 0 ? $"+${(-total).Format()}" : $"${total.Format()}";
+
+        if (_specs.Count == 0) CursorInfo = (plan.Steps.Count == 1 ? $"{tool.Name} is already here" : "Already built", false);
+        else if (valid == 0) CursorInfo = (problem ?? "Can't build here", false);
+        else if (!affordable) CursorInfo = ($"Need ${total.Format()} (have ${World.Money.Format()})", false);
+        else
+        {
+            string text = plan.Steps.Count == 1
+                ? (replacedName != null ? $"Replace {replacedName} with {tool.Name}  {price}" : $"{tool.Name}  {price}")
+                : $"{tool.Name} ×{valid}  {price}";
+            if (valid < _specs.Count) text += $"  · {_specs.Count - valid} blocked";
+            if (plan.Bridges > 0) text += plan.Bridges == 1 ? "  · bridges 1 crossing" : $"  · bridges {plan.Bridges} crossings";
+            else if (plan.BridgeProblem != null) text += $"  · {plan.BridgeProblem}";
+            CursorInfo = (text + AtHeight(), true);
+        }
+    }
+
+    /// <summary>Belt previews bend where the drag turns, like the real belts will.</summary>
+    private static PathShape ShapeFor(PlanStep step)
+    {
+        var straight = ModelFactory.ShapeFromPorts(step.Def);
+        if (step.Def.MetaOr("model", "") != "belt" || step.Incoming is not { } travel || travel == step.Facing) return straight;
+        var side = (Side)(((int)travel.Opposite() - (int)step.Facing + 4) & 3);
         return side switch
         {
-            Side.Left => new PathShape(PathKind.CurveLeft),
-            Side.Right => new PathShape(PathKind.CurveRight),
+            Side.Left => new PathShape(PathKind.CurveLeft, straight.StartZ, straight.EndZ),
+            Side.Right => new PathShape(PathKind.CurveRight, straight.StartZ, straight.EndZ),
             _ => straight,
         };
     }
@@ -674,17 +825,34 @@ public partial class BuildController : Node3D
         foreach (int id in Selection) want[id] = Highlight.Selected;
         if (Mode == ToolMode.Move)
             foreach (int id in Selection) want[id] = Highlight.Moving;
-        if (_hoverEntity != null && !want.ContainsKey(_hoverEntity.Id) && Mode is ToolMode.Select or ToolMode.Delete)
-            want[_hoverEntity.Id] = Mode == ToolMode.Delete ? Highlight.Danger : Highlight.Hover;
+        foreach (int id in _replacing) want[id] = Highlight.Danger;
+        foreach (int id in _lineHover) want[id] = Highlight.Upgrade;
+        if (_hoverEntity != null && !want.ContainsKey(_hoverEntity.Id))
+        {
+            var h = Mode switch
+            {
+                ToolMode.Select => Highlight.Hover,
+                ToolMode.Delete => Highlight.Danger,
+                ToolMode.Upgrade => Highlight.Upgrade,
+                _ => Highlight.None,
+            };
+            if (h != Highlight.None) want[_hoverEntity.Id] = h;
+        }
         if (_dragging)
         {
-            var kind = Mode == ToolMode.Delete ? Highlight.Danger : Mode == ToolMode.Select ? Highlight.Hover : Highlight.None;
+            var kind = Mode switch
+            {
+                ToolMode.Delete => Highlight.Danger,
+                ToolMode.Upgrade => Highlight.Upgrade,
+                ToolMode.Select => Highlight.Hover,
+                _ => Highlight.None,
+            };
             if (kind != Highlight.None)
                 foreach (var e in EntitiesInBox())
-                    if (!want.ContainsKey(e.Id) || kind == Highlight.Danger) want[e.Id] = kind;
+                    if (!want.ContainsKey(e.Id) || kind != Highlight.Hover) want[e.Id] = kind;
         }
 
-        foreach (var (id, h) in _applied)
+        foreach (var (id, _) in _applied)
             if (!want.ContainsKey(id)) _view.SetHighlight(id, Highlight.None);
         foreach (var (id, h) in want) _view.SetHighlight(id, h);
         _applied.Clear();

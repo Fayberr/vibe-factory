@@ -13,8 +13,8 @@
 │  Simulation ── fixed 20 Hz tick, commands, event queue, offline catch-up             │
 │  World ─────── sparse 3D grid, entities, money, upgrades→stats, stats, RNG           │
 │  Behaviors ─── conveyor · router · miner · processor · seller  (state on entity)    │
-│  Editing ───── blueprints, batch commands, undo/redo (EditHistory)                  │
-│  Content ───── JSON packs → validated registry (items, buildings, recipes, upgrades) │
+│  Editing ───── blueprints, batch commands, undo/redo, BuildPlanner (drags, bridges) │
+│  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes)   │
 │  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -32,9 +32,10 @@ Rules that keep it decoupled:
 
 ### Grid and verticality
 
-`GridPos(X, Y, Z)`: X east, Y south, Z up. Negative Z is underground, for tunnels.
+`GridPos(X, Y, Z)`: X east, Y south, Z up. Z = 0 is the ground plate and the lowest
+level (`GridBounds.Min.Z` is 0, and saves from older versions are clamped to it).
 The grid is sparse (a dictionary), so its size costs nothing. `GridBounds` limits
-the buildable plot, and expanding it is a natural progression hook.
+the buildable plot; every tier grows it (`TierDef.PlotSize`).
 
 A building def has a **footprint** (local cells, facing north) and **ports**. A
 port is an `in`/`out` on a *side* of a *footprint cell*. An output on side S of
@@ -44,7 +45,7 @@ input on the facing side of that same cell.
 Verticality needs no special cases. A ramp is a conveyor whose footprint spans two
 layers, with its input on the lower cell and its output on the upper one (or the
 reverse). A bridge is ramp up → belt at z+1 → ramp down, and lines at z pass
-underneath. Lifts, tunnels and multi-level machines use the same mechanism.
+underneath. Lifts and multi-level machines use the same mechanism.
 
 ### Tick and ordering
 
@@ -87,9 +88,9 @@ underneath. Lifts, tunnels and multi-level machines use the same mechanism.
 
 | Behavior | Role | Notes |
 |---|---|---|
-| `miner` | source | Work accrues at `miner.rate`. Rates above 1 cycle/tick merge into bundles up to the stack size, so the upgrade has no hard cap. |
-| `processor` | recipes | Buffers inputs from any port and crafts at `machine.speed`. Output value = consumed input value × `valueMultiplier`. Smelter and alloy forge are the same behavior. |
-| `seller` | sink | Pays value × count × `sell.multiplier`. |
+| `miner` | source | Work accrues at `miner.rate` × the drill's level speed. Rates above 1 cycle/tick merge into bundles up to the stack size. |
+| `processor` | recipes | Buffers inputs from any port and crafts at `machine.speed` × level speed. Output value = consumed input value × `valueMultiplier` × level value. Smelter, press and assembler are the same behavior with different recipes. |
+| `seller` | sink | Pays value × count × `sell.multiplier` × level value, and only 25% for items marked `raw`. |
 | `conveyor` | transport | Belts, ramps and in-line effects. |
 | `router` | transport | Splitters and mergers (see above). |
 
@@ -98,10 +99,19 @@ underneath. Lifts, tunnels and multi-level machines use the same mechanism.
 - `BigNum` (mantissa × 10^exponent) for money and values, far past 1e308. It uses
   only basic IEEE arithmetic and a power-of-ten table (never `Math.Pow`/`Log10`),
   so results are **bit-identical across machines**.
-- Upgrades are data. Each one targets a stat key, multiplies or adds, and scales
-  cost geometrically. They are uncapped unless `maxLevel` is set; belt speed is
-  capped because it is physically bounded by spacing. `World.Stat(key)` composes
-  them and caches the result.
+- **Per-building levels.** Every entity has a `Level`. Its def's `UpgradeTrack`
+  (speed and value per level, cost factor and growth, optional max) comes from the
+  JSON `upgrade` field or the behavior's `DefaultUpgrade`. `SetBuildingLevels` changes
+  several levels atomically and is undoable; removing a building refunds everything
+  invested in it; blueprints keep levels and charge for them.
+- **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings plus
+  a price (`UnlockTier`), and grow the plot. `limit` (base + per tier after the
+  building's own) caps extractors and depots; placement, paste and undo all check it.
+- **Replacing.** A def's `group` and `replaces` say what it may be dropped onto
+  (`PlaceBuilding(Replace: true)`); the old building is refunded, and items on a belt
+  survive a swap between belt pieces.
+- Global stat upgrades still exist as a mechanism for mod packs (research, events).
+  The base game defines none. `World.Stat(key)` composes them and caches the result.
 - `StatsTracker` keeps lifetime totals and a rolling 60 s income window.
   `Snapshot()` is the deterministic summary for leaderboards and shared stats.
 
@@ -142,7 +152,14 @@ Extrapolated time adds money and lifetime earnings but not per-item sold counts.
 - `EditHistory` wraps `Execute`: each edit is recorded with its inverse, computed
   from the world *before* it runs. Inverses are expressed by cell rather than
   entity id, so they stay valid when undo/redo recreates buildings. `BeginGroup`
-  and `EndGroup` make a dragged line a single undo step. Upgrades are not undoable.
+  and `EndGroup` make a dragged line a single undo step. Level changes are undoable;
+  tier unlocks are not.
+- `BuildPlanner` turns a click or drag into placement steps, independent of any
+  frontend: L-shaped paths, belts facing along the drag, re-aiming existing belts,
+  never downgrading pricier pieces, keeping a replaced building's direction, the
+  anchor height for ramps (a ramp down placed on the ground stands on it), and
+  **automatic bridges** (a belt dragged straight across other belt lines gets a ramp up,
+  a deck one level higher and a ramp down). It is unit-tested like the rest of the core.
 
 ### Persistence
 
@@ -174,8 +191,8 @@ instead of failing. `Migrate()` is the hook for version bumps.
 | Folder | Contents |
 |---|---|
 | `Visual/` | `MeshBuilder` (procedural geometry), `ModelFactory` (all building models), `WorldView` (instancing, curve/pillar-aware rebuilds, item MultiMeshes with tick interpolation, highlights, floating income), shaders, lighting and ground |
-| `Input/` | `CameraRig` (orbit/pan/zoom-to-cursor), `BuildController` (select, build with line drag, delete, move, paste, pipette, undo, ramp-aware layers), `GhostLayer` (translucent previews with port arrows) |
-| `UI/` | `Hud` (tool bar, sidebar, factory card, hotbar, key hints, panels), build menu, inspector, upgrades/stats, vector `IconView`, `Thumbnails` (renders icons from the 3D models) |
+| `Input/` | `CameraRig` (orbit/pan/zoom-to-cursor), `BuildController` (select, build, upgrade, delete, move, paste, pipette, undo, build height; uses `BuildPlanner`), `GhostLayer` (translucent previews with port arrows and pillars) |
+| `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip, panels), build menu with locks and limits, inspector with levels, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders icons from the 3D models) |
 | `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
 
 Scene graph order matters for input: the HUD is the last child, so it sees unhandled
@@ -194,8 +211,8 @@ keys first (hotbar, menus, Esc for panels). Everything else falls through to the
    steady-state input/output ratios with the headless sim and emit a generated
    `BuildingDef` (a processor with a synthesized recipe) that replaces it on a
    single footprint.
-5. **Progression:** tech tree unlocking defs, plot expansion (`GridBounds`), and
-   tiered content packs.
+5. **Progression:** research-style global unlocks on top of tiers (the stat-upgrade
+   mechanism is still there for it), prestige-free long-term goals.
 6. **Online:** record `CommandLog` + seed, submit with `StatsSnapshot`, and verify
    server-side by replaying with the same core (ASP.NET or a CLI worker).
 7. **Performance, when needed:** belt segments (Factorio-style transport lines),

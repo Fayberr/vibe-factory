@@ -74,7 +74,7 @@ public class ProgressionTests
     {
         var sim = TestUtil.NewSim();
         sim.Place("conveyor", 3, 3, 0, Dir.East);
-        sim.Place("bridge_belt", 3, 3, 1, Dir.East);
+        sim.Place("conveyor", 3, 3, 1, Dir.East); // bridge end, one level up
         Assert.True(sim.Execute(new PlaceBuilding("ramp_down", new GridPos(3, 3, 0), Dir.East, Replace: true)).Ok);
         Assert.Equal(1, sim.World.EntityCount);
     }
@@ -142,7 +142,8 @@ public class ProgressionTests
 
         history.Redo();
         history.Execute(new RemoveBuildings(new[] { new GridPos(0, 0, 0) }));
-        Assert.Equal((start + 10).ToDouble(), sim.World.Money.ToDouble(), 6); // price + all upgrades back
+        var price = sim.Content.Buildings["seller"].Cost;
+        Assert.Equal((start + price).ToDouble(), sim.World.Money.ToDouble(), 6); // price + all upgrades back
         history.Undo();
         Assert.Equal(4, sim.World.EntityAt(new GridPos(0, 0, 0))!.Level);
     }
@@ -237,14 +238,39 @@ public class ProgressionTests
     }
 
     [Fact]
-    public void Final_products_are_worth_hundreds_of_times_raw_ore()
+    public void The_best_product_of_each_tier_is_worth_at_least_double_the_last()
     {
-        // Robot value through the whole chain at level 1, no polish or research.
-        double ingot = 1 * 2, plate = ingot * 1.5, wireEach = 1.5 * 2 * 1.6 / 2, coal = 1.5, plastic = 5 * 2 / 2.0;
-        double steel = (ingot + coal) * 2.5, circuit = (2 * wireEach + plastic) * 3, glass = 2 * 0.8 * 3;
-        double motor = (steel + circuit + 2 * wireEach) * 2.5, robot = (motor + circuit + glass) * 3;
-        Assert.True(robot > 400, $"robot = {robot}");
-        _ = plate;
+        var c = TestUtil.Content;
+        // Level-1 value of every item reachable by each tier, following the recipes.
+        var value = new Dictionary<string, (double Value, int Tier)>();
+        foreach (var b in c.BuildingList)
+            if (b.Params is MinerParams m && (!value.TryGetValue(m.Item, out var v) || b.Tier < v.Tier))
+                value[m.Item] = (c.Items[m.Item].BaseValue, b.Tier);
+        for (bool changed = true; changed;)
+        {
+            changed = false;
+            foreach (var b in c.BuildingList.Where(b => b.Params is ProcessorParams))
+                foreach (var r in ((ProcessorParams)b.Params!).Recipes.Select(id => c.Recipes[id]))
+                {
+                    if (!r.Inputs.All(i => value.ContainsKey(i.Item))) continue;
+                    int tier = Math.Max(b.Tier, r.Inputs.Max(i => value[i.Item].Tier));
+                    double total = r.Inputs.Sum(i => value[i.Item].Value * i.Count) * r.ValueMultiplier;
+                    foreach (var o in r.Outputs)
+                    {
+                        var each = total / r.Outputs.Sum(x => x.Count);
+                        if (!value.TryGetValue(o.Item, out var old) || tier < old.Tier || (tier == old.Tier && each > old.Value + 1e-9))
+                        {
+                            value[o.Item] = (each, tier);
+                            changed = true;
+                        }
+                    }
+                }
+        }
+
+        double Best(int tier) => value.Values.Where(v => v.Tier <= tier).Max(v => v.Value);
+        for (int t = 1; t < c.Tiers.Count; t++)
+            Assert.True(Best(t) >= 2 * Best(t - 1), $"tier {t}: best {Best(t)} vs {Best(t - 1)} before");
+        Assert.True(value["robot"].Value > 1000 * value["iron_ore"].Value);
 
         var sim = TestUtil.NewSim();
         sim.Place("oil_pump", 0, 0, 0, Dir.East);
@@ -252,5 +278,44 @@ public class ProgressionTests
         sim.Place("seller", 2, 0, 0, Dir.East);
         sim.Step(20 * 20);
         Assert.True(sim.Sold("plastic") >= 10); // tier-3 chain runs end to end
+    }
+
+    // ---- Limits and the ground ---------------------------------------------------------
+
+    [Fact]
+    public void Drills_and_depots_are_limited_and_later_tiers_raise_the_limit()
+    {
+        var sim = TestUtil.NewSim(sandbox: false, money: 100_000);
+        var drill = sim.Content.Buildings["iron_miner"];
+        int max = sim.World.LimitOf(drill)!.Value;
+        for (int i = 0; i < max; i++) sim.Place("iron_miner", i * 2, 0, 0, Dir.South);
+
+        var r = sim.Execute(new PlaceBuilding("iron_miner", new GridPos(0, 5, 0), Dir.South));
+        Assert.False(r.Ok);
+        Assert.Contains("limit", r.Error);
+        var copy = Blueprint.FromEntities(sim.World.Entities.Take(1), GridPos.Zero);
+        Assert.False(sim.Execute(new PlaceBlueprint(copy, new GridPos(0, 5, 0))).Ok); // pasting counts too
+
+        sim.World.Stats.TotalEarned = 1e6;
+        Assert.True(sim.Execute(new UnlockTier()).Ok);
+        Assert.Equal(max + 2, sim.World.LimitOf(drill));
+        Assert.True(sim.Execute(new PlaceBuilding("iron_miner", new GridPos(0, 5, 0), Dir.South)).Ok);
+
+        Assert.Null(sim.World.LimitOf(sim.Content.Buildings["conveyor"])); // belts are unlimited
+        Assert.NotNull(sim.World.LimitOf(sim.Content.Buildings["seller"]));
+    }
+
+    [Fact]
+    public void Nothing_can_be_built_below_the_ground_plate()
+    {
+        var sim = TestUtil.NewSim();
+        var r = sim.Execute(new PlaceBuilding("conveyor", new GridPos(3, 3, -1), Dir.East));
+        Assert.False(r.Ok);
+        Assert.Contains("below the ground", r.Error);
+
+        // A ramp down placed on the ground spans ground + one level: it lands on the ground.
+        sim.Place("ramp_down", 3, 3, 0, Dir.East);
+        var ramp = sim.World.EntityAt(new GridPos(3, 3, 1))!;
+        Assert.Equal(0, ramp.Pos.Z);
     }
 }

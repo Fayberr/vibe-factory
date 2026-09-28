@@ -13,6 +13,7 @@ public enum Highlight
     Selected,
     Danger,
     Moving,
+    Upgrade,
 }
 
 /// <summary>
@@ -58,6 +59,7 @@ public partial class WorldView : Node3D
     private static readonly StandardMaterial3D SelectOverlay = Palette.Translucent(new Color(Palette.Select, 0.26f));
     private static readonly StandardMaterial3D DangerOverlay = Palette.Translucent(new Color(Palette.Danger, 0.45f));
     private static readonly StandardMaterial3D MovingOverlay = Palette.Translucent(new Color(1, 1, 1, 0.55f));
+    private static readonly StandardMaterial3D UpgradeOverlay = Palette.Translucent(new Color(Palette.Upgrade, 0.34f));
 
     private World World => _host.Sim.World;
 
@@ -80,7 +82,7 @@ public partial class WorldView : Node3D
 
     public int Layer => _layer;
 
-    /// <summary>Current build layer; with cutaway on, everything above it is hidden.</summary>
+    /// <summary>Current build height; with cutaway on, everything above it is hidden.</summary>
     public void SetLayer(int layer, bool cutaway)
     {
         _layer = layer;
@@ -121,6 +123,7 @@ public partial class WorldView : Node3D
         Highlight.Selected => SelectOverlay,
         Highlight.Danger => DangerOverlay,
         Highlight.Moving => MovingOverlay,
+        Highlight.Upgrade => UpgradeOverlay,
         _ => null,
     };
 
@@ -185,17 +188,28 @@ public partial class WorldView : Node3D
         foreach (var v in _visuals.Values) v.Rig.Root.QueueFree();
         _visuals.Clear();
         _dirty.Clear();
-        foreach (var child in GetChildren())
-            if (child.Name == "Ground" || child.Name == "Kerb" || child.Name == "LayerGrid") child.QueueFree();
-
-        _ground = SceneSetup.AddGround(this, World.Bounds);
-        _layerGrid = SceneSetup.AddLayerGrid(this, World.Bounds);
+        RebuildGround();
         foreach (var e in World.Entities) _dirty.Add(e.Id);
         _prev.Clear();
         _curr.Clear();
         SetLayer(_layer, _cutaway);
         FlushDirty();
         SnapshotItems();
+    }
+
+    /// <summary>Ground, kerb and height grid for the current plot (it grows with every tier).</summary>
+    private void RebuildGround()
+    {
+        foreach (var child in GetChildren())
+            if (child.Name == "Ground" || child.Name == "Kerb" || child.Name == "LayerGrid")
+            {
+                RemoveChild(child);
+                child.QueueFree();
+            }
+        _ground = SceneSetup.AddGround(this, World.Bounds);
+        _layerGrid = SceneSetup.AddLayerGrid(this, World.Bounds);
+        _ground.SetShaderParameter("grid_strength", _grid);
+        SetLayer(_layer, _cutaway);
     }
 
     private void OnSimEvent(SimEvent ev)
@@ -213,6 +227,12 @@ public partial class WorldView : Node3D
             case EntityReoriented o:
                 MarkAround(o.Pos);
                 _dirty.Add(o.EntityId);
+                break;
+            case EntityLevelChanged l:
+                _dirty.Add(l.EntityId);
+                break;
+            case TierUnlocked:
+                RebuildGround();
                 break;
             case ItemSold s:
                 _pendingIncome[s.EntityId] = _pendingIncome.GetValueOrDefault(s.EntityId) + s.Payout;
@@ -249,6 +269,7 @@ public partial class WorldView : Node3D
     private ModelRig BuildRig(Entity e)
     {
         var rig = ModelFactory.Build(e.Def, TransportPath.ShapeOf(e));
+        ModelFactory.ApplyLevel(rig, e.Level, (float)e.SpeedFactor);
         rig.Root.Position = GridMapping.CellFloor(e.Pos);
         rig.Root.Rotation = new Vector3(0, GridMapping.Yaw(e.Facing), 0);
         rig.Root.Visible = IsVisible(e.Pos.Z);

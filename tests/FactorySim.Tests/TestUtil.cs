@@ -7,9 +7,19 @@ internal static class TestUtil
 {
     public static readonly ContentRegistry Content = ContentRegistry.LoadDefault();
 
-    /// <summary>Base content plus a very fast source for saturation tests.</summary>
+    /// <summary>
+    /// Base content plus a very fast source for saturation tests and the kind of global
+    /// "research" upgrades a mod pack can add (the base game only has per-building levels).
+    /// </summary>
     public static readonly ContentRegistry FastContent = ContentRegistry.LoadDefault(null, new ContentPack
     {
+        Upgrades =
+        {
+            new UpgradeDef { Id = "belt_speed", Stat = StatIds.ConveyorSpeed, PerLevel = 1.1, BaseCost = 100, CostGrowth = 1.6, MaxLevel = 9 },
+            new UpgradeDef { Id = "miner_rate", Stat = StatIds.MinerRate, PerLevel = 1.15, BaseCost = 50 },
+            new UpgradeDef { Id = "sell_price", Stat = StatIds.SellMultiplier, PerLevel = 1.25, BaseCost = 250 },
+            new UpgradeDef { Id = "stack_size", Stat = StatIds.StackSize, Effect = UpgradeEffectKind.Add, PerLevel = 1, BaseCost = 500 },
+        },
         Buildings =
         {
             new BuildingDef

@@ -8,7 +8,8 @@ public readonly record struct GridBounds(GridPos Min, GridPos Max)
     public bool Contains(GridPos p) =>
         p.X >= Min.X && p.X <= Max.X && p.Y >= Min.Y && p.Y <= Max.Y && p.Z >= Min.Z && p.Z <= Max.Z;
 
-    public static GridBounds Default => new(new GridPos(0, 0, -2), new GridPos(31, 31, 6));
+    /// <summary>Height 0 is the base plate: nothing is built below it. Up to 4 levels above.</summary>
+    public static GridBounds Default => new(new GridPos(0, 0, 0), new GridPos(31, 31, 4));
 }
 
 public readonly record struct PlacementCheck(bool Ok, string? Reason = null)
@@ -19,7 +20,7 @@ public readonly record struct PlacementCheck(bool Ok, string? Reason = null)
 
 /// <summary>
 /// All simulation state: grid, entities, economy, upgrades, stats, RNG. Pure data plus
-/// queries — mutate it through <see cref="Simulation.Execute"/> so every change is a
+/// queries; mutate it through <see cref="Simulation.Execute"/> so every change is a
 /// validated, loggable, replayable command.
 /// </summary>
 public sealed class World
@@ -27,6 +28,7 @@ public sealed class World
     private readonly Dictionary<int, Entity> _entities = new();
     private readonly Dictionary<GridPos, Entity> _grid = new();
     private readonly Dictionary<string, double> _statCache = new();
+    private readonly Dictionary<string, int> _counts = new();
     private List<Entity> _updateOrder = new();
     private bool _topologyDirty = true;
 
@@ -38,7 +40,7 @@ public sealed class World
     public BigNum Money { get; internal set; }
     public GridBounds Bounds { get; set; } = GridBounds.Default;
 
-    /// <summary>Free building and upgrades — for prototyping and level design.</summary>
+    /// <summary>Free building and upgrades, for prototyping and level design.</summary>
     public bool Sandbox { get; set; }
 
     /// <summary>Highest unlocked progression tier (index into <see cref="ContentRegistry.Tiers"/>).</summary>
@@ -119,7 +121,7 @@ public sealed class World
         replaced.Clear();
         foreach (var cell in Entity.CellsFor(def, pos, facing))
         {
-            if (!Bounds.Contains(cell)) return PlacementCheck.Fail($"{cell} is outside the plot");
+            if (!Bounds.Contains(cell)) return PlacementCheck.Fail(OutsideReason(cell));
             var occupant = EntityAt(cell);
             if (occupant == null || replaced.Contains(occupant)) continue;
             if (Array.IndexOf(def.Replaces, occupant.Def.Group) < 0 || occupant.Def.Group.Length == 0)
@@ -140,12 +142,23 @@ public sealed class World
     {
         foreach (var cell in Entity.CellsFor(def, pos, facing))
         {
-            if (!Bounds.Contains(cell)) return PlacementCheck.Fail($"{cell} is outside the plot");
+            if (!Bounds.Contains(cell)) return PlacementCheck.Fail(OutsideReason(cell));
             var occupant = EntityAt(cell);
             if (occupant != null && occupant != ignore) return PlacementCheck.Fail($"{cell} is occupied by {occupant.Def.Name}");
         }
         return PlacementCheck.Success;
     }
+
+    private string OutsideReason(GridPos cell) =>
+        cell.Z < Bounds.Min.Z ? "Can't build below the ground"
+        : cell.Z > Bounds.Max.Z ? $"Too high (max height {Bounds.Max.Z})"
+        : "Outside the plot. Unlock a tier to expand it";
+
+    /// <summary>Number of buildings of a def currently placed.</summary>
+    public int CountOf(string defId) => _counts.GetValueOrDefault(defId);
+
+    /// <summary>Current cap for a def (null = unlimited).</summary>
+    public int? LimitOf(BuildingDef def) => def.Limit?.At(def, UnlockedTier);
 
     internal Entity AddEntity(BuildingDef def, GridPos pos, Dir facing, int? id = null, object? state = null, int level = 1)
     {
@@ -157,6 +170,7 @@ public sealed class World
         };
         NextEntityId = Math.Max(NextEntityId, e.Id + 1);
         _entities.Add(e.Id, e);
+        _counts[def.Id] = CountOf(def.Id) + 1;
         foreach (var cell in e.Cells()) _grid[cell] = e;
         _topologyDirty = true;
         return e;
@@ -166,6 +180,7 @@ public sealed class World
     {
         foreach (var cell in e.Cells()) _grid.Remove(cell);
         _entities.Remove(e.Id);
+        _counts[e.Def.Id] = CountOf(e.Def.Id) - 1;
         _topologyDirty = true;
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 
 namespace FactorySim.Client;
@@ -48,15 +49,22 @@ public partial class Main : Node3D
         return sum / world.EntityCount;
     }
 
-    /// <summary>`godot --headless -- --smoke`: build the demo, run at 16×, print stats, quit (CI check).</summary>
+    /// <summary>
+    /// `godot --headless -- --smoke`: build the demo, run at 16×, print stats, quit (CI check).
+    /// With `--showcase` it lays out every building and item instead (for checking the models).
+    /// </summary>
     private void RunSmokeTest(SimHost host, CameraRig camera)
     {
-        host.NewGame(withDemo: true);
+        bool showcase = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--showcase") >= 0;
+        host.NewGame(withDemo: !showcase);
+        if (showcase) BuildShowcase(host);
         host.TimeScale = 16;
         string? screenshot = null;
+        double wait = 3.0;
         foreach (var arg in OS.GetCmdlineUserArgs())
         {
             if (arg.StartsWith("--screenshot=")) screenshot = arg["--screenshot=".Length..];
+            if (arg.StartsWith("--wait=")) wait = double.Parse(arg["--wait=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             if (arg.StartsWith("--view="))
             {
                 // --view=yaw,pitch,distance,focusX,focusZ
@@ -65,13 +73,42 @@ public partial class Main : Node3D
             }
         }
 
-        GetTree().CreateTimer(3.0).Timeout += () =>
+        GetTree().CreateTimer(wait).Timeout += () =>
         {
             var w = host.Sim.World;
             GD.Print($"SMOKE: {w.EntityCount} buildings, {w.Tick} ticks, money {w.Money.Format()}, " +
                      $"income {w.Stats.IncomePerSecond(10).Format()}/s");
             if (screenshot != null) GetViewport().GetTexture().GetImage().SavePng(screenshot);
-            GetTree().Quit(w.Stats.TotalEarned.IsZero ? 1 : 0);
+            GetTree().Quit(w.Stats.TotalEarned.IsZero && !showcase ? 1 : 0);
         };
+    }
+
+    /// <summary>Every building in rows (a few upgraded, to show level trims) and every item shape on a shelf.</summary>
+    private void BuildShowcase(SimHost host)
+    {
+        var sim = host.Sim;
+        sim.World.Sandbox = true;
+        int i = 0;
+        foreach (var def in host.Content.BuildingList)
+        {
+            var pos = new GridPos(2 + (i % 8) * 2, 2 + (i / 8) * 3, 0);
+            if (sim.Execute(new PlaceBuilding(def.Id, pos, Dir.South)).Ok && i % 3 == 1)
+                sim.Execute(new SetBuildingLevels(new[] { new LevelChange(pos, 2 + i % 9) }));
+            i++;
+        }
+        int k = 0;
+        foreach (var item in host.Content.Items.Values)
+        {
+            var color = Palette.Parse(item.Meta.GetValueOrDefault("color"), Colors.Magenta);
+            string shape = item.Meta.GetValueOrDefault("shape") ?? "box";
+            AddChild(new MeshInstance3D
+            {
+                Mesh = ItemMeshes.Get(shape),
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = color, Roughness = 0.6f },
+                Position = new Vector3(2.5f + (k % 11) * 0.8f, 0.12f + ItemMeshes.Lift(shape), 16.5f + (k / 11) * 0.8f),
+                Scale = Vector3.One * 1.6f,
+            });
+            k++;
+        }
     }
 }

@@ -29,6 +29,18 @@ public static class Palette
     public static readonly Color Select = new("#4fc3ff");
     public static readonly Color Danger = new("#ff5a5a");
     public static readonly Color Ok = new("#5de08a");
+    public static readonly Color Upgrade = new("#ffd257");
+
+    /// <summary>Trim colour showing a building's level: none, then bronze, silver, gold, cyan, violet as it climbs.</summary>
+    public static Color? LevelTrim(int level) => level switch
+    {
+        <= 1 => null,
+        <= 3 => new Color("#d08a4e"),
+        <= 6 => new Color("#d9e2ec"),
+        <= 10 => new Color("#ffcf40"),
+        <= 20 => new Color("#46e0ff"),
+        _ => new Color("#c07bff"),
+    };
 
     private static readonly Dictionary<(Color, float, float), StandardMaterial3D> Solids = new();
     private static readonly Dictionary<(Color, float), StandardMaterial3D> Glows = new();

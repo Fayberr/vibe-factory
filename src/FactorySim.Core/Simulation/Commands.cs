@@ -5,7 +5,7 @@ namespace FactorySim;
 /// <summary>
 /// Every player-initiated mutation is a Command. Routing all changes through
 /// <see cref="Simulation.Execute"/> keeps them validated, applied at tick boundaries,
-/// and loggable — the basis for undo, replays and server-verified leaderboard runs.
+/// and loggable: the basis for undo, replays and server-verified leaderboard runs.
 /// </summary>
 public abstract record Command;
 

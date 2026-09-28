@@ -2,7 +2,7 @@ namespace FactorySim;
 
 /// <summary>
 /// Resolves port links and the per-tick update order. Rebuilt lazily whenever a
-/// building is placed, removed or rotated — never per tick.
+/// building is placed, removed or rotated, never per tick.
 /// </summary>
 internal static class Topology
 {

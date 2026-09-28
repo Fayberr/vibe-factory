@@ -102,6 +102,14 @@ public sealed class Simulation
         return result;
     }
 
+    /// <summary>Build-limit check for adding <paramref name="adding"/> more of <paramref name="def"/> (after removing <paramref name="freed"/>); null when allowed.</summary>
+    public string? LimitReason(BuildingDef def, int adding = 1, int freed = 0)
+    {
+        if (World.Sandbox || World.LimitOf(def) is not int max) return null;
+        if (World.CountOf(def.Id) - freed + adding <= max) return null;
+        return $"{def.Name} limit reached ({World.CountOf(def.Id)}/{max}). Later tiers allow more.";
+    }
+
     /// <summary>Tier gate for placing <paramref name="def"/>; null when allowed.</summary>
     public string? LockReason(BuildingDef def) =>
         World.Sandbox || def.Tier <= World.UnlockedTier
@@ -116,6 +124,7 @@ public sealed class Simulation
         var replaced = new List<Entity>();
         var check = c.Replace ? World.CanPlaceReplacing(def, c.Pos, c.Facing, replaced) : World.CanPlace(def, c.Pos, c.Facing);
         if (!check.Ok) return CommandResult.Fail(check.Reason!);
+        if (LimitReason(def, 1, replaced.Count(r => r.Def == def)) is { } limit) return CommandResult.Fail(limit);
 
         if (!World.Sandbox)
         {
@@ -181,6 +190,8 @@ public sealed class Simulation
             plan.Add((def, pos, facing, lv));
         }
         if (plan.Count == 0) return CommandResult.Fail("Nothing to place");
+        foreach (var g in plan.GroupBy(x => x.Def))
+            if (LimitReason(g.Key, g.Count()) is { } limit) return CommandResult.Fail(limit);
         if (!World.Sandbox)
         {
             if (World.Money < cost) return CommandResult.Fail($"Need {cost.Format()} (have {World.Money.Format()})");

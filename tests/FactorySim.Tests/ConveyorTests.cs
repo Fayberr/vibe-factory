@@ -104,11 +104,12 @@ public class ConveyorTests
     {
         var sim = TestUtil.NewSim();
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
-        sim.Line(new GridPos(1, 0, 0), Dir.East, 2, "polisher"); // two polishers in a row
-        sim.Place("seller", 3, 0, 0, Dir.East);
+        sim.Place("smelter", 1, 0, 0, Dir.East);
+        sim.Line(new GridPos(2, 0, 0), Dir.East, 2, "polisher"); // two polishers in a row
+        sim.Place("seller", 4, 0, 0, Dir.East);
 
         sim.Step(20 * 10);
         var sale = sim.DrainEvents().OfType<ItemSold>().First();
-        Assert.Equal((BigNum)1.5, sale.Payout); // 1 × 1.5, not × 2.25
+        Assert.Equal((BigNum)3, sale.Payout); // ingot 2 × 1.5, not × 2.25
     }
 }

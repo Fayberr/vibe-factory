@@ -8,8 +8,9 @@ using FactorySim.Content;
 namespace FactorySim.Client;
 
 /// <summary>
-/// Screen UI: tool bar (top), sidebar (left), factory card (bottom-left), hotbar and key
-/// hints (bottom), inspector and panels (right), build menu, help overlay, toasts.
+/// Screen UI: tool bar (top), sidebar (left), factory card with the next goal (bottom-left),
+/// build-height ladder, hotbar and key hints (bottom), inspector and panels (right), build
+/// menu, help overlay, toasts and a tooltip at the cursor saying what a click will do.
 /// Owns hotbar/menu hotkeys; everything else goes to the BuildController.
 /// </summary>
 public partial class Hud : CanvasLayer
@@ -25,14 +26,19 @@ public partial class Hud : CanvasLayer
 
     private Control _root = null!;
     private readonly Dictionary<ToolMode, Button> _toolButtons = new();
-    private Button _buildButton = null!, _undo = null!, _redo = null!, _cutaway = null!;
-    private Label _layerLabel = null!, _money = null!, _income = null!;
+    private Button _buildButton = null!, _undo = null!, _redo = null!, _hideAbove = null!;
+    private Label _money = null!, _income = null!, _goal = null!;
+    private ProgressBar _goalBar = null!;
+    private readonly List<Button> _heightButtons = new();
     private RichTextLabel _hints = null!;
+    private Control _hintPanel = null!;
+    private PanelContainer _cursorTip = null!;
+    private Label _cursorText = null!;
     private readonly List<BuildingTile> _slots = new();
     private readonly string?[] _hotbar = new string?[10];
     private BuildMenu? _menu;
     private InspectorPanel _inspector = null!;
-    private UpgradesPanel? _upgrades;
+    private ProgressPanel _progress = null!;
     private StatsPanel _stats = null!;
     private PanelContainer _game = null!, _help = null!;
     private Control _rightColumn = null!;
@@ -49,7 +55,19 @@ public partial class Hud : CanvasLayer
         _thumbs = thumbs;
         host.Notice += text => _toasts.Show(this, text);
         host.WorldReplaced += OnWorldReplaced;
-        tools.Changed += RefreshToolState;
+        host.EventRaised += ev =>
+        {
+            if (ev is EntityPlaced or EntityRemoved) _slotsDirty = true; // build limits changed
+            if (ev is not TierUnlocked t) return;
+            var b = host.Sim.World.Bounds;
+            _toasts.Show(this, $"Tier {t.Tier} unlocked: {t.Name}! Plot is now {b.Max.X - b.Min.X + 1}×{b.Max.Y - b.Min.Y + 1}, new buildings in the build menu.");
+            RefreshHotbar();
+        };
+        tools.Changed += () =>
+        {
+            _slotsDirty = true;
+            RefreshToolState();
+        };
         thumbs.Updated += _ => RefreshHotbar();
     }
 
@@ -68,6 +86,13 @@ public partial class Hud : CanvasLayer
 
         _toasts = new Toasts();
         _root.AddChild(Ui.Anchor(_toasts.Root, 0.5f, 0, 0, 72, Control.GrowDirection.Both, Control.GrowDirection.End));
+
+        _cursorText = Ui.Label("", 13);
+        _cursorTip = Ui.Panel(_cursorText);
+        _cursorTip.AddThemeStyleboxOverride("panel", UiTheme.Box(new Color(0.05f, 0.06f, 0.08f, 0.88f), 7, 9, 5));
+        _cursorTip.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _cursorTip.Visible = false;
+        _root.AddChild(_cursorTip);
     }
 
     // ---- Layout ---------------------------------------------------------------
@@ -84,6 +109,7 @@ public partial class Hud : CanvasLayer
         Tool(ToolMode.Select, Icon.Select, "Select (V)\nClick, Shift-click or drag a box", () => _tools.SetMode(ToolMode.Select));
         _buildButton = Ui.IconButton(Icon.Build, "Build menu (B)", ToggleBuildMenu, toggle: true);
         bar.AddChild(_buildButton);
+        Tool(ToolMode.Upgrade, Icon.Upgrades, "Upgrade (U)\nClick a building, drag a box, Shift-click a whole belt line.\nWith a selection, U upgrades it.", () => _tools.SetMode(_tools.Mode == ToolMode.Upgrade ? ToolMode.Select : ToolMode.Upgrade));
         Tool(ToolMode.Delete, Icon.Delete, "Delete (X)\nClick or drag a box", () => _tools.SetMode(_tools.Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete));
         Tool(ToolMode.Move, Icon.Move, "Move selection (M)", () => _tools.BeginMove());
         Tool(ToolMode.Paste, Icon.Copy, "Copy selection & paste (C)\nCtrl+C / Ctrl+V / Ctrl+X", () => _tools.CopySelection(enterPaste: true));
@@ -92,16 +118,6 @@ public partial class Hud : CanvasLayer
         _redo = Ui.IconButton(Icon.Redo, "Redo (Ctrl+Y)", () => _tools.Redo());
         bar.AddChild(_undo);
         bar.AddChild(_redo);
-        bar.AddChild(new VSeparator());
-        bar.AddChild(Ui.IconButton(Icon.LayerDown, "Layer down (Q · Shift+wheel)", () => _tools.SetLayer(_tools.Layer - 1)));
-        _layerLabel = Ui.Label("Ground", 14);
-        _layerLabel.CustomMinimumSize = new Vector2(96, 0);
-        _layerLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _layerLabel.VerticalAlignment = VerticalAlignment.Center;
-        bar.AddChild(_layerLabel);
-        bar.AddChild(Ui.IconButton(Icon.LayerUp, "Layer up (E · Shift+wheel)", () => _tools.SetLayer(_tools.Layer + 1)));
-        _cutaway = Ui.IconButton(Icon.Eye, "Cutaway: hide layers above the current one (Tab)", () => _tools.ToggleCutaway(), toggle: true);
-        bar.AddChild(_cutaway);
         _root.AddChild(Ui.Anchor(Ui.Panel(bar), 0.5f, 0, 0, 12, Control.GrowDirection.Both, Control.GrowDirection.End));
     }
 
@@ -109,7 +125,7 @@ public partial class Hud : CanvasLayer
     {
         var col = new VBoxContainer();
         col.AddChild(Ui.IconButton(Icon.Build, "Build menu (B)", ToggleBuildMenu, 44));
-        col.AddChild(Ui.IconButton(Icon.Upgrades, "Upgrades (U)", () => TogglePanel(_upgrades?.Root), 44));
+        col.AddChild(Ui.IconButton(Icon.Progress, "Progress: tiers and build limits (P)", () => TogglePanel(_progress.Root), 44));
         col.AddChild(Ui.IconButton(Icon.Stats, "Statistics (I)", () => TogglePanel(_stats.Root), 44));
         col.AddChild(Ui.IconButton(Icon.Game, "Game: save, load, speed (G)", () => TogglePanel(_game), 44));
         col.AddChild(Ui.IconButton(Icon.Help, "Controls (F1)", () => _help.Visible = !_help.Visible, 44));
@@ -124,8 +140,15 @@ public partial class Hud : CanvasLayer
         body.AddChild(_money);
         _income = Ui.Label("+$0/s", 15, UiTheme.Money);
         body.AddChild(_income);
+        body.AddChild(new HSeparator());
+        _goal = Ui.Label("", 12, UiTheme.Muted);
+        _goal.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _goal.CustomMinimumSize = new Vector2(220, 0);
+        body.AddChild(_goal);
+        _goalBar = new ProgressBar { CustomMinimumSize = new Vector2(0, 6), ShowPercentage = false, MaxValue = 1 };
+        body.AddChild(_goalBar);
         var panel = Ui.Panel(body);
-        panel.CustomMinimumSize = new Vector2(210, 0);
+        panel.CustomMinimumSize = new Vector2(240, 0);
         _root.AddChild(Ui.Anchor(panel, 0, 1, 12, -12, Control.GrowDirection.End, Control.GrowDirection.Begin));
     }
 
@@ -146,6 +169,7 @@ public partial class Hud : CanvasLayer
         hintPanel.AddThemeStyleboxOverride("panel", UiTheme.Box(new Color(0.05f, 0.06f, 0.08f, 0.6f), 8, 12, 4));
         hintPanel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
         hintPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _hintPanel = hintPanel;
         col.AddChild(hintPanel);
 
         var bar = new HBoxContainer();
@@ -157,10 +181,52 @@ public partial class Hud : CanvasLayer
             _slots.Add(tile);
             bar.AddChild(tile.Button);
         }
+        var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        row.AddThemeConstantOverride("separation", 8);
+        row.AddChild(BuildHeightLadder());
         var panel = Ui.Panel(bar);
-        panel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
-        col.AddChild(panel);
+        panel.SizeFlagsVertical = Control.SizeFlags.ShrinkEnd;
+        row.AddChild(panel);
+        row.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        col.AddChild(row);
         _root.AddChild(Ui.Anchor(col, 0.5f, 1, 0, -12, Control.GrowDirection.Both, Control.GrowDirection.Begin));
+    }
+
+    /// <summary>
+    /// Elevator-style build height selector: G (ground) at the bottom, levels above it. The
+    /// highlighted floor is where the next building goes; the eye hides everything above it.
+    /// </summary>
+    private Control BuildHeightLadder()
+    {
+        var col = new VBoxContainer();
+        col.AddThemeConstantOverride("separation", 3);
+        var title = Ui.Label("HEIGHT", 10, UiTheme.Muted);
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        col.AddChild(title);
+        for (int h = 4; h >= 0; h--)
+        {
+            int level = h;
+            var b = new Button
+            {
+                Text = h == 0 ? "G" : h.ToString(),
+                ToggleMode = true,
+                FocusMode = Control.FocusModeEnum.None,
+                CustomMinimumSize = new Vector2(40, 22),
+                TooltipText = h == 0
+                    ? "Ground: the lowest level (Q · PageDown · Shift+wheel)"
+                    : $"Build at height {h} (E/Q · PageUp/PageDown · Shift+wheel).\nBelts up here are bridges; drag a belt across another line and it bridges by itself.",
+            };
+            b.AddThemeFontSizeOverride("font_size", 12);
+            b.Pressed += () => _tools.SetHeight(level);
+            _heightButtons.Add(b);
+            col.AddChild(b);
+        }
+        _hideAbove = Ui.IconButton(Icon.Eye, "Hide everything above the build height (Tab)", () => _tools.ToggleHideAbove(), 30, toggle: true);
+        _hideAbove.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        col.AddChild(_hideAbove);
+        var panel = Ui.Panel(col);
+        panel.SizeFlagsVertical = Control.SizeFlags.ShrinkEnd;
+        return panel;
     }
 
     private void BuildRightColumn()
@@ -170,9 +236,14 @@ public partial class Hud : CanvasLayer
             () => _tools.Rotate(1),
             () => _tools.BeginMove(),
             () => _tools.CopySelection(enterPaste: true),
-            _tools.DeleteSelection);
+            _tools.DeleteSelection,
+            () => _tools.UpgradeEntities(_tools.SelectedEntities().ToList()));
         _inspector.Root.Visible = false;
         col.AddChild(_inspector.Root);
+
+        _progress = new ProgressPanel(() => _host.Execute(new UnlockTier()));
+        _progress.Root.Visible = false;
+        col.AddChild(_progress.Root);
 
         _stats = new StatsPanel();
         _stats.Root.Visible = false;
@@ -209,17 +280,19 @@ public partial class Hud : CanvasLayer
         var grid = new GridContainer { Columns = 4 };
         (string, string)[] keys =
         {
-            ("1 – 0", "Hotbar building"), ("B", "Build menu"),
-            ("LMB", "Place / select"), ("Drag", "Belt line · box select"),
-            ("R / Shift+R", "Rotate"), ("F", "Pick hovered building"),
-            ("Q / E", "Layer down / up"), ("Tab", "Cutaway view"),
+            ("1 to 0", "Hotbar building"), ("B", "Build menu"),
+            ("LMB", "Place / select"), ("Drag", "Belt line (bridges crossings)"),
+            ("Drop on belt", "Replaces it (polisher, splitter…)"), ("R / Shift+R", "Rotate"),
+            ("E / Q", "Build height up / down"), ("Shift+wheel", "Build height"),
+            ("Tab", "Hide above build height"), ("F", "Pick hovered building"),
+            ("U", "Upgrade tool / selection"), ("Shift+LMB (U)", "Upgrade whole belt line"),
             ("X", "Delete tool"), ("Del", "Delete selection"),
             ("M", "Move selection"), ("C", "Copy & paste selection"),
             ("Ctrl+C / V / X", "Copy / paste / cut"), ("Ctrl+Z / Y", "Undo / redo"),
             ("Ctrl+A", "Select all"), ("Esc / RMB click", "Cancel tool"),
             ("WASD", "Pan (Shift = fast)"), ("RMB drag", "Orbit camera"),
             ("MMB drag", "Pan"), ("Wheel", "Zoom to cursor"),
-            ("U", "Upgrades"), ("I", "Statistics"),
+            ("P", "Progress: tiers & limits"), ("I", "Statistics"),
             ("G", "Game menu"), ("F1", "This help"),
         };
         foreach (var (key, action) in keys)
@@ -251,11 +324,6 @@ public partial class Hud : CanvasLayer
                 RefreshToolState();
             }, KeyOf);
             _root.AddChild(Ui.Anchor(_menu.Root, 0.5f, 0.5f, 0, -20, Control.GrowDirection.Both, Control.GrowDirection.Both));
-
-            _upgrades = new UpgradesPanel(content, def => _host.Execute(new BuyUpgrade(def.Id)));
-            _upgrades.Root.Visible = false;
-            _rightColumn.AddChild(_upgrades.Root);
-            _rightColumn.MoveChild(_upgrades.Root, 1);
 
             LoadHotbar(content);
             _thumbs.RenderAll(content.BuildingList);
@@ -296,9 +364,9 @@ public partial class Hud : CanvasLayer
         for (int i = 0; i < _slots.Count; i++)
         {
             var def = _hotbar[i] is { } id ? _host.Content.Buildings.GetValueOrDefault(id) : null;
-            _slots[i].Set(def, def != null ? _thumbs.Get(def.Id) : null, i == 9 ? "0" : (i + 1).ToString(), false);
+            _slots[i].Set(def, def != null ? _thumbs.Get(def.Id) : null, i == 9 ? "0" : (i + 1).ToString(), false, _host.Sim);
         }
-        _menu?.Refresh(_thumbs, KeyOf);
+        _menu?.Refresh(_thumbs, KeyOf, _host.Sim);
         RefreshToolState();
     }
 
@@ -326,7 +394,7 @@ public partial class Hud : CanvasLayer
     {
         if (panel == null) return;
         bool show = _activePanel != panel || !panel.Visible;
-        foreach (var p in new Control?[] { _upgrades?.Root, _stats.Root, _game })
+        foreach (var p in new Control?[] { _progress.Root, _stats.Root, _game })
             if (p != null) p.Visible = false;
         panel.Visible = show;
         _activePanel = show ? panel : null;
@@ -364,8 +432,8 @@ public partial class Hud : CanvasLayer
             case Key.B:
                 ToggleBuildMenu();
                 break;
-            case Key.U:
-                TogglePanel(_upgrades?.Root);
+            case Key.P:
+                TogglePanel(_progress.Root);
                 break;
             case Key.I:
                 TogglePanel(_stats.Root);
@@ -401,18 +469,20 @@ public partial class Hud : CanvasLayer
         if (_host?.Sim == null) return;
         foreach (var (mode, b) in _toolButtons) b.SetPressedNoSignal(_tools.Mode == mode);
         _buildButton.SetPressedNoSignal(_tools.Mode == ToolMode.Build || _menu is { Root.Visible: true });
-        _cutaway.SetPressedNoSignal(_tools.Cutaway);
-        _layerLabel.Text = _tools.Layer switch
+        _hideAbove.SetPressedNoSignal(_tools.HideAbove);
+        int max = _tools.MaxHeight;
+        for (int i = 0; i < _heightButtons.Count; i++)
         {
-            0 => "Ground",
-            > 0 => $"Layer +{_tools.Layer}",
-            _ => $"Tunnel {_tools.Layer}",
-        };
+            int h = _heightButtons.Count - 1 - i;
+            _heightButtons[i].SetPressedNoSignal(h == _tools.Height);
+            _heightButtons[i].Visible = h <= max;
+        }
         for (int i = 0; i < _slots.Count; i++)
             _slots[i].Button.SetPressedNoSignal(_tools.Mode == ToolMode.Build && _tools.Tool?.Id == _hotbar[i]);
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;
         _hints.Text = "[center]" + HintsFor() + "[/center]";
+        _hintPanel.Visible = _menu is not { Root.Visible: true };
     }
 
     private string HintsFor()
@@ -422,19 +492,21 @@ public partial class Hud : CanvasLayer
             string.Join("    ", items.Select(i => $"{K(i.Key)} [color=#c9d2dd]{i.Action}[/color]"));
         return _tools.Mode switch
         {
-            ToolMode.Build => $"[color=#4fb6ff]{_tools.Tool?.Name}[/color] facing {_tools.Facing}    " +
-                              H(("LMB", "Place"), ("Drag", "Line"), ("R", "Rotate"), ("Q/E", "Layer"), ("F", "Pick"), ("Esc", "Cancel")),
+            ToolMode.Build => $"[color=#4fb6ff]{_tools.Tool?.Name}[/color] facing {_tools.Facing} · {BuildController.HeightName(_tools.Height).ToLowerInvariant()}    " +
+                              H(("LMB", "Place"), ("Drag", "Line"), ("R", "Rotate"), ("E/Q", "Height"), ("F", "Pick"), ("Esc", "Cancel")),
+            ToolMode.Upgrade => H(("LMB", "Upgrade"), ("Shift+LMB", "Whole line"), ("Drag", "Upgrade area"), ("Esc", "Cancel")),
             ToolMode.Delete => H(("LMB", "Delete"), ("Drag", "Delete area"), ("Ctrl+Z", "Undo"), ("Esc", "Cancel")),
-            ToolMode.Move => H(("LMB", "Drop here"), ("R", "Rotate"), ("Q/E", "Layer"), ("Esc", "Cancel")),
-            ToolMode.Paste => H(("LMB", "Paste"), ("R", "Rotate"), ("Q/E", "Layer"), ("Esc", "Done")),
-            _ when _tools.Selection.Count > 0 => H(("R", "Rotate"), ("M", "Move"), ("C", "Copy"), ("Del", "Delete"), ("Shift+LMB", "Add"), ("Esc", "Deselect")),
-            _ => H(("1-0", "Hotbar"), ("B", "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), ("F", "Pick"), ("X", "Delete"), ("F1", "Help")),
+            ToolMode.Move => H(("LMB", "Drop here"), ("R", "Rotate"), ("E/Q", "Up/down"), ("Esc", "Cancel")),
+            ToolMode.Paste => H(("LMB", "Paste"), ("R", "Rotate"), ("E/Q", "Height"), ("Esc", "Done")),
+            _ when _tools.Selection.Count > 0 => H(("U", "Upgrade"), ("R", "Rotate"), ("M", "Move"), ("C", "Copy"), ("Del", "Delete"), ("Shift+LMB", "Add"), ("Esc", "Deselect")),
+            _ => H(("1-0", "Hotbar"), ("B", "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), ("U", "Upgrade"), ("X", "Delete"), ("P", "Progress"), ("F1", "Help")),
         };
     }
 
     public override void _Process(double delta)
     {
         if (_host?.Sim == null) return;
+        UpdateCursorTip();
         _refresh -= delta;
         if (_refresh > 0) return;
         _refresh = 0.15;
@@ -442,10 +514,54 @@ public partial class Hud : CanvasLayer
         var world = _host.Sim.World;
         _money.Text = "$ " + world.Money.Format();
         _income.Text = $"+${world.Stats.IncomePerSecond(10).Format()}/s";
-        _inspector.Show(_tools.SelectedEntities().ToList(), _thumbs);
-        if (_upgrades is { Root.Visible: true }) _upgrades.Refresh(world);
+        _inspector.Show(world, _tools.SelectedEntities().ToList(), _thumbs);
+        if (_progress.Root.Visible) _progress.Refresh(_host.Sim);
         if (_stats.Root.Visible) _stats.Refresh(world);
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;
+        UpdateGoal(world);
+
+        // Money changes what is affordable and limits change with every placement.
+        if (_menu is { Root.Visible: true } || _slotsDirty)
+        {
+            _slotsDirty = false;
+            RefreshHotbar();
+        }
+    }
+
+    private bool _slotsDirty = true;
+
+    /// <summary>The next tier as the standing goal, so there is always something to work toward.</summary>
+    private void UpdateGoal(World world)
+    {
+        var tiers = world.Content.Tiers;
+        if (world.UnlockedTier + 1 >= tiers.Count)
+        {
+            _goal.Text = "All tiers unlocked. Keep upgrading!";
+            _goalBar.Value = 1;
+            return;
+        }
+        var next = tiers[world.UnlockedTier + 1];
+        double need = next.RequiredEarnings.ToDouble(), have = world.Stats.TotalEarned.ToDouble();
+        _goalBar.Value = need <= 0 ? 1 : Math.Min(1, have / need);
+        _goal.Text = have < need
+            ? $"Next: {next.Name}. Earn ${next.RequiredEarnings.Format()} in total (P)"
+            : $"{next.Name} is ready to unlock for ${next.Cost.Format()}. Press P";
+    }
+
+    private void UpdateCursorTip()
+    {
+        var info = _tools.CursorInfo;
+        bool show = info != null && _root.GetViewport().GuiGetHoveredControl() == null;
+        _cursorTip.Visible = show;
+        if (!show) return;
+        var (text, ok) = info!.Value;
+        _cursorText.Text = text;
+        _cursorText.AddThemeColorOverride("font_color", ok ? UiTheme.Text : new Color("#ff8a8a"));
+        var mouse = _root.GetViewport().GetMousePosition();
+        var size = _cursorTip.GetCombinedMinimumSize();
+        var screen = _root.GetViewportRect().Size;
+        _cursorTip.Size = size;
+        _cursorTip.Position = new Vector2(Mathf.Min(mouse.X + 20, screen.X - size.X - 8), Mathf.Min(mouse.Y + 24, screen.Y - size.Y - 8));
     }
 }

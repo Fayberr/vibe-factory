@@ -44,11 +44,18 @@ public partial class GhostLayer : Node3D
         for (int i = 0; i < specs.Count; i++)
         {
             var s = specs[i];
-            string key = $"{s.Def.Id}:{s.Shape}";
+            string key = $"{s.Def.Id}:{s.Shape}:{System.Math.Max(0, s.Pos.Z)}";
             if (i >= _ghosts.Count || _ghosts[i].Key != key)
             {
                 if (i < _ghosts.Count) _ghosts[i].Rig.Root.QueueFree();
                 var rig = WorldView.BuildPreview(s.Def, s.Shape);
+                if (s.Pos.Z > 0)
+                {
+                    // Raised pieces show the column they will stand on.
+                    var pillar = new MeshInstance3D { Mesh = ModelFactory.PillarMesh(s.Pos.Z) };
+                    rig.Root.AddChild(pillar);
+                    rig.Geometry.Add(pillar);
+                }
                 rig.MakeGhost(OkMat);
                 AddChild(rig.Root);
                 var ghost = new Ghost { Key = key, Rig = rig };

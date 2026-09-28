@@ -7,6 +7,9 @@ public sealed class SellerParams
 {
     /// <summary>Local price multiplier (stacks with the global "sell.multiplier" stat).</summary>
     public double Multiplier { get; init; } = 1;
+
+    /// <summary>Share of the value paid for raw materials: processing is how you make money.</summary>
+    public double RawMultiplier { get; init; } = 0.25;
 }
 
 public sealed class SellerState
@@ -27,7 +30,8 @@ public sealed class SellerBehavior : Behavior<SellerParams, SellerState>
 
     protected override bool TryAccept(TickContext ctx, Entity e, SellerParams p, SellerState s, ItemStack item, int port, int overflow)
     {
-        BigNum payout = item.TotalValue * (p.Multiplier * e.ValueFactor * ctx.Stat(StatIds.SellMultiplier));
+        double raw = ctx.Content.Items.TryGetValue(item.Type, out var def) && def.Raw ? p.RawMultiplier : 1;
+        BigNum payout = item.TotalValue * (p.Multiplier * raw * e.ValueFactor * ctx.Stat(StatIds.SellMultiplier));
         s.Earned += payout;
         s.Units += item.Count;
         ctx.Sell(e, item, payout);
@@ -43,6 +47,7 @@ public sealed class SellerBehavior : Behavior<SellerParams, SellerState>
     protected override void Describe(Entity e, SellerParams p, SellerState s, List<InfoLine> into)
     {
         into.Add(new InfoLine("Price bonus", $"×{p.Multiplier * e.ValueFactor:0.##}"));
+        into.Add(new InfoLine("Raw materials", $"{p.RawMultiplier:0%} of value"));
         into.Add(new InfoLine("Earned", "$" + s.Earned.Format()));
         into.Add(new InfoLine("Units sold", s.Units.ToString()));
     }

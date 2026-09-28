@@ -17,7 +17,8 @@ public partial class SimHost : Node
 {
     private const string SavePath = "user://factory_save.json";
     private const double AutosaveSeconds = 30;
-    private static readonly BigNum StartingMoney = 250;
+    /// <summary>Enough for a first drill → smelter → depot line with a little to spare.</summary>
+    private static readonly BigNum StartingMoney = 150;
 
     private readonly List<SimEvent> _events = new();
     private double _sinceSave;
@@ -71,7 +72,7 @@ public partial class SimHost : Node
         if (what == NotificationWMCloseRequest && Sim != null && Autosave) Save(quiet: true);
     }
 
-    /// <summary>Runs a non-undoable command (upgrades) and reports failures.</summary>
+    /// <summary>Runs a non-undoable command (tier unlocks) and reports failures.</summary>
     public CommandResult Execute(Command command)
     {
         var result = Sim.Execute(command);

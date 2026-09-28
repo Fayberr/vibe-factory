@@ -87,7 +87,8 @@ public static class SaveSystem
         {
             Tick = data.Tick,
             Money = data.Money,
-            Bounds = data.Bounds,
+            // Older saves allowed underground layers; the base plate is now the floor.
+            Bounds = data.Bounds with { Min = data.Bounds.Min with { Z = Math.Max(0, data.Bounds.Min.Z) } },
             Sandbox = data.Sandbox,
             UnlockedTier = Math.Clamp(data.UnlockedTier, 0, content.Tiers.Count - 1),
             Stats = data.Stats,

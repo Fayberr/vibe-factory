@@ -77,7 +77,7 @@ public class EditingTests
         var history = new EditHistory(sim);
 
         Assert.True(history.Execute(new PlaceBuilding("iron_miner", new GridPos(0, 0, 0), Dir.East)).Ok);
-        Assert.Equal((BigNum)75, sim.World.Money);
+        Assert.Equal((BigNum)70, sim.World.Money);
 
         Assert.True(history.Undo().Ok);
         Assert.Equal(0, sim.World.EntityCount);

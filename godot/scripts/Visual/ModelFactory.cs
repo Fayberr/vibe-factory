@@ -13,7 +13,7 @@ namespace FactorySim.Client;
 ///
 /// Local frame: building faces north (front = −Z), anchor cell floor centre at the origin.
 /// </summary>
-public static class ModelFactory
+public static partial class ModelFactory
 {
     public const float DeckHeight = 0.12f;
 
@@ -50,6 +50,27 @@ public static class ModelFactory
                 break;
             case "depot":
                 Depot(rig, def, accent);
+                break;
+            case "treefarm":
+                TreeFarm(rig, def, accent, effects);
+                break;
+            case "quarry":
+                Quarry(rig, def, accent);
+                break;
+            case "pump":
+                Pump(rig, def, accent);
+                break;
+            case "sawmill":
+                Sawmill(rig, def, accent, effects);
+                break;
+            case "press":
+                Press(rig, def, accent);
+                break;
+            case "refinery":
+                Refinery(rig, def, accent, effects);
+                break;
+            case "assembler":
+                Assembler(rig, def, accent);
                 break;
             default:
                 Add(rig, rig.Root, Cached($"box:{def.Id}", () =>
@@ -248,8 +269,40 @@ public static class ModelFactory
     private static void Belt(ModelRig rig, PathShape shape)
     {
         if (shape.Kind == PathKind.None) shape = new PathShape(PathKind.Straight);
-        Add(rig, rig.Root, BeltMesh(shape));
+        rig.Belts.Add(Add(rig, rig.Root, BeltMesh(shape)));
         rig.Height = 0.25f;
+    }
+
+    // ---- Levels ---------------------------------------------------------------
+
+    /// <summary>
+    /// Shows a building's level: belts get coloured rails, everything else a coloured band around
+    /// its base (bronze → silver → gold → cyan → violet), and belt decks run at the level's speed.
+    /// </summary>
+    public static void ApplyLevel(ModelRig rig, int level, float beltSpeed)
+    {
+        foreach (var belt in rig.Belts) belt.SetInstanceShaderParameter("belt_speed", beltSpeed);
+        if (Palette.LevelTrim(level) is not { } trim) return;
+        if (rig.Belts.Count > 0)
+        {
+            var rails = Palette.Solid(Palette.Rail, 0.5f);
+            var tinted = Palette.Solid(trim, 0.35f, 0.55f);
+            foreach (var belt in rig.Belts)
+                for (int i = 0; i < belt.Mesh.GetSurfaceCount(); i++)
+                    if (belt.Mesh.SurfaceGetMaterial(i) == rails) belt.SetSurfaceOverrideMaterial(i, tinted);
+            return;
+        }
+        Add(rig, rig.Root, Cached($"trim:{trim.ToHtml()}", () =>
+        {
+            var mb = new MeshBuilder();
+            var m = Palette.Solid(trim, 0.35f, 0.55f);
+            const float half = 0.49f, t = 0.05f, y = 0.1f, h = 0.05f;
+            mb.Box(m, new Vector3(0, y, -half + t / 2), new Vector3(2 * half, h, t), 0.01f);
+            mb.Box(m, new Vector3(0, y, half - t / 2), new Vector3(2 * half, h, t), 0.01f);
+            mb.Box(m, new Vector3(-half + t / 2, y, 0), new Vector3(t, h, 2 * half - 2 * t), 0.01f);
+            mb.Box(m, new Vector3(half - t / 2, y, 0), new Vector3(t, h, 2 * half - 2 * t), 0.01f);
+            return mb.Commit();
+        }));
     }
 
     /// <summary>Support column from the floor (y=0) up to <paramref name="height"/>.</summary>
@@ -492,7 +545,7 @@ public static class ModelFactory
 
     private static void Polisher(ModelRig rig, BuildingDef def, Color accent)
     {
-        Add(rig, rig.Root, BeltMesh(new PathShape(PathKind.Straight)));
+        rig.Belts.Add(Add(rig, rig.Root, BeltMesh(new PathShape(PathKind.Straight))));
         Add(rig, rig.Root, Cached($"polisher:{def.Id}", () =>
         {
             var mb = new MeshBuilder();

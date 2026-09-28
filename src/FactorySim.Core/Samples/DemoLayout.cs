@@ -2,7 +2,7 @@ namespace FactorySim.Samples;
 
 /// <summary>
 /// A small reference factory used by the CLI, tests and the Godot client:
-///  • Line A (y=4):  iron drill → ramp up → bridge belt → ramp down → smelter → splitter →
+///  • Line A (y=4):  iron drill → ramp up → raised belt → ramp down → smelter → splitter →
 ///    three parallel polishers (curved branches) → merger → depot
 ///  • Line B (x=2):  copper drill running south *under* line A's bridge → smelter → press (wire) → depot
 ///  • Line C (y=13): iron → smelter → press (plates) → workshop ← planks (lumber camp → sawmill) → depot
@@ -32,7 +32,7 @@ public static class DemoLayout
             // Line A: bridge over line B, then split into three polishers and merge again.
             Place("iron_miner", 0, 4, 0, Dir.East);
             Place("ramp_up", 1, 4, 0, Dir.East);
-            Place("bridge_belt", 2, 4, 1, Dir.East);
+            Place("conveyor", 2, 4, 1, Dir.East);   // a belt at height 1 is the bridge
             Place("ramp_down", 3, 4, 0, Dir.East);
             Place("smelter", 4, 4, 0, Dir.East);
             Place("conveyor", 5, 4, 0, Dir.East);

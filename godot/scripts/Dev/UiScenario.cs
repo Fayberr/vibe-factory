@@ -97,7 +97,7 @@ public partial class UiScenario : Node
         await Click(Cell(origin.X, origin.Y - 2));
         Check(w.GetEntity(anyId)?.Pos == before + new GridPos(0, -2, 0), "move keeps ids and shifts by (0,-2)");
 
-        // 7. Pipette and rotate-in-place.
+        // 7. Pipette.
         await Key(Godot.Key.Escape);
         await Key(Godot.Key.Escape);
         await Move(Cell(3, 3));
@@ -105,22 +105,81 @@ public partial class UiScenario : Node
         Check(Tools.Mode == ToolMode.Build && Tools.Tool?.Id == "iron_miner", "F picks the hovered building");
         await Key(Godot.Key.Escape);
 
-        // 8. Bridge flow: ramp up lifts the build layer, belts go on top, ramp down returns to ground.
+        // 8. Replace on place: a polisher dropped on a belt takes its place and direction.
+        int count = w.EntityCount;
+        await Key(Godot.Key.Key8);
+        Check(Tools.Tool?.Id == "polisher", "key 8 selects the polisher");
+        while (Tools.Facing != Dir.North) await Key(Godot.Key.R); // deliberately "wrong"
+        await Click(Cell(6, 3));
+        var polished = w.EntityAt(new GridPos(6, 3, 0));
+        Check(polished?.Def.Id == "polisher" && polished.Facing == Dir.East, $"polisher replaces the belt and keeps its direction (got {polished?.Def.Id} {polished?.Facing})");
+        Check(w.EntityCount == count, "replacing does not add or leave anything behind");
+        await Key(Godot.Key.Escape);
+
+        // 9. Drag a belt across another line: it bridges over by itself.
+        await Focus(17, 14);
+        await Key(Godot.Key.Key1);
+        await Drag(Cell(14, 14), Cell(20, 14));
+        await Drag(Cell(17, 11), Cell(17, 17));
+        Check(w.EntityAt(new GridPos(17, 13, 0))?.Def.Id == "ramp_up", "auto-bridge: ramp up before the crossing");
+        Check(w.EntityAt(new GridPos(17, 14, 1))?.Def.Id == "conveyor", "auto-bridge: belt one level up over the crossing");
+        Check(w.EntityAt(new GridPos(17, 15, 0))?.Def.Id == "ramp_down", "auto-bridge: ramp down after it");
+        Check(w.EntityAt(new GridPos(17, 14, 0))?.Facing == Dir.East, "the crossed line is untouched");
+        await Key(Godot.Key.Escape);
+        await Shot("08-auto-bridge");
+
+        // 10. Build height: E/Q, never below the ground, ramps carry the height.
+        await Focus(12, 18);
+        await Key(Godot.Key.Key1);
+        await Key(Godot.Key.E);
+        Check(Tools.Height == 1, $"E raises the build height (got {Tools.Height})");
+        await Click(Cell(12, 17));
+        Check(w.EntityAt(new GridPos(12, 17, 1))?.Def.Id == "conveyor", "a click at height 1 builds at height 1");
+        await Key(Godot.Key.Q);
+        await Key(Godot.Key.Q);
+        Check(Tools.Height == 0, $"Q stops at the ground (got {Tools.Height})");
+        await Key(Godot.Key.Key5);
+        await Click(Cell(12, 19));
+        Check(w.EntityAt(new GridPos(12, 19, 0))?.Def.Id == "ramp_down" && w.EntityAt(new GridPos(12, 19, 1)) != null,
+            "a ramp down placed on the ground stands on it (spans ground and height 1)");
+        Check(w.Entities.All(e => e.Pos.Z >= 0), "nothing is below the ground");
+
+        await Focus(5, 11);
         await Key(Godot.Key.Key4);
         while (Tools.Facing != Dir.East) await Key(Godot.Key.R);
         await Click(Cell(3, 11));
-        Check(Tools.Layer == 1, $"placing a ramp up moves the build layer to +1 (got {Tools.Layer})");
+        Check(Tools.Height == 1, $"placing a ramp up moves the build height to 1 (got {Tools.Height})");
         await Key(Godot.Key.Key1);
         await Drag(Cell(4, 11), Cell(6, 11));
-        Check(w.EntityAt(new GridPos(5, 11, 1))?.Def.Id == "conveyor", "belts are laid on layer +1");
+        Check(w.EntityAt(new GridPos(5, 11, 1))?.Def.Id == "conveyor", "belts are laid at height 1");
         await Key(Godot.Key.Key5);
         while (Tools.Facing != Dir.East) await Key(Godot.Key.R);
         await Click(Cell(7, 11));
-        Check(w.EntityAt(new GridPos(7, 11, 0))?.Def.Id == "ramp_down" && Tools.Layer == 0, "ramp down spans 0–1 and returns to the ground");
+        Check(w.EntityAt(new GridPos(7, 11, 0))?.Def.Id == "ramp_down" && Tools.Height == 0, "the ramp down lands on the ground and brings the height back");
         await Key(Godot.Key.Escape);
         await Shot("07-bridge");
 
-        // 9. Menus.
+        // 11. Per-building upgrades: U on a selection, Shift-click a whole line in the upgrade tool.
+        await Focus(4, 4);
+        await Click(Cell(3, 3));
+        var drill = w.EntityAt(new GridPos(3, 3, 0));
+        await Key(Godot.Key.U);
+        Check(drill?.Level == 2, $"U upgrades the selected drill (level {drill?.Level})");
+        await Frames(10);
+        await Shot("06-inspector-upgrades");
+        await Key(Godot.Key.Escape);
+        await Key(Godot.Key.U);
+        Check(Tools.Mode == ToolMode.Upgrade, "U without a selection opens the upgrade tool");
+        await Focus(17, 14);
+        await KeyDown(Godot.Key.Shift);
+        await Click(Cell(15, 14));
+        await KeyUp(Godot.Key.Shift);
+        var line = Enumerable.Range(14, 7).Select(x => w.EntityAt(new GridPos(x, 14, 0))).ToList();
+        Check(line.All(e => e?.Level == 2), $"Shift-click upgrades the whole belt line ({line.Count(e => e?.Level == 2)}/{line.Count})");
+        await Key(Godot.Key.Escape);
+
+        // 12. Menus, as a normal (non-sandbox) game sees them: locked tiers, limits.
+        Host.Sim.World.Sandbox = false;
         await Key(Godot.Key.B);
         await Frames(30);
         await Shot("04-build-menu");
@@ -128,10 +187,10 @@ public partial class UiScenario : Node
         await Key(Godot.Key.F1);
         await Shot("05-help");
         await Key(Godot.Key.Escape);
-        await Click(Cell(3, 3));
-        await Key(Godot.Key.U);
+        await Key(Godot.Key.P);
         await Frames(10);
-        await Shot("06-inspector-upgrades");
+        await Shot("09-progress");
+        await Key(Godot.Key.P);
 
         GD.Print($"UI TEST: {_checks - _failures}/{_checks} checks passed");
         GetTree().Quit(_failures == 0 ? 0 : 1);
@@ -144,7 +203,22 @@ public partial class UiScenario : Node
         GD.Print($"{(ok ? "  ok  " : "  FAIL")} {what}");
     }
 
-    private Vector2 Cell(int x, int y) => Camera.Camera.UnprojectPosition(new Vector3(x + 0.5f, Tools.Layer, y + 0.5f));
+    /// <summary>Screen point of a cell at the build height. Warns when it would land under the HUD.</summary>
+    private Vector2 Cell(int x, int y)
+    {
+        var p = Camera.Camera.UnprojectPosition(new Vector3(x + 0.5f, Tools.Height, y + 0.5f));
+        var size = GetViewport().GetVisibleRect().Size;
+        if (p.X < 120 || p.X > size.X - 120 || p.Y < 90 || p.Y > size.Y - 260)
+            GD.Print($"  warn cell ({x},{y}) is at {p}, near the HUD or off screen");
+        return p;
+    }
+
+    /// <summary>Centres the camera on a cell (default angle and zoom).</summary>
+    private async Task Focus(int x, int y)
+    {
+        Camera.SetView(40, -52, 20, new Vector3(x + 0.5f, 0, y + 0.5f));
+        await Frames(5);
+    }
 
     private async Task Frames(int n)
     {
@@ -190,6 +264,18 @@ public partial class UiScenario : Node
             Input.ParseInputEvent(new InputEventKey { Keycode = key, PhysicalKeycode = key, Pressed = pressed, CtrlPressed = ctrl, ShiftPressed = shift });
             await Frames(2);
         }
+    }
+
+    private async Task KeyDown(Key key)
+    {
+        Input.ParseInputEvent(new InputEventKey { Keycode = key, PhysicalKeycode = key, Pressed = true });
+        await Frames(2);
+    }
+
+    private async Task KeyUp(Key key)
+    {
+        Input.ParseInputEvent(new InputEventKey { Keycode = key, PhysicalKeycode = key, Pressed = false });
+        await Frames(2);
     }
 
     private async Task Shot(string name)

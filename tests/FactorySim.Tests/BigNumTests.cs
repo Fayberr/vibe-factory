@@ -70,7 +70,7 @@ public class BigNumTests
     [Fact]
     public void Pow_is_deterministic_repeated_squaring()
     {
-        // Same inputs, same bits — the property replays/leaderboards rely on.
+        // Same inputs, same bits: the property replays/leaderboards rely on.
         var a = BigNum.Pow(1.6, 57);
         var b = BigNum.Pow(1.6, 57);
         Assert.Equal(a, b);

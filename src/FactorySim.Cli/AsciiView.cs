@@ -2,7 +2,7 @@ using System.Text;
 
 namespace FactorySim.Cli;
 
-/// <summary>Text renderer for one layer — a second frontend proving the core is engine-agnostic.</summary>
+/// <summary>Text renderer for one layer: a second frontend proving the core is engine-agnostic.</summary>
 public static class AsciiView
 {
     public static string RenderLayer(World world, int z)

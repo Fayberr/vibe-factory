@@ -9,8 +9,14 @@ public class PersistenceAndOfflineTests
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 10_000);
         DemoLayout.Build(sim);
-        sim.Execute(new BuyUpgrade("miner_rate"));
-        sim.Execute(new BuyUpgrade("stack_size"));
+        var levels = sim.Execute(new SetBuildingLevels(new[]
+        {
+            new LevelChange(new GridPos(0, 4, 0), 5),  // drill
+            new LevelChange(new GridPos(4, 4, 0), 3),  // smelter
+            new LevelChange(new GridPos(1, 4, 1), 2),  // ramp (upper cell)
+            new LevelChange(new GridPos(11, 4, 0), 4), // depot
+        }));
+        Assert.True(levels.Ok, levels.Error);
         return sim;
     }
 

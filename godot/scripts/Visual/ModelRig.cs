@@ -14,8 +14,14 @@ public sealed class ModelRig
     public readonly List<GeometryInstance3D> Geometry = new();
     public readonly List<(Node3D Node, Vector3 Axis, float Speed)> Spinners = new();
     public readonly List<(Node3D Node, Vector3 Base, Vector3 Offset, float Frequency)> Bobbers = new();
+
+    /// <summary>Parts that swing back and forth about an axis (pump beams): amplitude in radians.</summary>
+    public readonly List<(Node3D Node, Vector3 Axis, float Amplitude, float Frequency)> Rockers = new();
     public readonly List<(StandardMaterial3D Material, float Energy)> Glows = new();
     public readonly List<CpuParticles3D> Emitters = new();
+
+    /// <summary>Belt bodies (chassis, rails, animated deck): level trim tints their rails, speed drives the deck.</summary>
+    public readonly List<MeshInstance3D> Belts = new();
 
     /// <summary>Status lamp material (per instance), or null for models without one.</summary>
     public StandardMaterial3D? StatusLamp;
@@ -24,7 +30,7 @@ public sealed class ModelRig
     public float Height = 0.3f;
 
     /// <summary>True if the model has anything to animate.</summary>
-    public bool Animated => Spinners.Count + Bobbers.Count + Glows.Count + Emitters.Count > 0;
+    public bool Animated => Spinners.Count + Bobbers.Count + Rockers.Count + Glows.Count + Emitters.Count > 0;
 
     private float _activity;
     private float _phase;
@@ -38,6 +44,7 @@ public sealed class ModelRig
 
         foreach (var (node, axis, speed) in Spinners) node.RotateObjectLocal(axis, speed * dt * _activity);
         foreach (var (node, basePos, offset, freq) in Bobbers) node.Position = basePos + offset * Mathf.Sin(_phase * freq * Mathf.Tau);
+        foreach (var (node, axis, amplitude, freq) in Rockers) node.Basis = new Basis(axis, amplitude * Mathf.Sin(_phase * freq * Mathf.Tau));
         float flicker = 0.9f + 0.1f * Mathf.Sin(_flicker * 13f) * Mathf.Sin(_flicker * 7.3f);
         foreach (var (mat, energy) in Glows) mat.EmissionEnergyMultiplier = energy * (0.12f + 0.88f * _activity * flicker);
         foreach (var e in Emitters) e.Emitting = _activity > 0.4f;

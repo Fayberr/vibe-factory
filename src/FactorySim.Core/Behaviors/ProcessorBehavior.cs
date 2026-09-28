@@ -29,7 +29,7 @@ public sealed class InputBuffer
 public sealed class ProcessorState
 {
     // Keys are never removed, so enumeration order (and therefore save output) is
-    // a pure function of history — required for byte-identical save/load determinism.
+    // a pure function of history, which byte-identical save/load determinism requires.
     public Dictionary<string, InputBuffer> Inputs { get; set; } = new();
     public string? Recipe { get; set; }
     public double Work { get; set; }

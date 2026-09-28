@@ -7,7 +7,7 @@ namespace FactorySim.Client;
 
 /// <summary>
 /// Renders an icon for every building by photographing its procedural model in an
-/// off-screen viewport — the build menu and hotbar always match the 3D look, and new
+/// off-screen viewport, so the build menu and hotbar always match the 3D look, and new
 /// content gets icons for free.
 /// </summary>
 public partial class Thumbnails : Node

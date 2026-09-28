@@ -50,3 +50,32 @@ public class ContentAndArchitectureTests
             $"FactorySim.Core must not reference '{name}'."));
     }
 }
+
+public class TextStyleTests
+{
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "FactorySim.sln"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("repository root not found");
+    }
+
+    [Fact]
+    public void No_em_dashes_anywhere_in_the_game()
+    {
+        // House style: no em dashes in anything players read (content, messages, UI) or in the code behind it.
+        var root = RepoRoot();
+        var files = new[] { "src", "godot/scripts", "tests" }
+            .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*.*", SearchOption.AllDirectories))
+            .Where(f => f.EndsWith(".cs") || f.EndsWith(".json") || f.EndsWith(".md"))
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .Append(Path.Combine(root, "README.md"))
+            .Concat(Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md"));
+        var offenders = files
+            .SelectMany(f => File.ReadLines(f).Select((line, i) => (f, i, line)))
+            .Where(x => x.line.Contains((char)0x2014))
+            .Select(x => $"{Path.GetRelativePath(root, x.f)}:{x.i + 1}")
+            .ToList();
+        Assert.True(offenders.Count == 0, "Em dash found at " + string.Join(", ", offenders));
+    }
+}

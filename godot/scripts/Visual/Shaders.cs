@@ -14,8 +14,9 @@ public static class Shaders
         uniform float speed = 2.0;
         uniform float ribs = 8.0;
         uniform float width = 0.57;
+        instance uniform float belt_speed = 1.0;
         void fragment() {
-            float v = fract((UV.y - TIME * speed) * ribs);
+            float v = fract((UV.y - TIME * speed * belt_speed) * ribs);
             float rib = smoothstep(0.0, 0.1, v) * (1.0 - smoothstep(0.32, 0.42, v));
             float edge = smoothstep(0.0, 0.06, UV.x) * (1.0 - smoothstep(width - 0.06, width, UV.x));
             ALBEDO = mix(base_color, rib_color, rib) * mix(0.55, 1.0, edge);
@@ -71,6 +72,6 @@ public static class Shaders
 
     private static ShaderMaterial? _deck;
 
-    /// <summary>Shared belt deck material; its speed is updated from the belt-speed stat.</summary>
+    /// <summary>Shared belt deck material; each belt sets its own "belt_speed" instance parameter from its level.</summary>
     public static ShaderMaterial Deck => _deck ??= new ShaderMaterial { Shader = new Shader { Code = BeltDeck } };
 }

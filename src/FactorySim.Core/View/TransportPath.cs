@@ -29,7 +29,7 @@ public readonly record struct PathShape(PathKind Kind, float StartZ = 0, float E
 
 /// <summary>
 /// Engine-agnostic geometry of transport entities, shared by item positioning and by
-/// renderers that build belt meshes — so items always ride exactly on the drawn belt.
+/// renderers that build belt meshes, so items always ride exactly on the drawn belt.
 ///
 /// Local frame: building facing north, origin at the anchor cell's floor centre,
 /// +X = right, −Y = front, +Z = up (layers). <see cref="ToWorld"/> converts to grid space.

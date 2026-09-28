@@ -73,11 +73,19 @@ public static class Ui
         "logistics" => "Logistics",
         "production" => "Production",
         "processing" => "Processing",
+        "crafting" => "Crafting",
         "economy" => "Economy",
         _ => char.ToUpperInvariant(category[0]) + category[1..],
     };
 
-    public static readonly string[] CategoryOrder = { "logistics", "production", "processing", "economy" };
+    public static readonly string[] CategoryOrder = { "logistics", "production", "processing", "crafting", "economy" };
+
+    /// <summary>Why a building can't be placed right now (tier lock or build limit), or null.</summary>
+    public static string? Blocker(Simulation sim, BuildingDef def) => sim.LockReason(def) ?? sim.LimitReason(def);
+
+    /// <summary>"3/6" for limited buildings, "" otherwise.</summary>
+    public static string LimitText(World world, BuildingDef def) =>
+        world.LimitOf(def) is int max ? $"{world.CountOf(def.Id)}/{max}" : "";
 }
 
 /// <summary>A building tile: rendered thumbnail, name, cost, optional hotkey badge.</summary>
@@ -87,6 +95,8 @@ public sealed class BuildingTile
     private readonly TextureRect _image;
     private readonly Label _key;
     private readonly Label _placeholder;
+    private readonly Label _limit;
+    private readonly IconView _lock;
     public BuildingDef? Def { get; private set; }
 
     public BuildingTile(Vector2 size, bool showName)
@@ -114,6 +124,20 @@ public sealed class BuildingTile
         _key.Position = new Vector2(6, 3);
         Button.AddChild(_key);
 
+        _limit = Ui.Label("", 11, UiTheme.Muted);
+        _limit.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        _limit.HorizontalAlignment = HorizontalAlignment.Right;
+        _limit.OffsetLeft = -60;
+        _limit.OffsetRight = -6;
+        _limit.OffsetTop = 3;
+        Button.AddChild(_limit);
+
+        _lock = new IconView { Icon = Icon.Lock, Color = UiTheme.Muted, Visible = false };
+        _lock.SetAnchorsPreset(Control.LayoutPreset.Center);
+        _lock.OffsetLeft = _lock.OffsetTop = -14;
+        _lock.OffsetRight = _lock.OffsetBottom = 14;
+        Button.AddChild(_lock);
+
         Name = Ui.Label("", showName ? 13 : 11);
         Name.SetAnchorsPreset(Control.LayoutPreset.BottomWide);
         Name.HorizontalAlignment = HorizontalAlignment.Center;
@@ -125,14 +149,25 @@ public sealed class BuildingTile
 
     public Label Name { get; }
 
-    public void Set(BuildingDef? def, Texture2D? image, string key, bool showName)
+    public void Set(BuildingDef? def, Texture2D? image, string key, bool showName, Simulation? sim = null)
     {
         Def = def;
         _key.Text = key;
         _image.Texture = image;
         _placeholder.Text = def == null ? "" : image == null ? def.MetaOr("glyph", "?") is { Length: 1 } g ? g : def.Name[..1] : "";
         Name.Text = def == null ? "" : showName ? $"{def.Name}\n${def.Cost.Format()}" : $"${def.Cost.Format()}";
-        Button.TooltipText = def == null ? "Empty slot — hover a building in the build menu (B) and press a number to assign it" : $"{def.Name} — ${def.Cost.Format()}\n{def.MetaOr("description", "")}";
+
+        string? locked = def != null && sim != null ? sim.LockReason(def) : null;
+        string? full = def != null && sim != null && locked == null ? sim.LimitReason(def) : null;
+        _limit.Text = def != null && sim != null && locked == null ? Ui.LimitText(sim.World, def) : "";
+        _limit.AddThemeColorOverride("font_color", full != null ? Palette.Danger : UiTheme.Muted);
+        _lock.Visible = locked != null;
+        _image.Modulate = locked != null ? new Color(0.35f, 0.38f, 0.45f, 0.8f) : Colors.White;
+
+        string limitLine = def?.Limit != null && sim != null ? $"\nLimit {Ui.LimitText(sim.World, def)}. Later tiers allow more." : "";
+        Button.TooltipText = def == null
+            ? "Empty slot. Hover a building in the build menu (B) and press a number to assign it"
+            : $"{def.Name}  ${def.Cost.Format()}\n{def.MetaOr("description", "")}{limitLine}" + (locked != null ? $"\nLocked: {locked}" : "");
         Button.Modulate = def == null ? new Color(1, 1, 1, 0.45f) : Colors.White;
     }
 }
@@ -144,13 +179,15 @@ public sealed class BuildMenu
     private readonly List<BuildingTile> _tiles = new();
     public BuildingDef? Hovered { get; private set; }
 
+    private Simulation? _sim;
+
     public BuildMenu(ContentRegistry content, Thumbnails thumbs, Action<BuildingDef> onPick, Func<BuildingDef, string> keyOf)
     {
         var body = new VBoxContainer();
         var header = new HBoxContainer();
         header.AddChild(Ui.Label("Build", 22));
         header.AddChild(Ui.Spacer());
-        header.AddChild(Ui.Label("Click to build · hover + 1–0 to put on the hotbar", 13, UiTheme.Muted));
+        header.AddChild(Ui.Label("Click to build · hover + 1 to 0 to put on the hotbar · locked ones unlock in Progress (P)", 13, UiTheme.Muted));
         body.AddChild(header);
 
         var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(740, 520), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
@@ -180,13 +217,14 @@ public sealed class BuildMenu
         }
         Root = Ui.Panel(body);
         Root.Visible = false;
-        thumbs.Updated += id => Refresh(thumbs, keyOf);
+        thumbs.Updated += id => Refresh(thumbs, keyOf, _sim);
     }
 
-    public void Refresh(Thumbnails thumbs, Func<BuildingDef, string> keyOf)
+    public void Refresh(Thumbnails thumbs, Func<BuildingDef, string> keyOf, Simulation? sim)
     {
+        _sim = sim;
         foreach (var t in _tiles)
-            if (t.Def != null) t.Set(t.Def, thumbs.Get(t.Def.Id), keyOf(t.Def), true);
+            if (t.Def != null) t.Set(t.Def, thumbs.Get(t.Def.Id), keyOf(t.Def), true, sim);
     }
 }
 
@@ -202,8 +240,11 @@ public sealed class InspectorPanel
     private readonly ProgressBar _progress = new() { CustomMinimumSize = new Vector2(0, 6), ShowPercentage = false, MaxValue = 1 };
     private readonly GridContainer _details = new() { Columns = 2 };
     private readonly List<InfoLine> _lines = new();
+    private readonly Label _level = Ui.Label("", 14);
+    private readonly Label _levelInfo = Ui.Label("", 12, UiTheme.Muted);
+    private readonly Button _upgrade;
 
-    public InspectorPanel(Action rotate, Action move, Action copy, Action delete)
+    public InspectorPanel(Action rotate, Action move, Action copy, Action delete, Action upgrade)
     {
         var body = new VBoxContainer { CustomMinimumSize = new Vector2(290, 0) };
         var head = new HBoxContainer();
@@ -222,6 +263,17 @@ public sealed class InspectorPanel
         body.AddChild(new HSeparator());
         body.AddChild(_details);
 
+        var level = new HBoxContainer();
+        var levelText = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        levelText.AddChild(_level);
+        levelText.AddChild(_levelInfo);
+        level.AddChild(levelText);
+        _upgrade = Ui.TextButton("", upgrade, "Upgrade (U). Each building is upgraded on its own");
+        _upgrade.CustomMinimumSize = new Vector2(120, 38);
+        level.AddChild(_upgrade);
+        body.AddChild(new HSeparator());
+        body.AddChild(level);
+
         var actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         actions.AddChild(Ui.IconButton(Icon.Rotate, "Rotate (R)", rotate, 36));
         actions.AddChild(Ui.IconButton(Icon.Move, "Move (M)", move, 36));
@@ -233,11 +285,12 @@ public sealed class InspectorPanel
         Root = Ui.Panel(body);
     }
 
-    public void Show(IReadOnlyList<Entity> selection, Thumbnails thumbs)
+    public void Show(World world, IReadOnlyList<Entity> selection, Thumbnails thumbs)
     {
         Root.Visible = selection.Count > 0;
         if (selection.Count == 0) return;
         _lines.Clear();
+        ShowLevels(world, selection);
 
         if (selection.Count == 1)
         {
@@ -246,7 +299,7 @@ public sealed class InspectorPanel
             _image.Texture = thumbs.Get(e.Def.Id);
             _image.Visible = true;
             _title.Text = e.Def.Name;
-            _subtitle.Text = $"{Ui.CategoryName(e.Def.Category)} · layer {e.Pos.Z} · facing {e.Facing}";
+            _subtitle.Text = $"{Ui.CategoryName(e.Def.Category)} · {BuildController.HeightName(e.Pos.Z).ToLowerInvariant()} · facing {e.Facing}";
             _dot.Color = status.Working ? Palette.Ok : status.Detail == "idle" || status.Detail == "empty" ? new Color("#f2c14e") : Palette.Danger;
             _status.Text = string.IsNullOrEmpty(status.Detail) ? (status.Working ? "Working" : "Idle") : char.ToUpperInvariant(status.Detail[0]) + status.Detail[1..];
             _progress.Visible = status.Progress > 0;
@@ -259,7 +312,7 @@ public sealed class InspectorPanel
             _title.Text = $"{selection.Count} buildings";
             _subtitle.Text = "Selection";
             _dot.Color = UiTheme.Accent;
-            _status.Text = $"Value ${selection.Aggregate(BigNum.Zero, (sum, e) => sum + e.Def.Cost).Format()}";
+            _status.Text = $"Value ${selection.Aggregate(BigNum.Zero, (sum, e) => sum + world.InvestedIn(e)).Format()}";
             _progress.Visible = false;
             foreach (var g in selection.GroupBy(e => e.Def.Name).OrderByDescending(g => g.Count()).Take(8))
                 _lines.Add(new InfoLine(g.Key, $"×{g.Count()}"));
@@ -281,49 +334,104 @@ public sealed class InspectorPanel
             if (line < _lines.Count) label.Text = i % 2 == 0 ? _lines[line].Label : _lines[line].Value;
         }
     }
+
+    /// <summary>Level, what the next level brings, and the upgrade button (cheapest first for several).</summary>
+    private void ShowLevels(World world, IReadOnlyList<Entity> selection)
+    {
+        var upgradable = selection.Where(e => e.Def.Upgrade?.CanUpgrade(e.Level) == true).ToList();
+        var cost = upgradable.Aggregate(BigNum.Zero, (s, e) => s + e.Def.Upgrade!.UpgradeCost(e.Def, e.Level));
+        if (selection.Count == 1)
+        {
+            var e = selection[0];
+            var track = e.Def.Upgrade;
+            _level.Text = track?.MaxLevel is int max ? $"Level {e.Level} / {max}" : $"Level {e.Level}";
+            _levelInfo.Text = track == null ? "" : !track.CanUpgrade(e.Level) ? "Fully upgraded" : NextLevelText(track, e.Level);
+        }
+        else
+        {
+            int min = selection.Min(e => e.Level), max = selection.Max(e => e.Level);
+            _level.Text = min == max ? $"All level {min}" : $"Levels {min} to {max}";
+            _levelInfo.Text = upgradable.Count == 0 ? "All fully upgraded" : $"{upgradable.Count} can go one level up";
+        }
+        _upgrade.Text = upgradable.Count == 0 ? "Max" : $"Upgrade ${cost.Format()}";
+        _upgrade.Disabled = upgradable.Count == 0 || (!world.Sandbox && world.Money < upgradable.Min(e => e.Def.Upgrade!.UpgradeCost(e.Def, e.Level)));
+    }
+
+    private static string NextLevelText(UpgradeTrack track, int level)
+    {
+        var parts = new List<string>();
+        if (track.SpeedPerLevel > 0) parts.Add($"speed ×{track.SpeedFactor(level):0.##} → ×{track.SpeedFactor(level + 1):0.##}");
+        if (track.ValuePerLevel > 0) parts.Add($"value ×{track.ValueFactor(level):0.##} → ×{track.ValueFactor(level + 1):0.##}");
+        return string.Join(", ", parts);
+    }
 }
 
-/// <summary>Upgrade shop (U).</summary>
-public sealed class UpgradesPanel
+/// <summary>Tiers (P): what the next one unlocks, how far along it is, and the build limits.</summary>
+public sealed class ProgressPanel
 {
     public readonly PanelContainer Root;
-    private readonly List<(UpgradeDef Def, Label Info, Button Buy)> _rows = new();
+    private readonly Label _current = Ui.Label("", 14, UiTheme.Muted);
+    private readonly Label _nextName = Ui.Label("", 19);
+    private readonly Label _nextInfo = Ui.Label("", 13, UiTheme.Muted);
+    private readonly ProgressBar _earned = new() { CustomMinimumSize = new Vector2(0, 8), ShowPercentage = false, MaxValue = 1 };
+    private readonly Label _earnedText = Ui.Label("", 12, UiTheme.Muted);
+    private readonly Button _unlock;
+    private readonly Label _limits = Ui.Label("", 13);
+    private readonly VBoxContainer _nextBox = new();
 
-    public UpgradesPanel(ContentRegistry content, Action<UpgradeDef> buy)
+    public ProgressPanel(Action unlock)
     {
-        var body = new VBoxContainer { CustomMinimumSize = new Vector2(300, 0) };
-        body.AddChild(Ui.Label("Upgrades", 19));
-        foreach (var up in content.UpgradeList)
-        {
-            var row = new HBoxContainer();
-            var text = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-            text.AddChild(Ui.Label(up.Name, 15));
-            var info = Ui.Label("", 12, UiTheme.Muted);
-            text.AddChild(info);
-            row.AddChild(text);
-            var b = Ui.TextButton("", () => buy(up));
-            b.CustomMinimumSize = new Vector2(96, 36);
-            row.AddChild(b);
-            body.AddChild(row);
-            _rows.Add((up, info, b));
-        }
+        var body = new VBoxContainer { CustomMinimumSize = new Vector2(320, 0) };
+        body.AddChild(Ui.Label("Progress", 19));
+        body.AddChild(_current);
+        body.AddChild(new HSeparator());
+
+        _nextBox.AddChild(Ui.Label("NEXT TIER", 11, UiTheme.Muted));
+        _nextBox.AddChild(_nextName);
+        _nextInfo.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _nextInfo.CustomMinimumSize = new Vector2(300, 0);
+        _nextBox.AddChild(_nextInfo);
+        _nextBox.AddChild(_earned);
+        _nextBox.AddChild(_earnedText);
+        _unlock = Ui.TextButton("", unlock);
+        _unlock.CustomMinimumSize = new Vector2(0, 40);
+        _nextBox.AddChild(_unlock);
+        body.AddChild(_nextBox);
+
+        body.AddChild(new HSeparator());
+        body.AddChild(Ui.Label("BUILD LIMITS", 11, UiTheme.Muted));
+        body.AddChild(_limits);
+        body.AddChild(Ui.Label("Upgrades are per building: select one and press U.", 12, UiTheme.Muted));
         Root = Ui.Panel(body);
     }
 
-    public void Refresh(World world)
+    public void Refresh(Simulation sim)
     {
-        foreach (var (def, info, buy) in _rows)
+        var world = sim.World;
+        var tiers = world.Content.Tiers;
+        int t = world.UnlockedTier;
+        _current.Text = $"Tier {t} · {tiers[t].Name} · plot {world.Bounds.Max.X - world.Bounds.Min.X + 1}×{world.Bounds.Max.Y - world.Bounds.Min.Y + 1}";
+
+        _nextBox.Visible = t + 1 < tiers.Count;
+        if (t + 1 < tiers.Count)
         {
-            int level = world.UpgradeLevel(def.Id);
-            bool maxed = def.MaxLevel is int max && level >= max;
-            string Effect(int lv) => def.Effect == UpgradeEffectKind.Multiply
-                ? $"×{Math.Pow(def.PerLevel, lv):0.##}"
-                : $"+{def.PerLevel * lv:0.##}";
-            info.Text = maxed ? $"Lv {level} · {Effect(level)} (max)" : $"Lv {level} · {Effect(level)} → {Effect(level + 1)}";
-            var cost = def.CostForLevel(level);
-            buy.Text = maxed ? "Max" : $"${cost.Format()}";
-            buy.Disabled = maxed || (!world.Sandbox && world.Money < cost);
+            var next = tiers[t + 1];
+            var unlocks = world.Content.BuildingList.Where(b => b.Tier == t + 1).Select(b => b.Name);
+            _nextName.Text = $"{t + 1} · {next.Name}";
+            _nextInfo.Text = $"{next.Description}\nUnlocks: {string.Join(", ", unlocks)}\nPlot grows to {next.PlotSize}×{next.PlotSize}, build limits rise.";
+            double need = next.RequiredEarnings.ToDouble(), have = world.Stats.TotalEarned.ToDouble();
+            _earned.Value = need <= 0 ? 1 : Math.Min(1, have / need);
+            _earnedText.Text = $"Lifetime earnings ${world.Stats.TotalEarned.Format()} / ${next.RequiredEarnings.Format()}";
+            bool earned = world.Sandbox || have >= need;
+            bool afford = world.Sandbox || world.Money >= next.Cost;
+            _unlock.Text = !earned ? $"Earn ${(next.RequiredEarnings - world.Stats.TotalEarned).Format()} more" : $"Unlock for ${next.Cost.Format()}";
+            _unlock.Disabled = !earned || !afford;
         }
+
+        var lines = world.Content.BuildingList
+            .Where(b => b.Limit != null && b.Tier <= t)
+            .Select(b => $"{b.Name,-16} {Ui.LimitText(world, b)}");
+        _limits.Text = string.Join("\n", lines);
     }
 }
 

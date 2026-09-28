@@ -20,6 +20,8 @@ public enum Icon
     Help,
     Close,
     Rotate,
+    Progress,
+    Lock,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -147,6 +149,17 @@ public partial class IconView : Control
             case Icon.Rotate:
                 Arc(12, 12, 7, -Mathf.Pi * 0.35f, Mathf.Pi * 1.3f);
                 Poly(17.5f, 3.5f, 19.5f, 9.5f, 13.2f, 8.2f);
+                break;
+            case Icon.Progress:
+                Poly(3, 20.5f, 3, 16, 8, 16, 8, 11.5f, 13, 11.5f, 13, 7, 18, 7, 18, 20.5f);
+                L(18, 7, 18, 1.8f, 1.6f);
+                Poly(18.6f, 1.8f, 22.5f, 3.4f, 18.6f, 5);
+                break;
+            case Icon.Lock:
+                Arc(12, 10, 4.2f, Mathf.Pi, Mathf.Tau, 2.2f);
+                L(7.8f, 10, 7.8f, 12, 2.2f);
+                L(16.2f, 10, 16.2f, 12, 2.2f);
+                DrawRect(new Rect2(P(5.5f, 11.5f), new Vector2(13, 9.5f) * s), _color);
                 break;
         }
     }
