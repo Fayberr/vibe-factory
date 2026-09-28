@@ -41,7 +41,7 @@ public sealed class BuildPlan
 ///    belts one level up above it, ramp down after it.
 /// The ids of the pieces used for bridges are parameters so content can rename them.
 /// </summary>
-public sealed class BuildPlanner
+public sealed partial class BuildPlanner
 {
     private readonly Simulation _sim;
     private readonly List<Entity> _scratch = new();
@@ -165,10 +165,21 @@ public sealed class BuildPlanner
         {
             Dir? incoming = i == 0 ? null : Toward(cells[i - 1], cells[i]);
             var action = Classify(def, line, cells[i], dirs[i], interior: i > 0 && i < n - 1, out crossing[i]);
+            // A line dragged into the side or back of a belt joins it; re-aiming that belt would cut its line.
+            if (i == n - 1 && n > 1 && action == PlanAction.Rotate && World.EntityAt(cells[i]) is { } joined && AcceptsFrom(joined, cells[i], incoming!.Value))
+                action = PlanAction.Keep;
             plan.Steps.Add(new PlanStep(action, def, cells[i], dirs[i], line ? incoming : null));
         }
         if (line && def.Id == BeltId) AddBridges(plan, cells, dirs, crossing);
         return plan;
+    }
+
+    /// <summary>Whether <paramref name="e"/> takes items in at <paramref name="cell"/> from a belt moving <paramref name="move"/>.</summary>
+    private static bool AcceptsFrom(Entity e, GridPos cell, Dir move)
+    {
+        foreach (int q in e.Def.InputPorts)
+            if (e.PortCell(q) == cell && e.PortDir(q) == move.Opposite()) return true;
+        return false;
     }
 
     private PlanAction Classify(BuildingDef def, bool line, GridPos cell, Dir dir, bool interior, out bool crossing)

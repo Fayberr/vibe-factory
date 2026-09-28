@@ -37,6 +37,16 @@ public class TutorialTests
     }
 
     [Fact]
+    public void Key_tokens_are_filled_in_with_the_current_keys()
+    {
+        var text = Tutorial.Steps.Single(s => s.Id == "drill").Text;
+        Assert.Contains("{rotate}", text);
+        var filled = Tutorial.WithKeys(text, id => id == "rotate" ? "T" : "?");
+        Assert.Contains("T rotates it", filled);
+        Assert.DoesNotContain("{", string.Concat(Tutorial.Steps.Select(s => Tutorial.WithKeys(s.Text, _ => "K"))));
+    }
+
+    [Fact]
     public void Steps_are_unique_and_the_hotbar_ones_name_real_buildings()
     {
         Assert.Equal(Tutorial.Steps.Count, Tutorial.Steps.Select(s => s.Id).Distinct().Count());

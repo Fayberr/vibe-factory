@@ -100,6 +100,13 @@ public partial class AudioManager : Node
 
     public override void _Process(double delta) => _now += delta;
 
+    public override void _Notification(int what)
+    {
+        if (what is not ((int)NotificationApplicationFocusOut or (int)NotificationApplicationFocusIn)) return;
+        _background = what == NotificationApplicationFocusOut;
+        if (_settings != null) ApplyVolumes(_settings);
+    }
+
     /// <summary>Plays the game's sounds for simulation events and failed actions, and clicks for every button.</summary>
     public void Hook(SimHost host)
     {
@@ -153,10 +160,14 @@ public partial class AudioManager : Node
         AudioServer.SetBusSend(index, "Master");
     }
 
-    /// <summary>Sets the four volume sliders (0..1, linear).</summary>
+    private GameSettings? _settings;
+    private bool _background;
+
+    /// <summary>Sets the four volume sliders (0..1, linear); everything is silent in the background if the player wants.</summary>
     public void ApplyVolumes(GameSettings s)
     {
-        SetVolume("Master", s.MasterVolume);
+        _settings = s;
+        SetVolume("Master", _background && s.MuteInBackground ? 0 : s.MasterVolume);
         SetVolume(MusicBus, s.MusicVolume);
         SetVolume(EffectsBus, s.EffectsVolume);
         SetVolume(InterfaceBus, s.InterfaceVolume);

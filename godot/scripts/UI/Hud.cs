@@ -33,6 +33,9 @@ public partial class Hud : CanvasLayer
     private readonly List<Button> _heightButtons = new();
     private RichTextLabel _hints = null!;
     private Control _hintPanel = null!;
+    private GridContainer _helpGrid = null!;
+    private Label _pausedText = null!, _fps = null!;
+    private readonly List<(Control Control, Func<string> Tip)> _keyTips = new();
     private Control _card = null!, _bottomRow = null!;
     private PanelContainer _cursorTip = null!;
     private Label _cursorText = null!;
@@ -86,15 +89,15 @@ public partial class Hud : CanvasLayer
             switch (ev)
             {
                 case ContractOffered o when !_ordersWindow.Visible:
-                    _toasts.Show(this, $"New order: {o.Contract.Quantity} {Item(o.Contract.Item)} for +${o.Contract.Reward.Format()} (O)");
+                    if (Settings.ShowNotifications) _toasts.Show(this, $"New order: {o.Contract.Quantity} {Item(o.Contract.Item)} for +${o.Contract.Reward.Format()} ({K("orders")})");
                     return;
-                case ContractCompleted c:
+                case ContractCompleted c when Settings.ShowNotifications:
                     _toasts.Show(this, $"Order complete: {c.Contract.Quantity} {Item(c.Contract.Item)}, +${c.Contract.Reward.Format()}");
                     return;
-                case ContractExpired x:
+                case ContractExpired x when Settings.ShowNotifications:
                     _toasts.Show(this, $"Order for {Item(x.Contract.Item)} ran out of time");
                     return;
-                case MilestoneReached m:
+                case MilestoneReached m when Settings.ShowNotifications:
                     _toasts.Show(this, $"Goal reached: {m.Name}, +${m.Reward.Format()}");
                     return;
             }
@@ -125,10 +128,14 @@ public partial class Hud : CanvasLayer
         BuildWindows();
         BuildHelp();
 
+        _fps = Ui.Label("", 12, UiTheme.Muted);
+        _fps.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _root.AddChild(Ui.Anchor(_fps, 1, 0, -12, 8, Control.GrowDirection.Begin, Control.GrowDirection.End));
+
         _toasts = new Toasts();
         _root.AddChild(Ui.Anchor(_toasts.Root, 0.5f, 0, 0, 72, Control.GrowDirection.Both, Control.GrowDirection.End));
 
-        var paused = Ui.Label("PAUSED · Space to resume", 15);
+        var paused = _pausedText = Ui.Label("", 15);
         paused.AddThemeFontOverride("font", UiTheme.Bold);
         _pausedBadge = Ui.Panel(paused);
         _pausedBadge.AddThemeStyleboxOverride("panel", UiTheme.Box(new Color(UiTheme.Primary, 0.9f), 8, 14, 6));
@@ -142,7 +149,12 @@ public partial class Hud : CanvasLayer
         _cursorTip.MouseFilter = Control.MouseFilterEnum.Ignore;
         _cursorTip.Visible = false;
         _root.AddChild(_cursorTip);
+
+        Keybinds.Changed += RefreshKeyLabels;
+        RefreshKeyLabels();
     }
+
+    public override void _ExitTree() => Keybinds.Changed -= RefreshKeyLabels;
 
     // ---- Layout ---------------------------------------------------------------
 
@@ -155,13 +167,19 @@ public partial class Hud : CanvasLayer
             _toolButtons[mode] = b;
             bar.AddChild(b);
         }
-        Tool(ToolMode.Select, Icon.Select, "Select (V)\nClick, Shift-click or drag a box", () => _tools.SetMode(ToolMode.Select));
-        _buildButton = Ui.IconButton(Icon.Build, "Build menu (B)", ToggleBuildMenu, toggle: true);
+        Tool(ToolMode.Select, Icon.Select, "", () => _tools.SetMode(ToolMode.Select));
+        Keyed(_toolButtons[ToolMode.Select], () => $"Select ({K("select_tool")})\nClick, Shift-click or drag a box");
+        _buildButton = Ui.IconButton(Icon.Build, "", ToggleBuildMenu, toggle: true);
+        Keyed(_buildButton, () => $"Build menu ({K("build_menu")})");
         bar.AddChild(_buildButton);
-        Tool(ToolMode.Upgrade, Icon.Upgrades, "Upgrade (U)\nClick a building, drag a box, Shift-click a whole belt line.\nWith a selection, U upgrades it.", () => _tools.SetMode(_tools.Mode == ToolMode.Upgrade ? ToolMode.Select : ToolMode.Upgrade));
-        Tool(ToolMode.Delete, Icon.Delete, "Delete (X)\nClick or drag a box", () => _tools.SetMode(_tools.Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete));
-        Tool(ToolMode.Move, Icon.Move, "Move selection (M)", () => _tools.BeginMove());
-        Tool(ToolMode.Paste, Icon.Copy, "Copy selection & paste (C)\nCtrl+C / Ctrl+V / Ctrl+X", () => _tools.CopySelection(enterPaste: true));
+        Tool(ToolMode.Upgrade, Icon.Upgrades, "", () => _tools.SetMode(_tools.Mode == ToolMode.Upgrade ? ToolMode.Select : ToolMode.Upgrade));
+        Keyed(_toolButtons[ToolMode.Upgrade], () => $"Upgrade ({K("upgrade")})\nClick a building, drag a box, Shift-click a whole belt line.\nWith a selection, {K("upgrade")} upgrades it.");
+        Tool(ToolMode.Delete, Icon.Delete, "", () => _tools.SetMode(_tools.Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete));
+        Keyed(_toolButtons[ToolMode.Delete], () => $"Delete ({K("delete_tool")})\nClick or drag a box");
+        Tool(ToolMode.Move, Icon.Move, "", () => _tools.BeginMove());
+        Keyed(_toolButtons[ToolMode.Move], () => $"Move selection ({K("move")})");
+        Tool(ToolMode.Paste, Icon.Copy, "", () => _tools.CopySelection(enterPaste: true));
+        Keyed(_toolButtons[ToolMode.Paste], () => $"Copy selection & paste ({K("copy")})\nCtrl+C / Ctrl+V / Ctrl+X");
         bar.AddChild(new VSeparator());
         _undo = Ui.IconButton(Icon.Undo, "Undo (Ctrl+Z)", () => _tools.Undo());
         _redo = Ui.IconButton(Icon.Redo, "Redo (Ctrl+Y)", () => _tools.Redo());
@@ -173,13 +191,13 @@ public partial class Hud : CanvasLayer
     private void BuildSideBar()
     {
         var col = new VBoxContainer();
-        col.AddChild(Ui.IconButton(Icon.Build, "Build menu (B)", ToggleBuildMenu, 44));
-        _progressButton = Ui.IconButton(Icon.Progress, "Progress: tiers and build limits (P)", () => ToggleWindow(_progressWindow), 44);
+        col.AddChild(Keyed(Ui.IconButton(Icon.Build, "", ToggleBuildMenu, 44), () => $"Build menu ({K("build_menu")})"));
+        _progressButton = Keyed(Ui.IconButton(Icon.Progress, "", () => ToggleWindow(_progressWindow), 44), () => $"Progress: tiers, build limits and goals ({K("progress")})");
         col.AddChild(_progressButton);
-        col.AddChild(Ui.IconButton(Icon.Orders, "Orders: deliveries for bonus cash (O)", () => ToggleWindow(_ordersWindow), 44));
-        col.AddChild(Ui.IconButton(Icon.Stats, "Statistics (I)", () => ToggleWindow(_statsWindow), 44));
-        col.AddChild(Ui.IconButton(Icon.Game, "Game: save, load, speed (G)", () => ToggleWindow(_gameWindow), 44));
-        col.AddChild(Ui.IconButton(Icon.Help, "Controls (F1)", () => _help.Visible = !_help.Visible, 44));
+        col.AddChild(Keyed(Ui.IconButton(Icon.Orders, "", () => ToggleWindow(_ordersWindow), 44), () => $"Orders: deliveries for bonus cash ({K("orders")})"));
+        col.AddChild(Keyed(Ui.IconButton(Icon.Stats, "", () => ToggleWindow(_statsWindow), 44), () => $"Statistics ({K("stats")})"));
+        col.AddChild(Keyed(Ui.IconButton(Icon.Game, "", () => ToggleWindow(_gameWindow), 44), () => $"Game: save, speed, settings ({K("game_menu")})"));
+        col.AddChild(Keyed(Ui.IconButton(Icon.Help, "", () => _help.Visible = !_help.Visible, 44), () => $"Controls ({K("help")})"));
         _root.AddChild(Ui.Anchor(Ui.Panel(col), 0, 0.5f, 12, 0, Control.GrowDirection.End, Control.GrowDirection.Both));
     }
 
@@ -318,7 +336,7 @@ public partial class Hud : CanvasLayer
 
         var game = new VBoxContainer();
         game.AddChild(Ui.TextButton("Save", () => _host.Save()));
-        game.AddChild(Ui.TextButton("Pause / resume (Space)", TogglePause));
+        game.AddChild(Keyed(Ui.TextButton("Pause / resume", TogglePause), () => $"Pauses the factory; you can keep building ({K("pause")})"));
         _speedButton = Ui.TextButton("Speed ×1", CycleSpeed, "Simulation speed");
         game.AddChild(_speedButton);
         _sandbox = new CheckButton { Text = "Sandbox (free building)", FocusMode = Control.FocusModeEnum.None };
@@ -414,40 +432,47 @@ public partial class Hud : CanvasLayer
         head.AddChild(Ui.Spacer());
         head.AddChild(Ui.IconButton(Icon.Close, "Close (Esc)", () => _help.Visible = false, 32));
         body.AddChild(head);
-        var grid = new GridContainer { Columns = 4 };
+        _helpGrid = new GridContainer { Columns = 4 };
+        body.AddChild(_helpGrid);
+        FillHelp();
+        _help = Ui.Panel(body);
+        _help.Visible = false;
+        _root.AddChild(Ui.Anchor(_help, 0.5f, 0.5f, 0, 0, Control.GrowDirection.Both, Control.GrowDirection.Both));
+    }
+
+    private void FillHelp()
+    {
+        foreach (var child in _helpGrid.GetChildren()) child.QueueFree();
         (string, string)[] keys =
         {
-            ("1 to 0", "Hotbar building"), ("B", "Build menu"),
-            ("LMB", "Place / select"), ("Drag", "Belt line (bridges crossings)"),
-            ("Drop on belt", "Replaces it (polisher, splitter…)"), ("R / Shift+R", "Rotate"),
-            ("E / Q", "Build height up / down"), ("Shift+wheel", "Build height"),
-            ("Tab", "Hide above build height"), ("F", "Pick hovered building"),
-            ("U", "Upgrade tool / selection"), ("Shift+LMB (U)", "Upgrade whole belt line"),
-            ("X", "Delete tool"), ("Del", "Delete selection"),
-            ("M", "Move selection"), ("C", "Copy & paste selection"),
-            ("Ctrl+C / V / X", "Copy / paste / cut"), ("Ctrl+Z / Y", "Undo / redo"),
-            ("Ctrl+A", "Select all"), ("Esc / RMB click", "Cancel tool"),
-            ("WASD", "Pan (Shift = fast)"), ("RMB drag", "Orbit camera"),
-            ("MMB drag", "Pan"), ("Wheel", "Zoom to cursor"),
-            ("P", "Progress: tiers, limits, goals"), ("O", "Orders"),
-            ("I", "Statistics"), ("Space", "Pause the simulation"),
-            ("G", "Game menu"), ("F1", "This help"),
-            ("Esc (nothing to cancel)", "Pause menu (windows stay open)"), ("", ""),
+            ("1 to 0", "Hotbar building"), (K("build_menu"), "Build menu"),
+            ("LMB", "Place / select"), ("Drag", "Belt finds its way (around, over, into)"),
+            ("Shift+Drag", "Draw the belt's path yourself"), ($"{K("rotate")} / Shift+{K("rotate")}", "Rotate"),
+            ("Drop on belt", "Replaces it (polisher, splitter…)"), ($"{K("height_up")} / {K("height_down")}", "Build height up / down"),
+            ("Shift+wheel", "Build height"), (K("hide_above"), "Hide above build height"),
+            (K("pick"), "Pick hovered building"), (K("upgrade"), "Upgrade tool / selection"),
+            ($"Shift+LMB ({K("upgrade")})", "Upgrade whole belt line"), (K("delete_tool"), "Delete tool"),
+            ("Del", "Delete selection"), (K("move"), "Move selection"),
+            (K("copy"), "Copy & paste selection"), ("Ctrl+C / V / X", "Copy / paste / cut"),
+            ("Ctrl+Z / Y", "Undo / redo"), ("Ctrl+A", "Select all"),
+            ("Esc / RMB click", "Cancel tool"), ($"{K("pan_forward")}{K("pan_left")}{K("pan_back")}{K("pan_right")}, arrows", "Pan (Shift = fast)"),
+            ("RMB drag", "Orbit camera"), ("MMB drag", "Pan"),
+            ("Wheel", "Zoom to cursor"), (K("progress"), "Progress: tiers, limits, goals"),
+            (K("orders"), "Orders"), (K("stats"), "Statistics"),
+            (K("pause"), "Pause the factory"), (K("game_menu"), "Game menu"),
+            (K("help"), "This help"),
+            ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
             ("Click building", "Manage: upgrade, recipe"), ("Drag title bar", "Move a window"),
         };
         foreach (var (key, action) in keys)
         {
             var k = Ui.Label(key, 14, UiTheme.Accent);
             k.CustomMinimumSize = new Vector2(130, 0);
-            grid.AddChild(k);
+            _helpGrid.AddChild(k);
             var a = Ui.Label(action, 14);
             a.CustomMinimumSize = new Vector2(200, 0);
-            grid.AddChild(a);
+            _helpGrid.AddChild(a);
         }
-        body.AddChild(grid);
-        _help = Ui.Panel(body);
-        _help.Visible = false;
-        _root.AddChild(Ui.Anchor(_help, 0.5f, 0.5f, 0, 0, Control.GrowDirection.Both, Control.GrowDirection.Both));
     }
 
     // ---- World / content ------------------------------------------------------
@@ -532,6 +557,25 @@ public partial class Hud : CanvasLayer
     }
 
     /// <summary>Freezes or resumes the simulation; building still works while it's frozen.</summary>
+    /// <summary>The name of the key bound to an action, for labels ("R", "Tab").</summary>
+    private static string K(string action) => Keybinds.Name(action);
+
+    /// <summary>Gives <paramref name="control"/> a tooltip that names keys, refreshed when bindings change.</summary>
+    private T Keyed<T>(T control, Func<string> tip) where T : Control
+    {
+        _keyTips.Add((control, tip));
+        control.TooltipText = tip();
+        return control;
+    }
+
+    private void RefreshKeyLabels()
+    {
+        foreach (var (control, tip) in _keyTips) control.TooltipText = tip();
+        _pausedText.Text = $"PAUSED · {K("pause")} to resume";
+        FillHelp();
+        if (_host?.Sim != null) RefreshToolState();
+    }
+
     public void TogglePause()
     {
         _host.Paused = !_host.Paused;
@@ -566,25 +610,25 @@ public partial class Hud : CanvasLayer
                 }
                 else PickSlot(slot);
                 break;
-            case Key.B:
+            case var _ when Keybinds.Is(key, "build_menu"):
                 ToggleBuildMenu();
                 break;
-            case Key.P:
+            case var _ when Keybinds.Is(key, "progress"):
                 ToggleWindow(_progressWindow);
                 break;
-            case Key.I:
+            case var _ when Keybinds.Is(key, "stats"):
                 ToggleWindow(_statsWindow);
                 break;
-            case Key.O:
+            case var _ when Keybinds.Is(key, "orders"):
                 ToggleWindow(_ordersWindow);
                 break;
-            case Key.G:
+            case var _ when Keybinds.Is(key, "game_menu"):
                 ToggleWindow(_gameWindow);
                 break;
-            case Key.F1:
+            case var _ when Keybinds.Is(key, "help"):
                 _help.Visible = !_help.Visible;
                 break;
-            case Key.Space:
+            case var _ when Keybinds.Is(key, "pause"):
                 TogglePause();
                 break;
             case Key.Escape:
@@ -623,7 +667,7 @@ public partial class Hud : CanvasLayer
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;
         RefreshHints();
-        _hintPanel.Visible = _menu is not { Root.Visible: true };
+        _hintPanel.Visible = Settings.ShowKeyHints && _menu is not { Root.Visible: true };
     }
 
     private void RefreshHints()
@@ -631,6 +675,8 @@ public partial class Hud : CanvasLayer
         string text = "[center]" + HintsFor() + "[/center]";
         if (_hints.Text != text) _hints.Text = text;
     }
+
+    private static string UpDown => $"{K("height_up")}/{K("height_down")}";
 
     private string HintsFor()
     {
@@ -640,13 +686,15 @@ public partial class Hud : CanvasLayer
         return _tools.Mode switch
         {
             ToolMode.Build => $"[color=#4fb6ff]{_tools.Tool?.Name}[/color] facing {_tools.ShownFacing} · {BuildController.HeightName(_tools.Height).ToLowerInvariant()}    " +
-                              H(("LMB", "Place"), ("Drag", "Line"), ("R", "Rotate"), ("E/Q", "Height"), ("F", "Pick"), ("Esc", "Cancel")),
+                              (_tools.LineTool
+                                  ? H(("LMB", "Place"), ("Drag", "Route"), ("Shift+Drag", "Draw path"), (K("rotate"), "Rotate"), (UpDown, "Height"), ("Esc", "Cancel"))
+                                  : H(("LMB", "Place"), ("Drag", "Row"), (K("rotate"), "Rotate"), (UpDown, "Height"), (K("pick"), "Pick"), ("Esc", "Cancel"))),
             ToolMode.Upgrade => H(("LMB", "Upgrade"), ("Shift+LMB", "Whole line"), ("Drag", "Upgrade area"), ("Esc", "Cancel")),
             ToolMode.Delete => H(("LMB", "Delete"), ("Drag", "Delete area"), ("Ctrl+Z", "Undo"), ("Esc", "Cancel")),
-            ToolMode.Move => H(("LMB", "Drop here"), ("R", "Rotate"), ("E/Q", "Up/down"), ("Esc", "Cancel")),
-            ToolMode.Paste => H(("LMB", "Paste"), ("R", "Rotate"), ("E/Q", "Height"), ("Esc", "Done")),
-            _ when _tools.Selection.Count > 0 => H(("U", "Upgrade"), ("R", "Rotate"), ("M", "Move"), ("C", "Copy"), ("Del", "Delete"), ("Shift+LMB", "Add"), ("Esc", "Deselect")),
-            _ => H(("1-0", "Hotbar"), ("B", "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), ("U", "Upgrade"), ("X", "Delete"), ("P", "Progress"), ("F1", "Help")),
+            ToolMode.Move => H(("LMB", "Drop here"), (K("rotate"), "Rotate"), (UpDown, "Up/down"), ("Esc", "Cancel")),
+            ToolMode.Paste => H(("LMB", "Paste"), (K("rotate"), "Rotate"), (UpDown, "Height"), ("Esc", "Done")),
+            _ when _tools.Selection.Count > 0 => H((K("upgrade"), "Upgrade"), (K("rotate"), "Rotate"), (K("move"), "Move"), (K("copy"), "Copy"), ("Del", "Delete"), ("Shift+LMB", "Add"), ("Esc", "Deselect")),
+            _ => H(("1-0", "Hotbar"), (K("build_menu"), "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), (K("upgrade"), "Upgrade"), (K("delete_tool"), "Delete"), (K("progress"), "Progress"), (K("help"), "Help")),
         };
     }
 
@@ -662,6 +710,8 @@ public partial class Hud : CanvasLayer
     {
         if (_host?.Sim == null) return;
         KeepBottomClear();
+        _fps.Visible = Settings.ShowFps;
+        if (Settings.ShowFps) _fps.Text = $"{Engine.GetFramesPerSecond():0} FPS";
         UpdateCursorTip();
         _tutorial.Update(_host.Sim.World, delta);
         _refresh -= delta;
@@ -706,7 +756,7 @@ public partial class Hud : CanvasLayer
         double need = next.RequiredEarnings.ToDouble(), have = world.Stats.TotalEarned.ToDouble();
         _goalBar.Value = need <= 0 ? 1 : Math.Min(1, have / need);
         _goal.Text = have < need
-            ? $"Next: {next.Name}. Earn ${next.RequiredEarnings.Format()} in total (P)"
+            ? $"Next: {next.Name}. Earn ${next.RequiredEarnings.Format()} in total ({K("progress")})"
             : $"{next.Name} is ready to unlock for ${next.Cost.Format()}. Press P";
     }
 

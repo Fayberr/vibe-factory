@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
 
@@ -35,6 +36,34 @@ public sealed class GameSettings
     public int AutosaveSeconds { get; set; } = 60;
 
     public bool TutorialDone { get; set; }
+
+    /// <summary>Silence everything while another window has focus.</summary>
+    public bool MuteInBackground { get; set; } = true;
+
+    /// <summary>Frame rate cap; 0 = none (vsync still applies).</summary>
+    public int MaxFps { get; set; }
+
+    public bool ShowFps { get; set; }
+
+    /// <summary>Keyboard and edge panning speed: 0.6 slow, 1 normal, 1.6 fast.</summary>
+    public float PanSpeed { get; set; } = 1f;
+
+    public bool InvertZoom { get; set; }
+
+    /// <summary>Pan when the mouse touches the window's edge.</summary>
+    public bool EdgePan { get; set; }
+
+    /// <summary>"+$" floating over depots as they sell.</summary>
+    public bool ShowIncomePopups { get; set; } = true;
+
+    /// <summary>The key hints above the hotbar.</summary>
+    public bool ShowKeyHints { get; set; } = true;
+
+    /// <summary>Pop-ups for new, finished and missed orders and reached goals.</summary>
+    public bool ShowNotifications { get; set; } = true;
+
+    /// <summary>Rebound keys (action → key name); actions not listed use their default.</summary>
+    public Dictionary<string, string> Keys { get; set; } = new();
 
     public static GameSettings Load()
     {
@@ -77,5 +106,6 @@ public sealed class GameSettings
             _ => Viewport.Msaa.Msaa4X,
         };
         root.Scaling3DScale = Quality == "Low" ? 0.75f : 1f;
+        Engine.MaxFps = Mathf.Max(0, MaxFps);
     }
 }

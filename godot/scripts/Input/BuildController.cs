@@ -52,6 +52,10 @@ public partial class BuildController : Node3D
     private bool _lmbDown, _dragging;
     private Vector2 _lmbPressPos;
     private GridPos? _dragStart;
+    private readonly List<GridPos> _trail = new(); // cells the cursor passed while dragging (Shift draws along them)
+    private (GridPos, GridPos, bool, string, int)? _routeKey;
+    private List<GridPos>? _route;
+    private int _edits; // bumped by every placement or removal, so a cached route is found again
     private bool? _firstLegX;
     private Vector2 _rmbPressPos;
 
@@ -122,6 +126,7 @@ public partial class BuildController : Node3D
         host.WorldReplaced += () =>
         {
             _planner = new BuildPlanner(host.Sim);
+            _routeKey = null;
             Selection.Clear();
             _applied.Clear();
             Height = 0;
@@ -130,6 +135,7 @@ public partial class BuildController : Node3D
         };
         host.EventRaised += ev =>
         {
+            if (ev is EntityPlaced or EntityRemoved or EntityReoriented) _edits++;
             if (ev is EntityRemoved r && Selection.Remove(r.EntityId)) Changed?.Invoke();
         };
     }
@@ -445,6 +451,8 @@ public partial class BuildController : Node3D
                 _lmbPressPos = mb.Position;
                 _dragStart = _hoverCell;
                 _firstLegX = null;
+                _trail.Clear();
+                if (_hoverCell is { } pressed) _trail.Add(pressed);
                 OnLeftPress();
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } mb:
@@ -468,6 +476,27 @@ public partial class BuildController : Node3D
     {
         bool ctrl = key.CtrlPressed || key.MetaPressed;
         if (key.Echo && key.Keycode is not (Key.Z or Key.Y)) return false;
+        // Rebindable single keys (Settings → Controls); Ctrl shortcuts, Esc and Delete are fixed.
+        if (!ctrl && !key.AltPressed)
+        {
+            System.Action? act =
+                Keybinds.Is(key, "rotate") ? () => Rotate(key.ShiftPressed ? -1 : 1)
+                : Keybinds.Is(key, "pick") ? Pipette
+                : Keybinds.Is(key, "height_up") ? () => SetHeight(Height + 1)
+                : Keybinds.Is(key, "height_down") ? () => SetHeight(Height - 1)
+                : Keybinds.Is(key, "upgrade") ? UpgradeKey
+                : Keybinds.Is(key, "hide_above") ? ToggleHideAbove
+                : Keybinds.Is(key, "delete_tool") ? () => SetMode(Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete)
+                : Keybinds.Is(key, "select_tool") ? () => SetMode(ToolMode.Select)
+                : Keybinds.Is(key, "move") ? BeginMove
+                : Keybinds.Is(key, "copy") ? () => CopySelection(enterPaste: true)
+                : null;
+            if (act != null)
+            {
+                act();
+                return true;
+            }
+        }
         switch (key.Keycode)
         {
             case Key.Z when ctrl && key.ShiftPressed:
@@ -490,35 +519,11 @@ public partial class BuildController : Node3D
             case Key.A when ctrl:
                 SelectAll();
                 return true;
-            case Key.C:
-                CopySelection(enterPaste: true);
-                return true;
-            case Key.R:
-                Rotate(key.ShiftPressed ? -1 : 1);
-                return true;
-            case Key.F:
-                Pipette();
-                return true;
-            case Key.E or Key.Pageup:
+            case Key.Pageup:
                 SetHeight(Height + 1);
                 return true;
-            case Key.Q or Key.Pagedown:
+            case Key.Pagedown:
                 SetHeight(Height - 1);
-                return true;
-            case Key.U:
-                UpgradeKey();
-                return true;
-            case Key.Tab or Key.H:
-                ToggleHideAbove();
-                return true;
-            case Key.X:
-                SetMode(Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete);
-                return true;
-            case Key.V:
-                SetMode(ToolMode.Select);
-                return true;
-            case Key.M:
-                BeginMove();
                 return true;
             case Key.Delete or Key.Backspace:
                 DeleteSelection();
@@ -656,8 +661,27 @@ public partial class BuildController : Node3D
         var start = (fromPress && _dragStart is { } s ? s : hover) with { Z = z };
         if (start == end) return _planner.Click(Tool, end, Facing);
         _firstLegX ??= Math.Abs(end.X - start.X) >= Math.Abs(end.Y - start.Y);
-        return _planner.Drag(Tool, BuildPlanner.LPath(start, end, _firstLegX.Value), Facing);
+        return _planner.Drag(Tool, DragCells(Tool, start, end, _firstLegX.Value), Facing);
     }
+
+    /// <summary>Belts laid by dragging: the path the cursor drew with Shift held, else a route that finds its
+    /// own way (around buildings, over lines, into the building the drag ends on). Other tools: an L.</summary>
+    private List<GridPos> DragCells(BuildingDef tool, GridPos start, GridPos end, bool firstLegX)
+    {
+        if (!_planner.IsLineTool(tool)) return BuildPlanner.LPath(start, end, firstLegX);
+        if (Input.IsKeyPressed(Key.Shift) && _trail.Count > 1)
+            return _trail.Select(c => c with { Z = start.Z }).ToList();
+        var key = (start, end, firstLegX, tool.Id, _edits);
+        if (_routeKey != key)
+        {
+            _routeKey = key;
+            _route = _planner.Route(start, end, firstLegX);
+        }
+        return _route ?? BuildPlanner.LPath(start, end, firstLegX);
+    }
+
+    /// <summary>The tool lays lines (belts): dragging routes them, Shift+drag draws them.</summary>
+    public bool LineTool => Tool != null && _planner.IsLineTool(Tool);
 
     private void CommitPlacement()
     {
@@ -697,6 +721,7 @@ public partial class BuildController : Node3D
         if (_host.Sim == null) return;
         UpdateHover();
         if (_lmbDown && !_dragging && _mouse.DistanceTo(_lmbPressPos) > DragThreshold) _dragging = true;
+        if (_lmbDown && _hoverCell is { } over && _trail.Count > 0) BuildPlanner.ExtendTrail(_trail, over with { Z = _trail[0].Z });
         UpdatePreview();
         UpdateHighlights();
     }

@@ -121,6 +121,10 @@ public partial class GameFlow : Node, IMenuActions
         Settings.ApplyDisplay(GetTree().Root);
         Audio.ApplyVolumes(Settings);
         View.ApplyQuality(Settings.Quality);
+        View.ShowIncome = Settings.ShowIncomePopups;
+        Camera.PanSpeed = Settings.PanSpeed;
+        Camera.InvertZoom = Settings.InvertZoom;
+        Camera.EdgePan = Settings.EdgePan;
         Host.AutosaveSeconds = Settings.AutosaveSeconds;
     }
 

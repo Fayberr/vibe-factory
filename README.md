@@ -22,10 +22,13 @@ variation so repeats don't sound mechanical), and chilled lounge music by Kevin 
 plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
-slots (autosave, play time, last played), settings (volumes for music, effects and
-interface, fullscreen, vsync, graphics quality, interface size, autosave interval), a
-pause menu, a tutorial, and a long progression of eight tiers, customer orders and 26
-goals.
+slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
+eight tiers, customer orders and 26 goals, and settings in four tabs:
+
+- **Audio:** master, music, effects and interface volume; mute when the game is in the background.
+- **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
+- **Controls:** pan speed, edge panning, inverted zoom, and every key rebindable (click it, press the new one).
+- **Gameplay:** autosave interval, money pop-ups over depots, key hints, order and goal pop-ups, replay the tutorial.
 
 ## Repository layout
 
@@ -70,14 +73,17 @@ under Godot's user folder (`user://saves/`); older single saves move into slot 1
 
 ## Building controls
 
-Building is designed to be fast from the keyboard. Press `F1` in game for this table.
+Building is designed to be fast from the keyboard. Press `F1` in game for this table. These
+are the default keys: every single-key action can be rebound in *Settings → Controls*.
 
 | Keys | Action |
 |---|---|
 | `1` to `0` | Hotbar building (press again to put it away) |
 | `B` | Build menu. Hover a building and press `1` to `0` to put it on the hotbar |
 | LMB | Place / select. Dropping a polisher, splitter or machine on a belt replaces that belt |
-| Drag (building) | Lay a line. It forms an L, belts orient and curve themselves, and a belt dragged across another line bridges over it |
+| Drag (belts) | The belt finds its own way: the shortest path with the fewest turns, around buildings (as many turns as it takes), over other belt lines (it builds the bridge) and past the spots machines drop items on. Drag from a machine to a machine and it connects the one's output to the other's input; drag into the side of a belt and it joins that line |
+| `Shift`+drag (belts) | Draw the path yourself: the belt follows the mouse, turn after turn. Move back along it to take cells off again |
+| Drag (other buildings) | A row of them, as an L |
 | Drag (selecting) | Box select. `Shift` adds, `Ctrl` removes |
 | `R` / `Shift+R` | Rotate the placement, the selection, or the hovered building |
 | `F` | Pick the hovered building (type, rotation and height) |

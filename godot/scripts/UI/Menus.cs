@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -42,6 +43,7 @@ public partial class MenuLayer : CanvasLayer
     public bool TitleVisible => _title.Visible;
     public bool PauseVisible => _pause.Visible;
     public bool SettingsVisible => _settingsWindow.Visible;
+    public SettingsPanel SettingsPanel => _settingsPanel;
 
     public void Init(IMenuActions actions, GameSettings settings)
     {
@@ -218,7 +220,7 @@ public partial class MenuLayer : CanvasLayer
         _confirm.Body.AddChild(row);
         AddWindow(_confirm);
 
-        _settingsWindow = new HudWindow("Settings", Icon.Game, 460);
+        _settingsWindow = new HudWindow("Settings", Icon.Game, 520);
         _settingsPanel = new SettingsPanel(_settings, () => _actions.SettingsChanged());
         _settingsWindow.Body.AddChild(_settingsPanel.Root);
         AddWindow(_settingsWindow);
@@ -389,50 +391,191 @@ public partial class MenuLayer : CanvasLayer
     }
 }
 
-/// <summary>Audio, display and gameplay settings; every change applies at once and is saved.</summary>
+/// <summary>
+/// Settings in four tabs (Audio, Display, Controls, Gameplay); every change applies at once and
+/// is saved. Controls lists every rebindable key: click one, press the new key (Esc cancels).
+/// </summary>
 public sealed class SettingsPanel
 {
     public readonly Control Root;
     private readonly GameSettings _s;
     private readonly Action _changed;
+    private readonly Control[] _pages = new Control[4];
+    private readonly Dictionary<string, Button> _bindings = new();
+    private readonly Label _keyStatus = Ui.Label("", 12, UiTheme.Muted);
+    private Button? _listening;
+
+    public static readonly string[] Tabs = { "Audio", "Display", "Controls", "Gameplay" };
 
     public SettingsPanel(GameSettings settings, Action changed)
     {
         _s = settings;
         _changed = changed;
         var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 8);
+        col.AddThemeConstantOverride("separation", 0);
 
-        col.AddChild(Header("AUDIO"));
-        col.AddChild(Slider("Master", () => _s.MasterVolume, v => _s.MasterVolume = v));
-        col.AddChild(Slider("Music", () => _s.MusicVolume, v => _s.MusicVolume = v));
-        col.AddChild(Slider("Effects", () => _s.EffectsVolume, v => _s.EffectsVolume = v));
-        col.AddChild(Slider("Interface", () => _s.InterfaceVolume, v => _s.InterfaceVolume = v));
+        var tabs = new HBoxContainer();
+        tabs.AddThemeConstantOverride("separation", 6);
+        var group = new ButtonGroup();
+        for (int i = 0; i < Tabs.Length; i++)
+        {
+            int page = i;
+            var tab = new Button
+            {
+                Text = Tabs[i], ToggleMode = true, ButtonGroup = group, ButtonPressed = i == 0,
+                FocusMode = Control.FocusModeEnum.None, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+                CustomMinimumSize = new Vector2(0, 36),
+            };
+            tab.Toggled += on => { if (on) ShowPage(page); };
+            tabs.AddChild(tab);
+        }
+        col.AddChild(Ui.Pad(tabs, 14, 10));
+        col.AddChild(new HSeparator());
 
-        col.AddChild(Header("DISPLAY"));
-        col.AddChild(Check("Fullscreen", () => _s.Fullscreen, v => _s.Fullscreen = v));
-        col.AddChild(Check("VSync", () => _s.VSync, v => _s.VSync = v));
-        col.AddChild(Choice("Graphics", new[] { "Low", "Medium", "High" }, () => _s.Quality, v => _s.Quality = v));
+        _pages[0] = Page(
+            Header("VOLUME"),
+            Slider("Master", () => _s.MasterVolume, v => _s.MasterVolume = v),
+            Slider("Music", () => _s.MusicVolume, v => _s.MusicVolume = v),
+            Slider("Effects", () => _s.EffectsVolume, v => _s.EffectsVolume = v),
+            Slider("Interface", () => _s.InterfaceVolume, v => _s.InterfaceVolume = v),
+            Header("WHEN YOU SWITCH AWAY"),
+            Check("Mute the game in the background", () => _s.MuteInBackground, v => _s.MuteInBackground = v));
+
         // Steps, not a slider: rescaling the interface under a dragged slider moves the slider.
         var sizes = new[] { 0.8f, 0.9f, 1f, 1.1f, 1.25f, 1.5f };
         string SizeName(float f) => $"{f * 100:0}%";
-        col.AddChild(Choice("Interface size", Array.ConvertAll(sizes, SizeName),
-            () => SizeName(sizes.MinBy(f => Math.Abs(f - _s.UiScale))),
-            v => _s.UiScale = sizes[Array.FindIndex(sizes, f => SizeName(f) == v)]));
+        var fps = new[] { ("Unlimited", 0), ("30", 30), ("60", 60), ("120", 120), ("144", 144), ("240", 240) };
+        _pages[1] = Page(
+            Header("WINDOW"),
+            Check("Fullscreen", () => _s.Fullscreen, v => _s.Fullscreen = v),
+            Check("VSync", () => _s.VSync, v => _s.VSync = v),
+            Choice("Frame rate limit", Array.ConvertAll(fps, f => f.Item1),
+                () => Array.Find(fps, f => f.Item2 == _s.MaxFps).Item1 ?? "Unlimited",
+                v => _s.MaxFps = Array.Find(fps, f => f.Item1 == v).Item2),
+            Check("Show frames per second", () => _s.ShowFps, v => _s.ShowFps = v),
+            Header("LOOK"),
+            Choice("Graphics", new[] { "Low", "Medium", "High" }, () => _s.Quality, v => _s.Quality = v),
+            Choice("Interface size", Array.ConvertAll(sizes, SizeName),
+                () => SizeName(sizes.MinBy(f => Math.Abs(f - _s.UiScale))),
+                v => _s.UiScale = sizes[Array.FindIndex(sizes, f => SizeName(f) == v)]));
 
-        col.AddChild(Header("GAMEPLAY"));
-        var autosave = new[] { ("Off", 0), ("Every 30 s", 30), ("Every minute", 60), ("Every 2 minutes", 120), ("Every 5 minutes", 300) };
-        col.AddChild(Choice("Autosave", Array.ConvertAll(autosave, a => a.Item1),
-            () => Array.Find(autosave, a => a.Item2 == _s.AutosaveSeconds).Item1 ?? "Every minute",
-            v => _s.AutosaveSeconds = Array.Find(autosave, a => a.Item1 == v).Item2));
-        var replay = Ui.TextButton("Show the tutorial again next time", () =>
+        var speeds = new[] { ("Slow", 0.6f), ("Normal", 1f), ("Fast", 1.6f) };
+        var controls = new List<Control>
         {
-            _s.TutorialDone = false;
+            Header("CAMERA"),
+            Choice("Pan speed", Array.ConvertAll(speeds, p => p.Item1),
+                () => speeds.MinBy(p => Math.Abs(p.Item2 - _s.PanSpeed)).Item1,
+                v => _s.PanSpeed = Array.Find(speeds, p => p.Item1 == v).Item2),
+            Check("Pan when the mouse touches the edge", () => _s.EdgePan, v => _s.EdgePan = v),
+            Check("Invert zoom (wheel up zooms out)", () => _s.InvertZoom, v => _s.InvertZoom = v),
+        };
+        foreach (var grp in Keybinds.All.GroupBy(a => a.Group))
+        {
+            controls.Add(Header($"KEYS · {grp.Key.ToUpperInvariant()}"));
+            controls.AddRange(grp.Select(Binding));
+        }
+        controls.Add(Ui.Label("Fixed: Esc, 1 to 0 (hotbar), Ctrl shortcuts, Delete, arrow keys, PageUp/PageDown.", 12, UiTheme.Muted));
+        controls.Add(_keyStatus);
+        controls.Add(Ui.TextButton("Reset all keys to their defaults", () =>
+        {
+            Keybinds.ResetAll();
+            _s.Keys = new Dictionary<string, string>();
+            _keyStatus.Text = "";
             Changed();
-        });
-        col.AddChild(replay);
-        Root = Ui.Pad(col, 18, 14);
+        }));
+        _pages[2] = Page(controls.ToArray());
+
+        var autosave = new[] { ("Off", 0), ("Every 30 s", 30), ("Every minute", 60), ("Every 2 minutes", 120), ("Every 5 minutes", 300) };
+        _pages[3] = Page(
+            Header("SAVING"),
+            Choice("Autosave", Array.ConvertAll(autosave, a => a.Item1),
+                () => Array.Find(autosave, a => a.Item2 == _s.AutosaveSeconds).Item1 ?? "Every minute",
+                v => _s.AutosaveSeconds = Array.Find(autosave, a => a.Item1 == v).Item2),
+            Header("ON SCREEN"),
+            Check("Money floating over depots as they sell", () => _s.ShowIncomePopups, v => _s.ShowIncomePopups = v),
+            Check("Key hints above the hotbar", () => _s.ShowKeyHints, v => _s.ShowKeyHints = v),
+            Check("Pop-ups for orders and goals", () => _s.ShowNotifications, v => _s.ShowNotifications = v),
+            Header("TUTORIAL"),
+            Ui.TextButton("Show the tutorial again next time", () =>
+            {
+                _s.TutorialDone = false;
+                Changed();
+            }));
+
+        foreach (var page in _pages) col.AddChild(page);
+        ShowPage(0);
+        Keybinds.Changed += RefreshBindings;
+        Root = col;
     }
+
+    public void ShowPage(int page)
+    {
+        for (int i = 0; i < _pages.Length; i++) _pages[i].Visible = i == page;
+        StopListening();
+    }
+
+    private static Control Page(params Control[] rows)
+    {
+        var col = new VBoxContainer();
+        col.AddThemeConstantOverride("separation", 8);
+        foreach (var r in rows) col.AddChild(r);
+        return Ui.Pad(col, 18, 14);
+    }
+
+    /// <summary>A key binding row: the action and a button with its key; click it and press a new key.</summary>
+    private Control Binding(Keybinds.Action action)
+    {
+        var row = new HBoxContainer();
+        var name = Ui.Label(action.Label, 14);
+        name.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        row.AddChild(name);
+        var button = new Button { Text = Keybinds.Name(action.Id), CustomMinimumSize = new Vector2(130, 34), FocusMode = Control.FocusModeEnum.All };
+        button.Pressed += () =>
+        {
+            StopListening();
+            _listening = button;
+            button.Text = "Press a key…";
+            _keyStatus.Text = "Press the new key, or Esc to keep the old one.";
+            button.GrabFocus();
+        };
+        button.GuiInput += ev =>
+        {
+            if (_listening != button || ev is not InputEventKey { Pressed: true } key) return;
+            button.AcceptEvent(); // the key is the answer, not a shortcut
+            _listening = null;
+            if (key.Keycode == Key.Escape) _keyStatus.Text = "";
+            else if (!Keybinds.Set(action.Id, key.Keycode)) _keyStatus.Text = $"{Keybinds.NameOf(key.Keycode)} can't be rebound: it has a fixed job.";
+            else
+            {
+                _s.Keys = Keybinds.Stored();
+                _keyStatus.Text = $"{action.Label}: {Keybinds.Name(action.Id)}";
+                Changed();
+            }
+            RefreshBindings();
+            button.ReleaseFocus();
+        };
+        button.FocusExited += () => { if (_listening == button) StopListening(); };
+        _bindings[action.Id] = button;
+        row.AddChild(button);
+        return row;
+    }
+
+    private void StopListening()
+    {
+        if (_listening == null) return;
+        _listening = null;
+        _keyStatus.Text = "";
+        RefreshBindings();
+    }
+
+    private void RefreshBindings()
+    {
+        foreach (var (id, button) in _bindings)
+            if (button != _listening) button.Text = Keybinds.Name(id);
+    }
+
+    /// <summary>For scripted tests: starts listening for a new key for <paramref name="action"/>.</summary>
+    public Button BindingButton(string action) => _bindings[action];
 
     private void Changed() => _changed(); // applies, and saves a moment later
 

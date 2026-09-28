@@ -381,7 +381,8 @@ public sealed class ManageWindow
             : selection.Count == 1 ? $"Upgrade (${cost.Format()})"
             : $"Upgrade {upgradable.Count} (${cost.Format()})";
         _upgradeButton.Disabled = upgradable.Count == 0 || (!world.Sandbox && world.Money < cheapest);
-        _upgradeButton.TooltipText = selection.Count == 1 ? "Upgrade (U)" : "Upgrade all (U): cheapest first, as far as the money goes";
+        string key = Keybinds.Name("upgrade");
+        _upgradeButton.TooltipText = selection.Count == 1 ? $"Upgrade ({key})" : $"Upgrade all ({key}): cheapest first, as far as the money goes";
         _deleteButton.Text = selection.Count == 1 ? "Delete" : "Delete all";
 
         if (selection.Count == 1) ShowOne(sim, first, thumbs);

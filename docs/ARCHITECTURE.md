@@ -184,7 +184,12 @@ Extrapolated time adds money and lifetime earnings but not per-item sold counts.
   frontend: L-shaped paths, belts facing along the drag, re-aiming existing belts,
   never downgrading pricier pieces, keeping a replaced building's direction, the
   anchor height for ramps (a ramp down placed on the ground stands on it), turning a
-  single-input building (a depot) toward the belt that feeds its cell (`FaceFeeder`), and
+  single-input building (a depot) toward the belt that feeds its cell (`FaceFeeder`),
+  **routing** (`Route`, in `BuildPlanner.Routing.cs`: A* over the plot for the fewest cells,
+  then the fewest turns; it goes around buildings, bridges perpendicular belt lines as one
+  macro step (ramp up, deck, ramp down, straight on), avoids cells other buildings output
+  into, and starts from an output or ends in an input when the drag starts or ends on a
+  building or belt; `ExtendTrail` is the hand-drawn Shift-drag path), and
   **automatic bridges** (a belt dragged straight across other belt lines gets a ramp up,
   a deck one level higher and a ramp down). It is unit-tested like the rest of the core.
 
@@ -234,7 +239,8 @@ instead of failing. `Migrate()` is the hook for version bumps.
 | `UI/HudPanels` | Progress (tiers, limits, next goals), `OrdersPanel` (order cards with a swap button), statistics |
 | `Audio/` | `AudioManager`: Music, Effects (positional) and Interface buses; random clip and pitch per play, per-sound cool-downs, crossfading playlists; maps `SimEvent`s to sounds and gives every button a click |
 | `GameFlow` | Title → playing ⇄ paused. The title runs a demo factory with goals off behind the menu and an orbiting camera; the pause menu pauses the whole tree, `Space` only the simulation |
-| `GameSettings` | Preferences in `user://settings.json` (volumes, window mode, vsync, quality, UI scale, autosave, tutorial seen) |
+| `GameSettings` | Preferences in `user://settings.json`: audio (volumes, mute in background), display (window mode, vsync, FPS cap and counter, quality, UI scale capped to the window), camera (pan speed, edge pan, inverted zoom), gameplay toggles, autosave, tutorial seen, rebound keys |
+| `Input/Keybinds` | Rebindable single-key actions with defaults; binding a used key swaps the two. Esc, hotbar numbers, Ctrl shortcuts, Delete, arrows and PageUp/PageDown stay fixed. Tooltips, hints, help and tutorial text read the current keys (tutorial text uses `{action}` tokens) |
 | `SimHost` | Owns the `Simulation`: five save slots (`user://saves/slotN.json` plus a small `.meta.json` for the slot list), autosave, play time, offline catch-up on load, and moving saves from older versions into slot 1 |
 
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one

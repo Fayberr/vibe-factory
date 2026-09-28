@@ -151,6 +151,20 @@ public partial class UiScenario : Node
         await Key(Godot.Key.Escape);
         await Shot("08-auto-bridge");
 
+        // 9b. A belt dragged through a row of machines finds its own way around them (and around
+        //     the cells they output into), with as many turns as it takes.
+        for (int y = 3; y <= 7; y++) Host.Execute(new PlaceBuilding("smelter", new GridPos(18, y, 0), Dir.West));
+        await Focus(18, 5);
+        await Key(Godot.Key.Key1);
+        int beltsBefore = w.EntityCount;
+        await Drag(Cell(15, 5), Cell(21, 5));
+        bool wallIntact = Enumerable.Range(3, 5).All(y => w.EntityAt(new GridPos(18, y, 0))?.Def.Id == "smelter");
+        Check(wallIntact && w.EntityAt(new GridPos(21, 5, 0))?.Def.Id == "conveyor" && w.EntityAt(new GridPos(17, 5, 0)) == null,
+            $"a belt dragged at a wall of machines goes around it ({w.EntityCount - beltsBefore} belts)");
+        Check(w.EntityCount - beltsBefore > 7, "the detour takes more belts than the straight line would");
+        await Shot("08b-route");
+        await Key(Godot.Key.Escape);
+
         // 10. Build height: E/Q, never below the ground, ramps carry the height.
         await Focus(12, 18);
         await Key(Godot.Key.Key1);
@@ -290,6 +304,24 @@ public partial class UiScenario : Node
         await Key(Godot.Key.Escape);
         await Frames(5);
         Check(!Menus.SettingsVisible && !Menus.PauseVisible, "Esc closes Settings opened in game, without pausing");
+
+        // 14b. Key bindings: in Settings → Controls, click an action and press its new key.
+        Menus.OpenSettings();
+        Menus.SettingsPanel.ShowPage(2);
+        await Frames(10);
+        await Shot("15-controls");
+        var rotateKey = Menus.SettingsPanel.BindingButton("rotate");
+        await Click(rotateKey.GetGlobalRect().GetCenter());
+        await Key(Godot.Key.T);
+        Check(Keybinds.Get("rotate") == Godot.Key.T && rotateKey.Text == "T", $"clicking Rotate and pressing T rebinds it (now {Keybinds.Name("rotate")})");
+        await Key(Godot.Key.Escape);
+        await Frames(5);
+        await Key(Godot.Key.Key1);
+        var facing = Tools.Facing;
+        await Key(Godot.Key.T);
+        Check(Tools.Facing != facing && !Menus.SettingsVisible, "T now rotates the placement");
+        Keybinds.ResetAll();
+        await Key(Godot.Key.Escape);
 
         // 15. Title screen: the demo runs behind it; starting a factory hands the screen back.
         Flow.ShowTitle();

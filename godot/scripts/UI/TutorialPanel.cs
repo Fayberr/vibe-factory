@@ -119,7 +119,7 @@ public sealed class TutorialPanel
         _counter.Text = $"Step {_step + 1} of {Tutorial.Steps.Count}";
         _bar.Value = _step;
         _title.Text = step.Title;
-        _text.Text = step.Text;
+        _text.Text = Tutorial.WithKeys(step.Text, Keybinds.Name);
         bool last = _step + 1 == Tutorial.Steps.Count;
         _next.Visible = step.Done == null;
         _next.Text = last ? "Finish" : "Next";

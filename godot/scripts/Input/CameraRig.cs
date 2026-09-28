@@ -40,6 +40,26 @@ public partial class CameraRig : Node3D
     /// <summary>Slowly circles the focus point (title screen backdrop).</summary>
     public bool AutoOrbit { get; set; }
 
+    /// <summary>Keyboard (and edge) panning speed multiplier (Settings → Controls).</summary>
+    public float PanSpeed { get; set; } = 1;
+
+    /// <summary>Wheel up zooms out instead of in.</summary>
+    public bool InvertZoom { get; set; }
+
+    /// <summary>Pan when the mouse touches the window's edge.</summary>
+    public bool EdgePan { get; set; }
+
+    /// <summary>Which way the mouse at the window's edge pushes the view (zero away from the edges or outside the window).</summary>
+    private Vector2 EdgeDirection()
+    {
+        if (!DisplayServer.WindowIsFocused()) return Vector2.Zero;
+        var mouse = DisplayServer.MouseGetPosition() - DisplayServer.WindowGetPosition();
+        var size = DisplayServer.WindowGetSize();
+        if (mouse.X < 0 || mouse.Y < 0 || mouse.X >= size.X || mouse.Y >= size.Y) return Vector2.Zero;
+        const int band = 6;
+        return new Vector2(mouse.X < band ? -1 : mouse.X >= size.X - band ? 1 : 0, mouse.Y < band ? -1 : mouse.Y >= size.Y - band ? 1 : 0);
+    }
+
     /// <summary>Player control of the camera (off behind menus).</summary>
     public bool Interactive { get; set; } = true;
 
@@ -59,12 +79,13 @@ public partial class CameraRig : Node3D
         if (Interactive && !Input.IsKeyPressed(Key.Ctrl))
         {
             var move = Vector2.Zero;
-            if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) move.Y -= 1;
-            if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down)) move.Y += 1;
-            if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) move.X -= 1;
-            if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) move.X += 1;
+            if (Keybinds.Held("pan_forward") || Input.IsKeyPressed(Key.Up)) move.Y -= 1;
+            if (Keybinds.Held("pan_back") || Input.IsKeyPressed(Key.Down)) move.Y += 1;
+            if (Keybinds.Held("pan_left") || Input.IsKeyPressed(Key.Left)) move.X -= 1;
+            if (Keybinds.Held("pan_right") || Input.IsKeyPressed(Key.Right)) move.X += 1;
+            if (EdgePan) move += EdgeDirection();
             float boost = Input.IsKeyPressed(Key.Shift) ? 2.2f : 1f;
-            if (move != Vector2.Zero) Pan(move.Normalized() * _distanceTarget * 0.9f * boost * dt);
+            if (move != Vector2.Zero) Pan(move.Normalized() * _distanceTarget * 0.9f * PanSpeed * boost * dt);
         }
 
         float k = 1 - Mathf.Exp(-14f * dt);
@@ -95,7 +116,7 @@ public partial class CameraRig : Node3D
                 if (mb.ShiftPressed || mb.CtrlPressed) return; // reserved for tools
                 // A list scrolled to its end lets the wheel through; never zoom under the UI.
                 if (GetViewport().GuiGetHoveredControl() != null) return;
-                ZoomAt(mb.Position, mb.ButtonIndex == MouseButton.WheelUp ? 0.87f : 1.15f);
+                ZoomAt(mb.Position, (mb.ButtonIndex == MouseButton.WheelUp) != InvertZoom ? 0.87f : 1.15f);
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }:
                 _orbiting = true;
@@ -114,7 +135,7 @@ public partial class CameraRig : Node3D
                 float scale = _distance * 0.0018f;
                 Pan(new Vector2(-mm.Relative.X, -mm.Relative.Y * 1.3f) * scale);
                 break;
-            case InputEventKey { Pressed: true, Echo: false, Keycode: Key.Home }:
+            case InputEventKey { Pressed: true, Echo: false, CtrlPressed: false } key when Keybinds.Is(key, "reset_view"):
                 _yawTarget = 40;
                 _pitchTarget = -52;
                 break;

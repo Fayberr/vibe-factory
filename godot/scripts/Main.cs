@@ -9,7 +9,10 @@ public partial class Main : Node3D
 {
     public override void _Ready()
     {
-        var settings = GameSettings.Load();
+        // The scripted UI test runs on default settings (keys, camera), whatever the player chose.
+        bool uiTest = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--ui-test") >= 0;
+        var settings = uiTest ? new GameSettings() : GameSettings.Load();
+        Keybinds.Load(settings.Keys);
         var host = new SimHost { Name = "SimHost" };
         var view = new WorldView { Name = "WorldView" };
         var camera = new CameraRig { Name = "CameraRig" };

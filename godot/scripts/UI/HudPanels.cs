@@ -179,7 +179,7 @@ public sealed class BuildingTile
 
         string limitLine = def?.Limit != null && sim != null ? $"\nLimit {Ui.LimitText(sim.World, def)}. Later tiers allow more." : "";
         Button.TooltipText = def == null
-            ? "Empty slot. Hover a building in the build menu (B) and press a number to assign it"
+            ? $"Empty slot. Hover a building in the build menu ({Keybinds.Name("build_menu")}) and press a number to assign it"
             : $"{def.Name}  ${def.Cost.Format()}\n{def.MetaOr("description", "")}{limitLine}" + (locked != null ? $"\nLocked: {locked}" : "");
         Button.Modulate = def == null ? new Color(1, 1, 1, 0.45f) : Colors.White;
     }
@@ -200,7 +200,7 @@ public sealed class BuildMenu
         var header = new HBoxContainer();
         header.AddChild(Ui.Label("Build", 22));
         header.AddChild(Ui.Spacer());
-        header.AddChild(Ui.Label("Click to build · hover + 1 to 0 to put on the hotbar · locked ones unlock in Progress (P)", 13, UiTheme.Muted));
+        header.AddChild(Ui.Label($"Click to build · hover + 1 to 0 to put on the hotbar · locked ones unlock in Progress ({Keybinds.Name("progress")})", 13, UiTheme.Muted));
         body.AddChild(header);
 
         var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(740, 520), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };

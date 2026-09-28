@@ -47,6 +47,9 @@ public partial class WorldView : Node3D
     private readonly Stack<Label3D> _labelPool = new();
     private double _incomeTimer;
 
+    /// <summary>Float "+$" over depots as they sell (Settings → Gameplay).</summary>
+    public bool ShowIncome { get; set; } = true;
+
     private SimHost _host = null!;
     private Node3D _entities = null!;
     private ShaderMaterial _ground = null!;
@@ -424,8 +427,9 @@ public partial class WorldView : Node3D
         if (_incomeTimer > 0.7)
         {
             _incomeTimer = 0;
-            foreach (var (id, amount) in _pendingIncome)
-                if (_visuals.TryGetValue(id, out var v) && v.Rig.Root.Visible) FloatText(v, "+$" + amount.Format());
+            if (ShowIncome)
+                foreach (var (id, amount) in _pendingIncome)
+                    if (_visuals.TryGetValue(id, out var v) && v.Rig.Root.Visible) FloatText(v, "+$" + amount.Format());
             _pendingIncome.Clear();
         }
     }
