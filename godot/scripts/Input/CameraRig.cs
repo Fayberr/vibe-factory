@@ -34,6 +34,9 @@ public partial class CameraRig : Node3D
 
     public Vector3 FocusPoint => _focusTarget;
 
+    /// <summary>Zoom distance the camera is heading to.</summary>
+    public float Distance => _distanceTarget;
+
     /// <summary>Jumps to an exact view (used by scripted screenshots).</summary>
     public void SetView(float yaw, float pitch, float distance, Vector3 focus)
     {
@@ -82,6 +85,8 @@ public partial class CameraRig : Node3D
         {
             case InputEventMouseButton { Pressed: true } mb when mb.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown:
                 if (mb.ShiftPressed || mb.CtrlPressed) return; // reserved for tools
+                // A list scrolled to its end lets the wheel through; never zoom under the UI.
+                if (GetViewport().GuiGetHoveredControl() != null) return;
                 ZoomAt(mb.Position, mb.ButtonIndex == MouseButton.WheelUp ? 0.87f : 1.15f);
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }:

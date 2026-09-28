@@ -33,6 +33,23 @@ public partial class UiScenario : Node
         await Frames(20);
         var w = Host.Sim.World;
 
+        // 0. Tutorial: opens on the welcome, Next moves on, placing a drill completes that step.
+        Hud.StartTutorial();
+        await Frames(5);
+        Check(Hud.Tutorial.Active && Hud.Tutorial.Current?.Id == "welcome", "the tutorial starts with a welcome");
+        await Click(Hud.Tutorial.NextButton.GetGlobalRect().GetCenter());
+        Check(Hud.Tutorial.Current?.Id == "drill", "Next moves to placing a drill");
+        await Frames(5);
+        Check(Hud.Tutorial.Highlight.Visible, "the drill step points at its hotbar slot");
+        await Key(Godot.Key.Key6);
+        await Click(Cell(14, 3));
+        for (int i = 0; i < 400 && Hud.Tutorial.Current?.Id == "drill"; i++) await Frames(1);
+        Check(Hud.Tutorial.Current?.Id == "belt", "placing a drill completes the step and moves on");
+        await Key(Godot.Key.Z, ctrl: true);
+        await Key(Godot.Key.Escape);
+        Hud.Tutorial.Window.Close();
+        Check(!Hud.Tutorial.Active && w.EntityCount == 0, "closing ends the tutorial");
+
         // 1. Hotbar + L-shaped belt drag.
         await Key(Godot.Key.Key1);
         Check(Tools.Mode == ToolMode.Build && Tools.Tool?.Id == "conveyor", "key 1 selects the conveyor");
@@ -76,6 +93,9 @@ public partial class UiScenario : Node
         await Shot("03-paste-preview");
         await Click(Cell(5, 16));
         Check(w.EntityCount == 24, $"paste places a full copy (got {w.EntityCount})");
+        await Frames(4);
+        Check(Tools.Selection.Count == 0 && w.Entities.All(e => View.HighlightOf(e.Id) == Highlight.None),
+            "pasted buildings are not left highlighted");
         await Key(Godot.Key.Escape);
 
         // 5. Delete tool with a box.
@@ -213,6 +233,20 @@ public partial class UiScenario : Node
         Host.Sim.World.Sandbox = false;
         await Key(Godot.Key.B);
         await Frames(30);
+        if (Hud.BuildMenu is { } menu)
+        {
+            var over = menu.GetGlobalRect().GetCenter();
+            await Move(over);
+            float zoom = Camera.Distance;
+            foreach (var wheel in new[] { MouseButton.WheelDown, MouseButton.WheelUp })
+                for (int i = 0; i < 15; i++)
+                {
+                    Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = wheel, Pressed = true, Position = over, GlobalPosition = over });
+                    Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = wheel, Pressed = false, Position = over, GlobalPosition = over });
+                    await Frames(1);
+                }
+            Check(Mathf.IsEqualApprox(Camera.Distance, zoom), $"scrolling the build menu past its ends never zooms the map ({zoom} -> {Camera.Distance})");
+        }
         await Shot("04-build-menu");
         await Key(Godot.Key.Escape);
         await Key(Godot.Key.F1);

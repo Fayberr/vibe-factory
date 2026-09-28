@@ -70,6 +70,34 @@ public static class Shaders
         }
         """;
 
+    /// <summary>
+    /// Highlight drawn over a building (selection, hover, delete, upgrade): a glow on edges
+    /// that face away from the camera plus a light fill, so the building keeps its look
+    /// instead of turning into a see-through ghost.
+    /// </summary>
+    public const string Highlight = """
+        shader_type spatial;
+        render_mode unshaded, blend_mix, depth_draw_never, cull_back, shadows_disabled;
+        uniform vec4 tint : source_color = vec4(0.31, 0.76, 1.0, 1.0);
+        uniform float fill = 0.08;
+        uniform float rim = 0.9;
+        void fragment() {
+            float f = 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+            ALBEDO = tint.rgb;
+            ALPHA = clamp(fill + pow(f, 2.0) * rim, 0.0, 1.0);
+        }
+        """;
+
+    public static ShaderMaterial HighlightMaterial(Color tint, float fill, float rim)
+    {
+        var m = new ShaderMaterial { Shader = _highlight ??= new Shader { Code = Highlight } };
+        m.SetShaderParameter("tint", tint);
+        m.SetShaderParameter("fill", fill);
+        m.SetShaderParameter("rim", rim);
+        return m;
+    }
+
+    private static Shader? _highlight;
     private static ShaderMaterial? _deck;
 
     /// <summary>Shared belt deck material; each belt sets its own "belt_speed" instance parameter from its level.</summary>

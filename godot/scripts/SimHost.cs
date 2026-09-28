@@ -50,6 +50,7 @@ public partial class SimHost : Node
     /// <summary>Loads content and the last save (or starts fresh). Call after listeners are wired.</summary>
     public void Start(bool loadSave = true)
     {
+        if (loadSave) CarryOverRenamedUserData();
         Content = ContentRegistry.LoadDefault();
         if (!loadSave || !TryLoad()) NewGame(withDemo: false);
     }
@@ -141,6 +142,32 @@ public partial class SimHost : Node
             GD.PushError($"Could not load save: {ex.Message}");
             Notice?.Invoke("Save could not be loaded; starting fresh.");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// The game used to be called "Factory Sim", and Godot keeps user data in a folder named
+    /// after the game. Copy the save and settings from the old folder once so nothing is lost.
+    /// </summary>
+    private static void CarryOverRenamedUserData()
+    {
+        try
+        {
+            string current = OS.GetUserDataDir();
+            string? parent = System.IO.Path.GetDirectoryName(current);
+            if (parent == null) return;
+            string old = System.IO.Path.Combine(parent, "Factory Sim");
+            if (!System.IO.Directory.Exists(old)) return;
+            System.IO.Directory.CreateDirectory(current);
+            foreach (string name in new[] { "factory_save.json", "hotbar.json" })
+            {
+                string from = System.IO.Path.Combine(old, name), to = System.IO.Path.Combine(current, name);
+                if (System.IO.File.Exists(from) && !System.IO.File.Exists(to)) System.IO.File.Copy(from, to);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            GD.PushWarning($"Could not carry over data from the old game folder: {ex.Message}");
         }
     }
 

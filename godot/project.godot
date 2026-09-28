@@ -1,4 +1,4 @@
-; Godot 4 project for the Factory Sim client.
+; Godot 4 project for the Vibe Factory client.
 ; The game logic lives in ../src/FactorySim.Core (engine-agnostic .NET library);
 ; everything in this folder is presentation and input only.
 
@@ -6,8 +6,8 @@ config_version=5
 
 [application]
 
-config/name="Factory Sim"
-config/description="Modular factory/tycoon prototype: deterministic C# simulation core + Godot presentation."
+config/name="Vibe Factory"
+config/description="Vibe Factory: a factory tycoon game. Deterministic C# simulation core + Godot presentation."
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 

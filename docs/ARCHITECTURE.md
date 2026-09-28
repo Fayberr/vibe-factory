@@ -168,6 +168,14 @@ Extrapolated time adds money and lifetime earnings but not per-item sold counts.
   **automatic bridges** (a belt dragged straight across other belt lines gets a ramp up,
   a deck one level higher and a ramp down). It is unit-tested like the rest of the core.
 
+### Tutorial
+
+`FactorySim.Guide.Tutorial` is the first-factory walkthrough as data: each step has a
+title, text, an optional check against the `World` (a drill exists, a smelter is fed,
+$10 earned, a drill reached level 2) and a focus hint for the frontend to point at. The
+client's `TutorialPanel` presents it and moves on when a check passes; a test plays it
+through with commands and the starting money.
+
 ### Persistence
 
 `SaveSystem` writes versioned JSON: world scalars, upgrades, stats, and entities
@@ -201,6 +209,7 @@ instead of failing. `Migrate()` is the hook for version bumps.
 | `Input/` | `CameraRig` (orbit/pan/zoom-to-cursor), `BuildController` (select, build, upgrade, delete, move, paste, pipette, undo, build height; uses `BuildPlanner`), `GhostLayer` (translucent previews with port arrows and pillars) |
 | `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip), `HudWindow` (draggable windows, several open at once), `ManageWindow` (the selection: stats, upgrade, recipe choice), build menu with locks and limits, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders building and item icons from the 3D models) |
 | `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
+| `UI/TutorialPanel` | Presents the tutorial steps with a pulsing outline on the control each step is about |
 
 Scene graph order matters for input: the HUD is the last child, so it sees unhandled
 keys first (hotbar, menus, Esc for panels). Everything else falls through to the

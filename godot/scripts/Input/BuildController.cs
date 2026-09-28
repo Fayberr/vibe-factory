@@ -339,6 +339,7 @@ public partial class BuildController : Node3D
         }
         _floatingOrigin = GridPos.Zero;
         _floatingTurns = 0;
+        Selection.Clear(); // the clipboard holds the copy; nothing stays highlighted while pasting
         SetMode(ToolMode.Paste);
         _floating = Clipboard;
     }
@@ -429,7 +430,7 @@ public partial class BuildController : Node3D
                 if (mb.Position.DistanceTo(_rmbPressPos) < DragThreshold) OnRightClick();
                 break;
             case InputEventMouseButton { Pressed: true, ShiftPressed: true } wheel
-                when wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown:
+                when wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown && GetViewport().GuiGetHoveredControl() == null:
                 SetHeight(Height + (wheel.ButtonIndex == MouseButton.WheelUp ? 1 : -1));
                 GetViewport().SetInputAsHandled();
                 break;
@@ -531,13 +532,8 @@ public partial class BuildController : Node3D
                 _lmbDown = false;
                 break;
             case ToolMode.Paste when _floating != null && _hoverCell is { } at:
-                var r = History.Execute(new PlaceBlueprint(_floating, at, _floatingTurns));
-                if (Report(r))
-                {
-                    Selection.Clear();
-                    foreach (int id in r.EntityIds ?? Array.Empty<int>()) Selection.Add(id);
-                    Changed?.Invoke();
-                }
+                // Pasted buildings are not selected: they look like any other building right away.
+                if (Report(History.Execute(new PlaceBlueprint(_floating, at, _floatingTurns)))) Changed?.Invoke();
                 _lmbDown = false;
                 break;
         }

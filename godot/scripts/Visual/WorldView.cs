@@ -55,11 +55,11 @@ public partial class WorldView : Node3D
     private bool _cutaway;
     private float _gridTarget, _grid;
 
-    private static readonly StandardMaterial3D HoverOverlay = Palette.Translucent(new Color(1, 1, 1, 0.16f));
-    private static readonly StandardMaterial3D SelectOverlay = Palette.Translucent(new Color(Palette.Select, 0.26f));
-    private static readonly StandardMaterial3D DangerOverlay = Palette.Translucent(new Color(Palette.Danger, 0.45f));
-    private static readonly StandardMaterial3D MovingOverlay = Palette.Translucent(new Color(1, 1, 1, 0.55f));
-    private static readonly StandardMaterial3D UpgradeOverlay = Palette.Translucent(new Color(Palette.Upgrade, 0.34f));
+    private static readonly Material HoverOverlay = Shaders.HighlightMaterial(Colors.White, 0.07f, 0.55f);
+    private static readonly Material SelectOverlay = Shaders.HighlightMaterial(Palette.Select, 0.1f, 1f);
+    private static readonly Material DangerOverlay = Shaders.HighlightMaterial(Palette.Danger, 0.35f, 1f);
+    private static readonly Material MovingOverlay = Shaders.HighlightMaterial(Colors.White, 0.4f, 0.6f);
+    private static readonly Material UpgradeOverlay = Shaders.HighlightMaterial(Palette.Upgrade, 0.14f, 1f);
 
     private World World => _host.Sim.World;
 
@@ -99,6 +99,8 @@ public partial class WorldView : Node3D
     public void ShowGrid(bool on) => _gridTarget = on ? 1f : 0f;
 
     public bool IsVisible(int z) => !_cutaway || z <= _layer;
+
+    public Highlight HighlightOf(int entityId) => _visuals.TryGetValue(entityId, out var v) ? v.Highlight : Highlight.None;
 
     public void SetHighlight(int entityId, Highlight h)
     {

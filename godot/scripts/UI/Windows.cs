@@ -27,6 +27,9 @@ public sealed class HudWindow
     /// <summary>Stay against the right screen edge as the content changes (until the player drags it).</summary>
     public bool KeepRight { get; set; }
 
+    /// <summary>Whether Esc closes this window (the tutorial must not vanish on a stray Esc).</summary>
+    public bool EscCloses { get; init; } = true;
+
     /// <summary>Raised when the close button is pressed (the window hides itself first).</summary>
     public event Action? Closed;
 

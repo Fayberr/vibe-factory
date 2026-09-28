@@ -1,4 +1,4 @@
-# Factory Sim
+# Vibe Factory
 
 A modular factory/tycoon game about automation, resource pipelines and endless
 progression. The game logic is a **deterministic, engine-agnostic C# simulation**.
@@ -17,6 +17,8 @@ along curves, lattice towers, and smoking chimneys. Build-menu and hotbar icons 
 rendered from those same models, so new content gets art and icons with no asset work.
 
 ## Repository layout
+
+Assemblies and namespaces keep the code name `FactorySim`; the game is called Vibe Factory.
 
 ```
 src/FactorySim.Core/     Simulation: grid, transport, machines, economy, blueprints, undo, saves, offline.
@@ -42,8 +44,11 @@ dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, sta
 ```
 
 **Download (Windows):** the newest build is always the
-[latest release](https://github.com/Fayberr/factory-sim/releases/latest), direct link:
-[FactorySim-Windows.zip](https://github.com/Fayberr/factory-sim/releases/latest/download/FactorySim-Windows.zip).
+[latest release](https://github.com/Fayberr/vibe-factory/releases/latest), direct link:
+[VibeFactory-Windows.zip](https://github.com/Fayberr/vibe-factory/releases/latest/download/VibeFactory-Windows.zip).
+
+**New to it?** A short tutorial walks you through your first factory (drill, belt, smelter,
+depot, first upgrade) the first time you play. Reopen it any time from the Game menu (`G`).
 
 **Play from source:** open `godot/project.godot` in Godot 4.7 .NET and press Play. Pick
 *New factory (demo layout)* in the game menu (`G`) to spawn the demo, or start building.
@@ -123,7 +128,8 @@ godot --path godot -- --ui-test
 # Every building (some upgraded) and every item shape in one scene, for checking models.
 godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # Screenshot options: --wait=seconds, --view=yaw,pitch,distance,x,z, --select=x,y (opens
-# the Manage window for that cell), --windows (opens Progress and Statistics).
+# the Manage window for that cell), --windows (opens Progress and Statistics),
+# --tutorial (an empty factory at the tutorial's first step).
 ```
 
 ## Continuous integration and downloads
@@ -133,12 +139,12 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 1. Runs the unit tests (`dotnet test`) and builds the client (`dotnet build godot -c Release`).
 2. Exports the Windows build headlessly with Godot 4.7.2 .NET on Linux, using preset
    **Windows Desktop** in `godot/export_presets.cfg`, into `build/`.
-3. Uploads `FactorySim-Windows.zip` as a workflow artifact and publishes it as the
+3. Uploads `VibeFactory-Windows.zip` as a workflow artifact and publishes it as the
    repository's **Latest** release (tag `latest-build`, named after the run number and
    commit). The previous one is deleted first, so the repo page always shows exactly one
    current build. The latest push from any of those branches wins.
 
-The export is self-contained (it bundles the .NET runtime). Unzip and run `FactorySim.exe`,
+The export is self-contained (it bundles the .NET runtime). Unzip and run `VibeFactory.exe`,
 keeping the `.pck` and the `data_*` folder next to it. Godot's C# export needs a solution
 file. It lives in `godot/sln/` (project setting `dotnet/project/solution_directory`), which
 keeps `godot/` itself to a single project file so `dotnet build godot` works.
@@ -146,7 +152,7 @@ keeps `godot/` itself to a single project file so `dotnet build godot` works.
 Export locally with the same command (export templates for 4.7.2 installed):
 
 ```bash
-cd godot && godot --headless --export-release "Windows Desktop" ../build/FactorySim.exe
+cd godot && godot --headless --export-release "Windows Desktop" ../build/VibeFactory.exe
 ```
 
 ## Adding content

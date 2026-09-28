@@ -98,9 +98,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../build
-          "$GODOT" --headless --export-release "Windows Desktop" ../build/FactorySim.exe 2>&1 | tee ../export.log
-          test -f ../build/FactorySim.exe
-          test -f ../build/FactorySim.pck
+          "$GODOT" --headless --export-release "Windows Desktop" ../build/VibeFactory.exe 2>&1 | tee ../export.log
+          test -f ../build/VibeFactory.exe
+          test -f ../build/VibeFactory.pck
           test -f ../build/data_FactorySim.Client_windows_x86_64/FactorySim.Client.dll
           test -f ../build/data_FactorySim.Client_windows_x86_64/FactorySim.Core.dll
           if grep -q '^ERROR:' ../export.log; then
@@ -109,19 +109,19 @@ jobs:
           fi
           ls -la ../build
 
-      - name: Package FactorySim-Windows.zip
+      - name: Package VibeFactory-Windows.zip
         run: |
           set -euo pipefail
           cd build
-          zip -qr ../FactorySim-Windows.zip .
+          zip -qr ../VibeFactory-Windows.zip .
           cd ..
-          unzip -l FactorySim-Windows.zip | tail -n 1
+          unzip -l VibeFactory-Windows.zip | tail -n 1
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FactorySim-Windows
-          path: FactorySim-Windows.zip
+          name: VibeFactory-Windows
+          path: VibeFactory-Windows.zip
           if-no-files-found: error
 
       # A full release (not a pre-release) marked "Latest" is what GitHub shows in
@@ -145,16 +145,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest-build
-          name: 'Latest build #${{ github.run_number }} (${{ env.SHORT_SHA }})'
+          name: 'Vibe Factory build #${{ github.run_number }} (${{ env.SHORT_SHA }})'
           prerelease: false
           make_latest: true
-          files: FactorySim-Windows.zip
+          files: VibeFactory-Windows.zip
           fail_on_unmatched_files: true
           body: |
-            Automated Windows build of the Godot client (Godot ${{ env.GODOT_VERSION }} .NET),
+            Automated Windows build of Vibe Factory (Godot ${{ env.GODOT_VERSION }} .NET),
             rebuilt on every push.
 
-            **Download:** `FactorySim-Windows.zip` below. Unzip it and run `FactorySim.exe`.
+            **Download:** `VibeFactory-Windows.zip` below. Unzip it and run `VibeFactory.exe`.
             Keep the `.pck` and the `data_*` folder next to the executable.
 
             - Branch: `${{ github.ref_name }}`

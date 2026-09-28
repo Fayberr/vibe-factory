@@ -29,6 +29,7 @@ public partial class Main : Node3D
 
         var args = OS.GetCmdlineUserArgs();
         host.Autosave = System.Array.IndexOf(args, "--ui-test") < 0 && System.Array.IndexOf(args, "--smoke") < 0;
+        hud.AutoStartTutorial = host.Autosave; // scripted runs never pop up the tutorial
         if (System.Array.IndexOf(args, "--ui-test") >= 0)
         {
             AddChild(new UiScenario { Name = "UiScenario", Host = host, Tools = tools, Camera = camera, View = view, Hud = hud });
@@ -56,8 +57,15 @@ public partial class Main : Node3D
     private void RunSmokeTest(SimHost host, CameraRig camera, BuildController tools, Hud hud)
     {
         bool showcase = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--showcase") >= 0;
-        host.NewGame(withDemo: !showcase);
+        bool tutorial = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--tutorial") >= 0;
+        host.NewGame(withDemo: !showcase && !tutorial);
         if (showcase) BuildShowcase(host);
+        if (tutorial)
+        {
+            // An empty factory at the tutorial's first building step.
+            hud.StartTutorial();
+            hud.Tutorial.Next();
+        }
         host.TimeScale = 16;
         string? screenshot = null;
         double wait = 3.0;
@@ -90,7 +98,7 @@ public partial class Main : Node3D
             GD.Print($"SMOKE: {w.EntityCount} buildings, {w.Tick} ticks, money {w.Money.Format()}, " +
                      $"income {w.Stats.IncomePerSecond(10).Format()}/s");
             if (screenshot != null) GetViewport().GetTexture().GetImage().SavePng(screenshot);
-            GetTree().Quit(w.Stats.TotalEarned.IsZero && !showcase ? 1 : 0);
+            GetTree().Quit(w.Stats.TotalEarned.IsZero && !showcase && !tutorial ? 1 : 0);
         };
     }
 
