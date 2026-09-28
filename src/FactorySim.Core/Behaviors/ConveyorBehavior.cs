@@ -35,12 +35,13 @@ public sealed class ItemEffect
     /// <summary>Only affect these item types (null = all).</summary>
     public string[]? Items { get; init; }
 
-    public bool Apply(ItemStack item)
+    /// <summary>Applies the effect; <paramref name="bonus"/> is an extra value multiplier from the building's level.</summary>
+    public bool Apply(ItemStack item, double bonus = 1)
     {
         if (Once && item.HasTag(Tag)) return false;
         if (RequiresTag != null && !item.HasTag(RequiresTag)) return false;
         if (Items != null && Array.IndexOf(Items, item.Type) < 0) return false;
-        if (ValueMultiplier != 1) item.UnitValue *= ValueMultiplier;
+        if (ValueMultiplier * bonus != 1) item.UnitValue *= ValueMultiplier * bonus;
         item.SetTag(Tag, item.GetTag(Tag) + 1);
         return true;
     }
@@ -78,16 +79,20 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
         Require(p.Effect == null || p.Effect.Tag.Length > 0, def, "effect needs a tag.");
     }
 
+    /// <summary>Belts cap at level 5, where speed reaches spacing (the physical limit: 2.5× base).</summary>
+    public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
+        new() { MaxLevel = 5, SpeedPerLevel = 0.375, CostFactor = 3, CostGrowth = 2.2 };
+
     /// <summary>Effective speed; capped at Spacing so at most one item crosses an edge per tick.</summary>
-    public static int EffectiveSpeed(TickContext ctx, ConveyorParams p) =>
-        Math.Clamp((int)(p.Speed * ctx.Stat(StatIds.ConveyorSpeed)), 1, p.Spacing);
+    public static int EffectiveSpeed(TickContext ctx, Entity e, ConveyorParams p) =>
+        Math.Clamp((int)(p.Speed * ctx.Stat(StatIds.ConveyorSpeed) * e.SpeedFactor), 1, p.Spacing);
 
     protected override void Tick(TickContext ctx, Entity e, ConveyorParams p, ConveyorState s)
     {
         var items = s.Items;
         if (items.Count == 0) return;
 
-        int speed = EffectiveSpeed(ctx, p);
+        int speed = EffectiveSpeed(ctx, e, p);
         int outPort = e.Def.OutputPorts[0];
         int w = 0; // write index: compacts the list as items leave
 
@@ -148,7 +153,7 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
 
         if (side == Side.Back || side == CurveSide(e))
         {
-            entry = Math.Min(overflow, EffectiveSpeed(ctx, p));
+            entry = Math.Min(overflow, EffectiveSpeed(ctx, e, p));
             if (items.Count > 0) entry = Math.Min(entry, items[^1].Pos - p.Spacing);
             if (entry < 0) return false;
             index = items.Count;
@@ -163,7 +168,7 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
             if (index < items.Count && entry - items[index].Pos < p.Spacing) return false;
         }
 
-        p.Effect?.Apply(item);
+        p.Effect?.Apply(item, e.ValueFactor);
         items.Insert(index, new BeltItem(item, entry));
         return true;
     }
@@ -178,10 +183,11 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
 
     protected override void Describe(Entity e, ConveyorParams p, ConveyorState s, List<InfoLine> into)
     {
-        into.Add(new InfoLine("Speed", $"{p.Speed * Simulation.TicksPerSecond / (double)Length:0.##} tiles/s"));
-        into.Add(new InfoLine("Capacity", $"{p.Speed * Simulation.TicksPerSecond / (double)p.Spacing:0.#} items/s"));
+        double speed = Math.Min(p.Speed * e.SpeedFactor, p.Spacing);
+        into.Add(new InfoLine("Speed", $"{speed * Simulation.TicksPerSecond / Length:0.##} tiles/s"));
+        into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
         if (p.Effect != null)
-            into.Add(new InfoLine("Effect", $"×{p.Effect.ValueMultiplier:0.##} value{(p.Effect.Once ? ", once" : "")} [{p.Effect.Tag}]"));
+            into.Add(new InfoLine("Effect", $"×{p.Effect.ValueMultiplier * e.ValueFactor:0.##} value{(p.Effect.Once ? ", once per item" : "")}"));
         into.Add(new InfoLine("On belt", s.Items.Count.ToString()));
     }
 }

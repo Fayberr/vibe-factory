@@ -3,136 +3,321 @@
 //
 // Units: 20 ticks = 1 second. Conveyor tile = 1000 units.
 // Ports: "side" is relative to the building facing north; "cell" is a footprint cell.
+// Buildings: "tier" gates unlocking; "group"/"replaces" control placing on top of other
+// buildings (a splitter can be dropped into a belt line, a belt never replaces a machine);
+// "upgrade" overrides the behavior's default level-up track.
 // "meta" is ignored by the simulation — frontends use it:
-//   model   which procedural 3D model the Godot client builds (belt, ramp, splitter, merger,
-//           drill, furnace, forge, polisher, depot)
-//   color   main body/item colour, accent = highlight colour, glyph = ASCII view,
-//   shape   item mesh (rock, ingot), description = build menu text.
+//   model   procedural 3D model in the Godot client; accent = highlight colour
+//   level   placement height above the ground (1 = bridge level)
+//   glyph   ASCII view; description = build menu text; items: color + shape (mesh).
 {
+  "tiers": [
+    { "name": "Basics",         "description": "Drill, smelt, sell.",                         "cost": 0,     "requiredEarnings": 0,     "plotSize": 24 },
+    { "name": "Workshop",       "description": "Copper, wood, presses, bridges and polish.",  "cost": 400,   "requiredEarnings": 600,   "plotSize": 30 },
+    { "name": "Industry",       "description": "Coal, steel, sand, glass and crates.",        "cost": 5000,  "requiredEarnings": 8000,  "plotSize": 36 },
+    { "name": "Petrochemicals", "description": "Oil, plastic, toys and export terminals.",    "cost": 6e4,   "requiredEarnings": 1e5,   "plotSize": 44 },
+    { "name": "Electronics",    "description": "Gold, circuits, motors and jewelry.",         "cost": 8e5,   "requiredEarnings": 1.5e6, "plotSize": 52 },
+    { "name": "Robotics",       "description": "Robots: the crown of the chain.",             "cost": 1.2e7, "requiredEarnings": 2e7,   "plotSize": 64 }
+  ],
+
   "items": [
-    { "id": "iron_ore",   "name": "Iron Ore",     "baseValue": 1,   "meta": { "color": "#7c7470", "shape": "rock" } },
-    { "id": "copper_ore", "name": "Copper Ore",   "baseValue": 1.5, "meta": { "color": "#d9773a", "shape": "rock" } },
-    { "id": "iron_ingot", "name": "Iron Ingot",   "baseValue": 0,   "meta": { "color": "#dfe6ee", "shape": "ingot" } },
-    { "id": "bronze",     "name": "Bronze Alloy", "baseValue": 0,   "meta": { "color": "#e0a93b", "shape": "ingot" } }
+    { "id": "iron_ore",     "name": "Iron Ore",     "baseValue": 1,   "meta": { "color": "#7c7470", "shape": "rock" } },
+    { "id": "copper_ore",   "name": "Copper Ore",   "baseValue": 1.5, "meta": { "color": "#d9773a", "shape": "rock" } },
+    { "id": "coal",         "name": "Coal",         "baseValue": 1.5, "meta": { "color": "#34343a", "shape": "rock" } },
+    { "id": "log",          "name": "Log",          "baseValue": 1.2, "meta": { "color": "#8a5a33", "shape": "log" } },
+    { "id": "sand",         "name": "Sand",         "baseValue": 0.8, "meta": { "color": "#e4cc92", "shape": "pile" } },
+    { "id": "crude_oil",    "name": "Crude Oil",    "baseValue": 5,   "meta": { "color": "#2c2838", "shape": "barrel" } },
+    { "id": "gold_ore",     "name": "Gold Ore",     "baseValue": 12,  "meta": { "color": "#e8c547", "shape": "rock" } },
+    { "id": "iron_ingot",   "name": "Iron Ingot",   "baseValue": 0,   "meta": { "color": "#dfe6ee", "shape": "ingot" } },
+    { "id": "copper_ingot", "name": "Copper Ingot", "baseValue": 0,   "meta": { "color": "#e8905a", "shape": "ingot" } },
+    { "id": "gold_ingot",   "name": "Gold Ingot",   "baseValue": 0,   "meta": { "color": "#f6cf4a", "shape": "ingot" } },
+    { "id": "plank",        "name": "Plank",        "baseValue": 0,   "meta": { "color": "#dcb57e", "shape": "plank" } },
+    { "id": "iron_plate",   "name": "Iron Plate",   "baseValue": 0,   "meta": { "color": "#b9c4d0", "shape": "plate" } },
+    { "id": "copper_wire",  "name": "Copper Wire",  "baseValue": 0,   "meta": { "color": "#e8894a", "shape": "coil" } },
+    { "id": "steel",        "name": "Steel Beam",   "baseValue": 0,   "meta": { "color": "#7d8fa8", "shape": "ingot" } },
+    { "id": "glass",        "name": "Glass",        "baseValue": 0,   "meta": { "color": "#a8e2f7", "shape": "pane" } },
+    { "id": "plastic",      "name": "Plastic",      "baseValue": 0,   "meta": { "color": "#5fd3e0", "shape": "plate" } },
+    { "id": "crate",        "name": "Crate",        "baseValue": 0,   "meta": { "color": "#b98a52", "shape": "box" } },
+    { "id": "toy",          "name": "Toy",          "baseValue": 0,   "meta": { "color": "#ff5a6a", "shape": "toy" } },
+    { "id": "circuit",      "name": "Circuit",      "baseValue": 0,   "meta": { "color": "#3fbf6a", "shape": "chip" } },
+    { "id": "motor",        "name": "Motor",        "baseValue": 0,   "meta": { "color": "#9aa6b4", "shape": "motor" } },
+    { "id": "jewelry",      "name": "Jewelry",      "baseValue": 0,   "meta": { "color": "#b86bff", "shape": "gem" } },
+    { "id": "robot",        "name": "Robot",        "baseValue": 0,   "meta": { "color": "#f2f4f7", "shape": "robot" } }
   ],
 
   "recipes": [
-    {
-      "id": "smelt_iron",
-      "inputs":  [ { "item": "iron_ore", "count": 1 } ],
-      "outputs": [ { "item": "iron_ingot", "count": 1 } ],
-      "ticks": 16,
-      "valueMultiplier": 2
-    },
-    {
-      "id": "alloy_bronze",
-      "inputs":  [ { "item": "iron_ingot", "count": 1 }, { "item": "copper_ore", "count": 1 } ],
-      "outputs": [ { "item": "bronze", "count": 2 } ],
-      "ticks": 30,
-      "valueMultiplier": 3
-    }
+    { "id": "smelt_iron",     "inputs": [ { "item": "iron_ore", "count": 1 } ],   "outputs": [ { "item": "iron_ingot", "count": 1 } ],   "ticks": 16, "valueMultiplier": 2 },
+    { "id": "smelt_copper",   "inputs": [ { "item": "copper_ore", "count": 1 } ], "outputs": [ { "item": "copper_ingot", "count": 1 } ], "ticks": 16, "valueMultiplier": 2 },
+    { "id": "smelt_gold",     "inputs": [ { "item": "gold_ore", "count": 1 } ],   "outputs": [ { "item": "gold_ingot", "count": 1 } ],   "ticks": 24, "valueMultiplier": 2.5 },
+    { "id": "saw_planks",     "inputs": [ { "item": "log", "count": 1 } ],        "outputs": [ { "item": "plank", "count": 2 } ],        "ticks": 20, "valueMultiplier": 1.8 },
+    { "id": "press_plate",    "inputs": [ { "item": "iron_ingot", "count": 1 } ], "outputs": [ { "item": "iron_plate", "count": 1 } ],   "ticks": 16, "valueMultiplier": 1.5 },
+    { "id": "draw_wire",      "inputs": [ { "item": "copper_ingot", "count": 1 } ], "outputs": [ { "item": "copper_wire", "count": 2 } ], "ticks": 16, "valueMultiplier": 1.6 },
+    { "id": "forge_steel",    "inputs": [ { "item": "iron_ingot", "count": 1 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "steel", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 },
+    { "id": "melt_glass",     "inputs": [ { "item": "sand", "count": 2 } ],       "outputs": [ { "item": "glass", "count": 1 } ],        "ticks": 24, "valueMultiplier": 3 },
+    { "id": "refine_plastic", "inputs": [ { "item": "crude_oil", "count": 1 } ],  "outputs": [ { "item": "plastic", "count": 2 } ],      "ticks": 30, "valueMultiplier": 2 },
+    { "id": "build_crate",    "inputs": [ { "item": "plank", "count": 2 }, { "item": "iron_plate", "count": 1 } ], "outputs": [ { "item": "crate", "count": 1 } ], "ticks": 30, "valueMultiplier": 2 },
+    { "id": "make_toy",       "inputs": [ { "item": "plastic", "count": 1 }, { "item": "plank", "count": 1 } ], "outputs": [ { "item": "toy", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 },
+    { "id": "make_circuit",   "inputs": [ { "item": "copper_wire", "count": 2 }, { "item": "plastic", "count": 1 } ], "outputs": [ { "item": "circuit", "count": 1 } ], "ticks": 40, "valueMultiplier": 3 },
+    { "id": "make_motor",     "inputs": [ { "item": "steel", "count": 1 }, { "item": "circuit", "count": 1 }, { "item": "copper_wire", "count": 2 } ], "outputs": [ { "item": "motor", "count": 1 } ], "ticks": 60, "valueMultiplier": 2.5 },
+    { "id": "make_jewelry",   "inputs": [ { "item": "gold_ingot", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "jewelry", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
+    { "id": "make_robot",     "inputs": [ { "item": "motor", "count": 1 }, { "item": "circuit", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "robot", "count": 1 } ], "ticks": 80, "valueMultiplier": 3 }
   ],
 
   "buildings": [
+    // ---- Logistics -----------------------------------------------------------------
     {
-      // Straight belt. It curves automatically when fed only from one side.
-      "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 1, "category": "logistics",
+      "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 1, "category": "logistics", "tier": 0,
+      "group": "belt", "replaces": [ "belt" ],
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
         { "kind": "out", "side": "front" }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "model": "belt", "glyph": "belt", "description": "Moves items. Bends into a curve when fed from one side only." }
+      "meta": { "model": "belt", "glyph": "belt", "description": "Moves items. Bends into a curve when fed from one side only. Drag to lay a line." }
     },
     {
-      // Occupies its cell and the one above; enters low at the back, leaves one layer up at the front.
-      "id": "ramp_up", "name": "Ramp Up", "behavior": "conveyor", "cost": 5, "category": "logistics",
+      // Same belt, one level up: other lines can run underneath. The client places it at bridge height.
+      "id": "bridge_belt", "name": "Bridge Belt", "behavior": "conveyor", "cost": 4, "category": "logistics", "tier": 0,
+      "group": "bridge", "replaces": [ "bridge" ],
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
+        { "kind": "out", "side": "front" }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "model": "belt", "level": "1", "glyph": "=", "description": "A belt on pillars at bridge height. Ground belts can pass underneath it." }
+    },
+    {
+      // Occupies its cell and the one above; enters low at the back, leaves at bridge height at the front.
+      "id": "ramp_up", "name": "Bridge Ramp Up", "behavior": "conveyor", "cost": 6, "category": "logistics", "tier": 0,
+      "group": "ramp", "replaces": [ "belt", "ramp", "bridge" ],
       "footprint": [ [0, 0, 0], [0, 0, 1] ],
       "ports": [
         { "kind": "in", "side": "back", "cell": [0, 0, 0] },
         { "kind": "out", "side": "front", "cell": [0, 0, 1] }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "model": "ramp", "glyph": "U", "description": "Lifts items one layer up. Build bridges over other lines." }
+      "meta": { "model": "ramp", "glyph": "U", "description": "Lifts items from the ground to bridge height. Place it on a belt to start a bridge." }
     },
     {
-      "id": "ramp_down", "name": "Ramp Down", "behavior": "conveyor", "cost": 5, "category": "logistics",
+      "id": "ramp_down", "name": "Bridge Ramp Down", "behavior": "conveyor", "cost": 6, "category": "logistics", "tier": 0,
+      "group": "ramp", "replaces": [ "belt", "ramp", "bridge" ],
       "footprint": [ [0, 0, 0], [0, 0, 1] ],
       "ports": [
         { "kind": "in", "side": "back", "cell": [0, 0, 1] },
         { "kind": "out", "side": "front", "cell": [0, 0, 0] }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "model": "ramp", "glyph": "D", "description": "Drops items one layer down." }
+      "meta": { "model": "ramp", "glyph": "D", "description": "Brings items from bridge height back down to the ground." }
     },
     {
-      "id": "splitter", "name": "Splitter", "behavior": "router", "cost": 20, "category": "logistics",
+      "id": "splitter", "name": "Splitter", "behavior": "router", "cost": 20, "category": "logistics", "tier": 0,
+      "group": "hub", "replaces": [ "belt", "hub" ],
       "ports": [
         { "kind": "in", "side": "back" },
         { "kind": "out", "side": "front" }, { "kind": "out", "side": "left" }, { "kind": "out", "side": "right" }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "model": "splitter", "glyph": "Y", "accent": "#4fb6ff", "description": "Distributes items evenly over up to three outputs; skips blocked ones." }
+      "meta": { "model": "splitter", "glyph": "Y", "accent": "#4fb6ff", "description": "Distributes items evenly over up to three outputs; skips blocked ones. Drop it onto a belt." }
     },
     {
-      "id": "merger", "name": "Merger", "behavior": "router", "cost": 20, "category": "logistics",
+      "id": "merger", "name": "Merger", "behavior": "router", "cost": 20, "category": "logistics", "tier": 0,
+      "group": "hub", "replaces": [ "belt", "hub" ],
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
         { "kind": "out", "side": "front" }
       ],
       "params": { "speed": 100, "spacing": 250 },
-      "meta": { "model": "merger", "glyph": "X", "accent": "#ffb347", "description": "Joins up to three lines fairly into one." }
+      "meta": { "model": "merger", "glyph": "X", "accent": "#ffb347", "description": "Joins up to three lines fairly into one. Drop it onto a belt." }
     },
     {
-      "id": "iron_miner", "name": "Iron Drill", "behavior": "miner", "cost": 25, "category": "production",
+      "id": "bridge_splitter", "name": "Bridge Splitter", "behavior": "router", "cost": 30, "category": "logistics", "tier": 1,
+      "group": "bridgehub", "replaces": [ "bridge", "bridgehub" ],
+      "ports": [
+        { "kind": "in", "side": "back" },
+        { "kind": "out", "side": "front" }, { "kind": "out", "side": "left" }, { "kind": "out", "side": "right" }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "model": "splitter", "level": "1", "glyph": "y", "accent": "#4fb6ff", "description": "Splitter at bridge height." }
+    },
+    {
+      "id": "bridge_merger", "name": "Bridge Merger", "behavior": "router", "cost": 30, "category": "logistics", "tier": 1,
+      "group": "bridgehub", "replaces": [ "bridge", "bridgehub" ],
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
+        { "kind": "out", "side": "front" }
+      ],
+      "params": { "speed": 100, "spacing": 250 },
+      "meta": { "model": "merger", "level": "1", "glyph": "x", "accent": "#ffb347", "description": "Merger at bridge height." }
+    },
+
+    // ---- Production ----------------------------------------------------------------
+    {
+      "id": "iron_miner", "name": "Iron Drill", "behavior": "miner", "cost": 25, "category": "production", "tier": 0,
+      "group": "extractor", "replaces": [ "extractor" ],
       "ports": [ { "kind": "out", "side": "front" } ],
       "params": { "item": "iron_ore", "interval": 20, "amount": 1 },
       "meta": { "model": "drill", "accent": "#8d95a3", "glyph": "M", "description": "Extracts iron ore: 1 per second." }
     },
     {
-      "id": "copper_miner", "name": "Copper Drill", "behavior": "miner", "cost": 60, "category": "production",
+      "id": "copper_miner", "name": "Copper Drill", "behavior": "miner", "cost": 60, "category": "production", "tier": 1,
+      "group": "extractor", "replaces": [ "extractor" ],
       "ports": [ { "kind": "out", "side": "front" } ],
       "params": { "item": "copper_ore", "interval": 30, "amount": 1 },
-      "meta": { "model": "drill", "accent": "#e07a3a", "glyph": "C", "description": "Extracts copper ore: 1 every 1.5 seconds." }
+      "meta": { "model": "drill", "accent": "#e07a3a", "glyph": "C", "description": "Extracts copper ore: 1 every 1.5 s." }
     },
     {
-      "id": "smelter", "name": "Smelter", "behavior": "processor", "cost": 80, "category": "processing",
-      "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
-      "params": { "recipes": [ "smelt_iron" ], "inputCapacity": 8, "outputCapacity": 8 },
-      "meta": { "model": "furnace", "accent": "#ff7a2f", "glyph": "S", "description": "Smelts ore into ingots worth 2× the ore." }
+      "id": "lumber_camp", "name": "Lumber Camp", "behavior": "miner", "cost": 80, "category": "production", "tier": 1,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "log", "interval": 24, "amount": 1 },
+      "meta": { "model": "treefarm", "accent": "#4f9d4a", "glyph": "L", "description": "Grows and fells trees: 1 log every 1.2 s." }
     },
     {
-      // Same behavior as the smelter, different recipe and three inputs: merging is just data.
-      "id": "alloy_forge", "name": "Alloy Forge", "behavior": "processor", "cost": 400, "category": "processing",
-      "ports": [
-        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
-        { "kind": "out", "side": "front" }
-      ],
-      "params": { "recipes": [ "alloy_bronze" ], "inputCapacity": 8, "outputCapacity": 8 },
-      "meta": { "model": "forge", "accent": "#f2b134", "glyph": "A", "description": "Fuses iron ingots and copper ore into bronze (×3 value)." }
+      "id": "coal_miner", "name": "Coal Drill", "behavior": "miner", "cost": 400, "category": "production", "tier": 2,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "coal", "interval": 24, "amount": 1 },
+      "meta": { "model": "drill", "accent": "#3b3f47", "glyph": "K", "description": "Extracts coal: 1 every 1.2 s." }
+    },
+    {
+      "id": "sand_quarry", "name": "Sand Quarry", "behavior": "miner", "cost": 350, "category": "production", "tier": 2,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "sand", "interval": 16, "amount": 1 },
+      "meta": { "model": "quarry", "accent": "#e0b862", "glyph": "Q", "description": "Sifts sand: 1 every 0.8 s." }
+    },
+    {
+      "id": "oil_pump", "name": "Oil Pump", "behavior": "miner", "cost": 5000, "category": "production", "tier": 3,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "crude_oil", "interval": 40, "amount": 1 },
+      "meta": { "model": "pump", "accent": "#e2513a", "glyph": "O", "description": "Pumps crude oil: 1 barrel every 2 s." }
+    },
+    {
+      "id": "gold_miner", "name": "Gold Drill", "behavior": "miner", "cost": 6e4, "category": "production", "tier": 4,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "gold_ore", "interval": 40, "amount": 1 },
+      "meta": { "model": "drill", "accent": "#f2c14e", "glyph": "G", "description": "Extracts gold ore: 1 every 2 s." }
+    },
+
+    // ---- Processing ------------------------------------------------------------------
+    {
+      "id": "smelter", "name": "Smelter", "behavior": "processor", "cost": 80, "category": "processing", "tier": 0,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "smelt_iron", "smelt_copper", "smelt_gold" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "furnace", "accent": "#ff7a2f", "glyph": "S", "description": "Smelts iron, copper or gold ore into ingots (2× value)." }
     },
     {
       // An in-line upgrader is a conveyor with an effect: ×1.5 value, once per item.
-      "id": "polisher", "name": "Polisher", "behavior": "conveyor", "cost": 150, "category": "processing",
+      "id": "polisher", "name": "Polisher", "behavior": "conveyor", "cost": 150, "category": "processing", "tier": 1,
+      "group": "belt", "replaces": [ "belt" ],
+      "upgrade": { "maxLevel": 10, "speedPerLevel": 0.15, "valuePerLevel": 0.1, "costFactor": 1.5, "costGrowth": 1.8 },
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
       "params": { "speed": 100, "spacing": 250, "effect": { "tag": "polished", "valueMultiplier": 1.5, "once": true } },
-      "meta": { "model": "polisher", "accent": "#35d0c9", "glyph": "P", "description": "In-line upgrader: ×1.5 value, once per item." }
+      "meta": { "model": "polisher", "accent": "#35d0c9", "glyph": "P", "description": "In-line upgrader: ×1.5 value, once per item. Drop it onto a belt." }
     },
     {
-      "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 10, "category": "economy",
+      "id": "sawmill", "name": "Sawmill", "behavior": "processor", "cost": 120, "category": "processing", "tier": 1,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "saw_planks" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "sawmill", "accent": "#c98a45", "glyph": "W", "description": "Saws each log into 2 planks." }
+    },
+    {
+      "id": "press", "name": "Press", "behavior": "processor", "cost": 200, "category": "processing", "tier": 1,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "press_plate", "draw_wire" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "press", "accent": "#5b8def", "glyph": "R", "description": "Presses iron ingots into plates and draws copper ingots into wire." }
+    },
+    {
+      "id": "blast_furnace", "name": "Blast Furnace", "behavior": "processor", "cost": 1500, "category": "processing", "tier": 2,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "forge_steel" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "forge", "accent": "#ff5a2a", "glyph": "B", "description": "Fuses iron ingots with coal into steel (2.5× value)." }
+    },
+    {
+      "id": "glassworks", "name": "Glassworks", "behavior": "processor", "cost": 900, "category": "processing", "tier": 2,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "melt_glass" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "forge", "accent": "#63c8f2", "glyph": "g", "description": "Melts 2 sand into glass (3× value)." }
+    },
+    {
+      "id": "refinery", "name": "Oil Refinery", "behavior": "processor", "cost": 8000, "category": "processing", "tier": 3,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "refine_plastic" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "refinery", "accent": "#e2513a", "glyph": "F", "description": "Refines each barrel of crude into 2 plastic." }
+    },
+
+    // ---- Crafting ------------------------------------------------------------------------
+    {
+      "id": "workshop", "name": "Workshop", "behavior": "processor", "cost": 2500, "category": "crafting", "tier": 2,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "build_crate" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#c98a45", "glyph": "w", "description": "Builds crates from 2 planks and an iron plate." }
+    },
+    {
+      "id": "toy_factory", "name": "Toy Factory", "behavior": "processor", "cost": 1.5e4, "category": "crafting", "tier": 3,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_toy" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#ff5a6a", "glyph": "T", "description": "Makes toys from plastic and planks." }
+    },
+    {
+      "id": "assembler", "name": "Assembler", "behavior": "processor", "cost": 1.2e5, "category": "crafting", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_circuit", "make_motor" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#3fbf6a", "glyph": "E", "description": "Assembles circuits (wire + plastic) and motors (steel + circuit + wire)." }
+    },
+    {
+      "id": "jeweler", "name": "Jeweler", "behavior": "processor", "cost": 2e5, "category": "crafting", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_jewelry" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#b86bff", "glyph": "J", "description": "Sets gold ingots and glass into jewelry." }
+    },
+    {
+      "id": "robotics_lab", "name": "Robotics Lab", "behavior": "processor", "cost": 2e6, "category": "crafting", "tier": 5,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_robot" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#e9eef5", "glyph": "Z", "description": "Builds robots from a motor, a circuit and glass." }
+    },
+
+    // ---- Economy -------------------------------------------------------------------------
+    {
+      "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 10, "category": "economy", "tier": 0,
+      "group": "seller", "replaces": [ "seller", "belt" ],
       "ports": [
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" },
         { "kind": "in", "side": "right" }, { "kind": "in", "side": "front" }
       ],
-      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered from any side." }
+      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered from any side. Upgrade it for better prices." }
+    },
+    {
+      "id": "export_terminal", "name": "Export Terminal", "behavior": "seller", "cost": 2.5e4, "category": "economy", "tier": 3,
+      "group": "seller", "replaces": [ "seller", "belt" ],
+      "ports": [
+        { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" },
+        { "kind": "in", "side": "right" }, { "kind": "in", "side": "front" }
+      ],
+      "params": { "multiplier": 2 },
+      "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price." }
     }
   ],
 
   "upgrades": [
-    { "id": "belt_speed",   "name": "Belt Speed",   "stat": "conveyor.speed",      "effect": "multiply", "perLevel": 1.1,  "baseCost": 100, "costGrowth": 1.6, "maxLevel": 9 },
-    { "id": "miner_rate",   "name": "Drill Rate",   "stat": "miner.rate",          "effect": "multiply", "perLevel": 1.15, "baseCost": 50,  "costGrowth": 1.5 },
-    { "id": "machine_speed","name": "Machine Speed","stat": "machine.speed",       "effect": "multiply", "perLevel": 1.15, "baseCost": 150, "costGrowth": 1.55 },
-    { "id": "sell_price",   "name": "Sell Price",   "stat": "sell.multiplier",     "effect": "multiply", "perLevel": 1.25, "baseCost": 250, "costGrowth": 1.8 },
-    { "id": "stack_size",   "name": "Stack Size",   "stat": "logistics.stackSize", "effect": "add",      "perLevel": 1,    "baseCost": 500, "costGrowth": 2.2 }
+    { "id": "belt_speed",   "name": "Belt Speed",    "stat": "conveyor.speed",      "effect": "multiply", "perLevel": 1.1,  "baseCost": 100, "costGrowth": 1.6, "maxLevel": 9 },
+    { "id": "miner_rate",   "name": "Extraction",    "stat": "miner.rate",          "effect": "multiply", "perLevel": 1.15, "baseCost": 50,  "costGrowth": 1.5 },
+    { "id": "machine_speed","name": "Machine Speed", "stat": "machine.speed",       "effect": "multiply", "perLevel": 1.15, "baseCost": 150, "costGrowth": 1.55 },
+    { "id": "sell_price",   "name": "Market Prices", "stat": "sell.multiplier",     "effect": "multiply", "perLevel": 1.25, "baseCost": 250, "costGrowth": 1.8 },
+    { "id": "stack_size",   "name": "Stack Size",    "stat": "logistics.stackSize", "effect": "add",      "perLevel": 1,    "baseCost": 500, "costGrowth": 2.2 }
   ]
 }

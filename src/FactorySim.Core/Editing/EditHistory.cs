@@ -12,7 +12,7 @@ public sealed class EditHistory
 {
     private sealed class Step
     {
-        public readonly List<(Command Do, Command Undo)> Ops = new();
+        public readonly List<(Command Do, IReadOnlyList<Command> Undo)> Ops = new();
     }
 
     private readonly Simulation _sim;
@@ -59,11 +59,14 @@ public sealed class EditHistory
         _undo.RemoveAt(_undo.Count - 1);
         for (int i = step.Ops.Count - 1; i >= 0; i--)
         {
-            var r = _sim.Execute(step.Ops[i].Undo);
-            if (!r.Ok)
+            foreach (var undo in step.Ops[i].Undo)
             {
-                Changed?.Invoke();
-                return CommandResult.Fail($"Undo failed: {r.Error}");
+                var r = _sim.Execute(undo);
+                if (!r.Ok)
+                {
+                    Changed?.Invoke();
+                    return CommandResult.Fail($"Undo failed: {r.Error}");
+                }
             }
         }
         _redo.Push(step);
@@ -96,7 +99,7 @@ public sealed class EditHistory
         Changed?.Invoke();
     }
 
-    private void Record(Command command, Command inverse)
+    private void Record(Command command, IReadOnlyList<Command> inverse)
     {
         if (_open != null)
         {
@@ -116,31 +119,43 @@ public sealed class EditHistory
         Changed?.Invoke();
     }
 
-    /// <summary>The command that reverts <paramref name="command"/>, from the world as it is now (before it runs).</summary>
-    private Command? Inverse(Command command)
+    /// <summary>Commands that revert <paramref name="command"/>, from the world as it is now (before it runs).</summary>
+    private IReadOnlyList<Command>? Inverse(Command command)
     {
         var world = _sim.World;
         switch (command)
         {
             case PlaceBuilding p:
-                return new RemoveBuildings(new[] { p.Pos });
+                var undo = new List<Command> { new RemoveBuildings(new[] { p.Pos }) };
+                if (p.Replace && world.Content.Buildings.TryGetValue(p.DefId, out var def))
+                {
+                    var replaced = new List<Entity>();
+                    if (world.CanPlaceReplacing(def, p.Pos, p.Facing, replaced).Ok && replaced.Count > 0) undo.Add(Restore(replaced));
+                }
+                return undo;
             case PlaceBlueprint pb:
-                return new RemoveBuildings(pb.Blueprint.Placements(pb.At, pb.QuarterTurns).Select(x => x.Pos).ToList());
+                return One(new RemoveBuildings(pb.Blueprint.Placements(pb.At, pb.QuarterTurns).Select(x => x.Pos).ToList()));
             case RemoveBuilding r:
-                return world.EntityAt(r.Cell) is { } e ? Restore(new[] { e }) : null;
+                return world.EntityAt(r.Cell) is { } e ? One(Restore(new[] { e })) : null;
             case RemoveBuildings rs:
                 var removed = rs.Cells.Select(world.EntityAt).OfType<Entity>().Distinct().ToList();
-                return removed.Count > 0 ? Restore(removed) : null;
+                return removed.Count > 0 ? One(Restore(removed)) : null;
             case RotateBuilding rot:
-                return world.EntityAt(rot.Cell) is { } turned ? new RotateBuilding(turned.Pos, turned.Facing) : null;
+                return world.EntityAt(rot.Cell) is { } turned ? One(new RotateBuilding(turned.Pos, turned.Facing)) : null;
             case MoveBuildings m:
                 var moved = m.Cells.Select(world.EntityAt).OfType<Entity>().Distinct().ToList();
                 var newAnchors = moved.Select(e => (e.Pos - m.Pivot).Rotate(m.QuarterTurns) + m.Pivot + m.Delta).ToList();
-                return new MoveBuildings(newAnchors, GridPos.Zero - m.Delta, -m.QuarterTurns, m.Pivot + m.Delta);
+                return One(new MoveBuildings(newAnchors, GridPos.Zero - m.Delta, -m.QuarterTurns, m.Pivot + m.Delta));
+            case SetBuildingLevels lv:
+                var before = lv.Changes.Select(ch => world.EntityAt(ch.Cell)).OfType<Entity>().Distinct()
+                    .Select(e => new LevelChange(e.Pos, e.Level)).ToList();
+                return before.Count > 0 ? One(new SetBuildingLevels(before)) : null;
             default:
-                return null; // upgrades and unknown commands are not undoable
+                return null; // research, tiers and unknown commands are not undoable
         }
     }
+
+    private static IReadOnlyList<Command> One(Command c) => new[] { c };
 
     private static Command Restore(IEnumerable<Entity> entities) =>
         new PlaceBlueprint(Blueprint.FromEntities(entities, GridPos.Zero), GridPos.Zero);

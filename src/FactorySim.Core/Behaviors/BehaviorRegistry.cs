@@ -24,5 +24,7 @@ public sealed class BehaviorRegistry
 
     public bool TryGet(string name, out IBehavior behavior) => _behaviors.TryGetValue(name, out behavior!);
 
+    public IBehavior Get(string name) => _behaviors[name];
+
     public IEnumerable<string> Names => _behaviors.Keys;
 }

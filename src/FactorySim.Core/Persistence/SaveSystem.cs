@@ -17,6 +17,7 @@ public sealed class SaveData
     public long NextItemUid { get; set; }
     public GridBounds Bounds { get; set; }
     public bool Sandbox { get; set; }
+    public int UnlockedTier { get; set; }
     public Dictionary<string, int> Upgrades { get; set; } = new();
     public StatsTracker Stats { get; set; } = new();
     public List<EntitySave> Entities { get; set; } = new();
@@ -28,6 +29,9 @@ public sealed class EntitySave
     public string Def { get; set; } = "";
     public GridPos Pos { get; set; }
     public Dir Facing { get; set; }
+
+    /// <summary>Upgrade level (missing in old saves → 1).</summary>
+    public int Level { get; set; } = 1;
 
     /// <summary>Behavior state, serialized via the behavior's own state type (open to new behaviors).</summary>
     public JsonElement? State { get; set; }
@@ -54,6 +58,7 @@ public static class SaveSystem
         NextItemUid = world.NextItemUid,
         Bounds = world.Bounds,
         Sandbox = world.Sandbox,
+        UnlockedTier = world.UnlockedTier,
         Upgrades = new Dictionary<string, int>(world.UpgradeLevels),
         Stats = world.Stats,
         Entities = world.Entities.OrderBy(e => e.Id).Select(e => new EntitySave
@@ -62,6 +67,7 @@ public static class SaveSystem
             Def = e.Def.Id,
             Pos = e.Pos,
             Facing = e.Facing,
+            Level = e.Level,
             State = JsonSerializer.SerializeToElement(e.State, e.Behavior.StateType, Json.Options),
         }).ToList(),
     };
@@ -83,6 +89,7 @@ public static class SaveSystem
             Money = data.Money,
             Bounds = data.Bounds,
             Sandbox = data.Sandbox,
+            UnlockedTier = Math.Clamp(data.UnlockedTier, 0, content.Tiers.Count - 1),
             Stats = data.Stats,
         };
         foreach (var (id, level) in data.Upgrades)
@@ -113,7 +120,7 @@ public static class SaveSystem
             {
                 warnings.Add($"Reset state of entity #{es.Id} ({es.Def}): {ex.Message}");
             }
-            world.AddEntity(def, es.Pos, es.Facing, es.Id, state);
+            world.AddEntity(def, es.Pos, es.Facing, es.Id, state, Math.Max(1, es.Level));
         }
 
         // Restore counters last: AddEntity bumps NextEntityId past loaded ids.

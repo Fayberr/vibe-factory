@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="FactorySim.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Content/Data/*.json" LogicalName="FactorySim.Content.%(Filename)%(Extension)" />
   </ItemGroup>
 

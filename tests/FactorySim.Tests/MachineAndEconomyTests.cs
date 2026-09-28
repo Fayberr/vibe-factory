@@ -24,16 +24,16 @@ public class MachineAndEconomyTests
     }
 
     [Fact]
-    public void Alloy_forge_merges_ingredients_and_combines_value()
+    public void Workshop_merges_ingredients_and_combines_value()
     {
         var sim = TestUtil.NewSim();
         Samples.DemoLayout.Build(sim);
         sim.Step(20 * 60);
 
-        var bronze = sim.DrainEvents().OfType<ItemSold>().Where(s => s.Item == "bronze").ToList();
-        Assert.NotEmpty(bronze);
-        // (ingot 2 + copper 1.5) × 3 / 2 outputs = 5.25 per unit.
-        Assert.All(bronze, s => Assert.Equal(5.25, s.Payout.ToDouble() / s.Count, 9));
+        var crates = sim.DrainEvents().OfType<ItemSold>().Where(s => s.Item == "crate").ToList();
+        Assert.NotEmpty(crates);
+        // plank = log 1.2 × 1.8 / 2 = 1.08, plate = ore 1 × 2 × 1.5 = 3 → crate = (2 × 1.08 + 3) × 2.
+        Assert.All(crates, s => Assert.Equal(10.32, s.Payout.ToDouble() / s.Count, 9));
     }
 
     [Fact]
@@ -42,11 +42,11 @@ public class MachineAndEconomyTests
         var sim = TestUtil.NewSim();
         sim.Place("copper_miner", 0, 0, 0, Dir.East);
         sim.Place("conveyor", 1, 0, 0, Dir.East);
-        sim.Place("smelter", 2, 0, 0, Dir.East); // smelts iron only
+        sim.Place("press", 2, 0, 0, Dir.East); // takes ingots, not ore
 
         sim.Step(20 * 10);
-        var smelter = sim.World.EntityAt(new GridPos(2, 0, 0))!;
-        Assert.Empty(((ProcessorState)smelter.State).Inputs);
+        var press = sim.World.EntityAt(new GridPos(2, 0, 0))!;
+        Assert.Empty(((ProcessorState)press.State).Inputs);
         Assert.NotEmpty(sim.Belt(1, 0, 0).Items); // copper waits on the belt
     }
 

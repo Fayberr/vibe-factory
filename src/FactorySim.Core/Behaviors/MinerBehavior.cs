@@ -46,7 +46,7 @@ public sealed class MinerBehavior : Behavior<MinerParams, MinerState>
         bool fresh = false;
         if (s.Output == null)
         {
-            s.Work += ctx.Stat(StatIds.MinerRate);
+            s.Work += ctx.Stat(StatIds.MinerRate) * e.SpeedFactor;
             if (s.Work >= p.Interval)
             {
                 long cyclesAllowed = Math.Max(1, ctx.MaxStackSize / p.Amount);
@@ -66,8 +66,11 @@ public sealed class MinerBehavior : Behavior<MinerParams, MinerState>
     protected override void Describe(Entity e, MinerParams p, MinerState s, List<InfoLine> into)
     {
         into.Add(new InfoLine("Produces", p.ItemName));
-        into.Add(new InfoLine("Base rate", $"{p.Amount * Simulation.TicksPerSecond / (double)p.Interval:0.##}/s"));
+        into.Add(new InfoLine("Rate", $"{p.Amount * Simulation.TicksPerSecond * e.SpeedFactor / p.Interval:0.##}/s"));
     }
+
+    public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
+        new() { MaxLevel = 25, SpeedPerLevel = 0.5, CostFactor = 1.2, CostGrowth = 1.65 };
 
     protected override EntityStatus GetStatus(Entity e, MinerParams p, MinerState s) =>
         s.Output == null

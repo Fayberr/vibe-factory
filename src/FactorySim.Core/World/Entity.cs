@@ -28,6 +28,12 @@ public sealed class Entity
     /// <summary>Behavior-owned, JSON-serializable state.</summary>
     public object State { get; internal set; }
 
+    /// <summary>Upgrade level, 1 = as built. Effects come from <see cref="BuildingDef.Upgrade"/>.</summary>
+    public int Level { get; internal set; } = 1;
+
+    public double SpeedFactor => Def.Upgrade?.SpeedFactor(Level) ?? 1;
+    public double ValueFactor => Def.Upgrade?.ValueFactor(Level) ?? 1;
+
     /// <summary>Per port index; only output ports are ever connected. Rebuilt by Topology.</summary>
     internal PortLink[] Links;
 

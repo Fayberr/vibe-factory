@@ -9,7 +9,11 @@ namespace FactorySim;
 /// </summary>
 public abstract record Command;
 
-public sealed record PlaceBuilding(string DefId, GridPos Pos, Dir Facing) : Command;
+/// <summary>
+/// Places a building. With <paramref name="Replace"/>, buildings in its footprint whose group it
+/// may replace are removed first (refunded), and belt contents carry over when compatible.
+/// </summary>
+public sealed record PlaceBuilding(string DefId, GridPos Pos, Dir Facing, bool Replace = false) : Command;
 
 /// <summary>Removes whatever building occupies <paramref name="Cell"/> (any footprint cell).</summary>
 public sealed record RemoveBuilding(GridPos Cell) : Command;
@@ -30,6 +34,15 @@ public sealed record RemoveBuildings(IReadOnlyList<GridPos> Cells) : Command;
 /// new anchor = rotate(anchor − Pivot, QuarterTurns) + Pivot + Delta.
 /// </summary>
 public sealed record MoveBuildings(IReadOnlyList<GridPos> Cells, GridPos Delta, int QuarterTurns = 0, GridPos Pivot = default) : Command;
+
+/// <summary>Target level for the building at <paramref name="Cell"/>.</summary>
+public readonly record struct LevelChange(GridPos Cell, int Level);
+
+/// <summary>Sets building levels atomically, charging (or refunding) the difference in upgrade costs.</summary>
+public sealed record SetBuildingLevels(IReadOnlyList<LevelChange> Changes) : Command;
+
+/// <summary>Unlocks the next progression tier (needs lifetime earnings and money).</summary>
+public sealed record UnlockTier : Command;
 
 public readonly record struct CommandResult(bool Ok, string? Error = null, int EntityId = 0, IReadOnlyList<int>? EntityIds = null)
 {

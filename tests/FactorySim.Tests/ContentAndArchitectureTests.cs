@@ -10,7 +10,7 @@ public class ContentAndArchitectureTests
     {
         var c = TestUtil.Content;
         Assert.IsType<ConveyorParams>(c.Buildings["conveyor"].Params);
-        Assert.IsType<ProcessorParams>(c.Buildings["alloy_forge"].Params);
+        Assert.IsType<ProcessorParams>(c.Buildings["blast_furnace"].Params);
         Assert.Equal(1.5, ((ConveyorParams)c.Buildings["polisher"].Params!).Effect!.ValueMultiplier);
         Assert.Equal("conveyor", c.BuildingList[0].Id);
     }

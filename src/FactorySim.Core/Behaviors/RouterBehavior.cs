@@ -55,14 +55,17 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         return s;
     }
 
-    private static int Speed(TickContext ctx, RouterParams p) =>
-        Math.Clamp((int)(p.Speed * ctx.Stat(StatIds.ConveyorSpeed)), 1, p.Spacing);
+    private static int Speed(TickContext ctx, Entity e, RouterParams p) =>
+        Math.Clamp((int)(p.Speed * ctx.Stat(StatIds.ConveyorSpeed) * e.SpeedFactor), 1, p.Spacing);
+
+    public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
+        new() { MaxLevel = 5, SpeedPerLevel = 0.375, CostFactor = 1.5, CostGrowth = 2.2 };
 
     protected override void Tick(TickContext ctx, Entity e, RouterParams p, RouterState s)
     {
         var items = s.Items;
         if (items.Count == 0) return;
-        int speed = Speed(ctx, p);
+        int speed = Speed(ctx, e, p);
         int w = 0;
 
         for (int i = 0; i < items.Count; i++)
@@ -120,7 +123,7 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         int preferred = s.NextIn;
         bool preferredWaiting = preferred >= 0 && preferred != port && e.IsInputFed(preferred) && s.RefusedAt[preferred] >= ctx.Tick - 1;
 
-        int entry = Math.Min(overflow, Speed(ctx, p));
+        int entry = Math.Min(overflow, Speed(ctx, e, p));
         if (items.Count > 0) entry = Math.Min(entry, items[^1].Pos - p.Spacing);
 
         if (preferredWaiting || entry < 0)

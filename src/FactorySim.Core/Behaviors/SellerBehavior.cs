@@ -27,7 +27,7 @@ public sealed class SellerBehavior : Behavior<SellerParams, SellerState>
 
     protected override bool TryAccept(TickContext ctx, Entity e, SellerParams p, SellerState s, ItemStack item, int port, int overflow)
     {
-        BigNum payout = item.TotalValue * (p.Multiplier * ctx.Stat(StatIds.SellMultiplier));
+        BigNum payout = item.TotalValue * (p.Multiplier * e.ValueFactor * ctx.Stat(StatIds.SellMultiplier));
         s.Earned += payout;
         s.Units += item.Count;
         ctx.Sell(e, item, payout);
@@ -36,8 +36,13 @@ public sealed class SellerBehavior : Behavior<SellerParams, SellerState>
 
     protected override EntityStatus GetStatus(Entity e, SellerParams p, SellerState s) => new(true, 0, "selling");
 
+    /// <summary>Uncapped: depots are the main long-term money sink.</summary>
+    public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
+        new() { MaxLevel = null, ValuePerLevel = 0.1, CostFactor = 2, CostGrowth = 1.9 };
+
     protected override void Describe(Entity e, SellerParams p, SellerState s, List<InfoLine> into)
     {
+        into.Add(new InfoLine("Price bonus", $"×{p.Multiplier * e.ValueFactor:0.##}"));
         into.Add(new InfoLine("Earned", "$" + s.Earned.Format()));
         into.Add(new InfoLine("Units sold", s.Units.ToString()));
     }

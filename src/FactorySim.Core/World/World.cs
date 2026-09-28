@@ -41,6 +41,9 @@ public sealed class World
     /// <summary>Free building and upgrades — for prototyping and level design.</summary>
     public bool Sandbox { get; set; }
 
+    /// <summary>Highest unlocked progression tier (index into <see cref="ContentRegistry.Tiers"/>).</summary>
+    public int UnlockedTier { get; internal set; }
+
     public Rng Rng { get; }
     public StatsTracker Stats { get; internal set; } = new();
 
@@ -106,6 +109,33 @@ public sealed class World
 
     // ---- Placement ---------------------------------------------------------
 
+    /// <summary>
+    /// Placement that may replace occupants: every footprint cell must be free or hold a building
+    /// whose group <paramref name="def"/> lists in <see cref="BuildingDef.Replaces"/>.
+    /// <paramref name="replaced"/> receives the buildings that would be removed.
+    /// </summary>
+    public PlacementCheck CanPlaceReplacing(BuildingDef def, GridPos pos, Dir facing, List<Entity> replaced)
+    {
+        replaced.Clear();
+        foreach (var cell in Entity.CellsFor(def, pos, facing))
+        {
+            if (!Bounds.Contains(cell)) return PlacementCheck.Fail($"{cell} is outside the plot");
+            var occupant = EntityAt(cell);
+            if (occupant == null || replaced.Contains(occupant)) continue;
+            if (Array.IndexOf(def.Replaces, occupant.Def.Group) < 0 || occupant.Def.Group.Length == 0)
+                return PlacementCheck.Fail($"{cell} is occupied by {occupant.Def.Name}");
+            if (occupant.Def == def && occupant.Pos == pos && occupant.Facing == facing)
+                return PlacementCheck.Fail($"{occupant.Def.Name} is already here");
+            replaced.Add(occupant);
+        }
+        // Everything replaced must fit inside the new footprint, or parts of it would be left floating.
+        var cells = Entity.CellsFor(def, pos, facing).ToHashSet();
+        foreach (var e in replaced)
+            if (!e.Cells().All(cells.Contains))
+                return PlacementCheck.Fail($"{e.Def.Name} only partly fits under {def.Name}");
+        return PlacementCheck.Success;
+    }
+
     public PlacementCheck CanPlace(BuildingDef def, GridPos pos, Dir facing, Entity? ignore = null)
     {
         foreach (var cell in Entity.CellsFor(def, pos, facing))
@@ -117,11 +147,14 @@ public sealed class World
         return PlacementCheck.Success;
     }
 
-    internal Entity AddEntity(BuildingDef def, GridPos pos, Dir facing, int? id = null, object? state = null)
+    internal Entity AddEntity(BuildingDef def, GridPos pos, Dir facing, int? id = null, object? state = null, int level = 1)
     {
         if (!Content.Behaviors.TryGet(def.Behavior, out var behavior))
             throw new InvalidOperationException($"No behavior '{def.Behavior}'.");
-        var e = new Entity(id ?? NextEntityId, def, behavior, pos, facing, state ?? behavior.CreateState(def));
+        var e = new Entity(id ?? NextEntityId, def, behavior, pos, facing, state ?? behavior.CreateState(def))
+        {
+            Level = Math.Clamp(level, 1, def.Upgrade?.MaxLevel ?? int.MaxValue),
+        };
         NextEntityId = Math.Max(NextEntityId, e.Id + 1);
         _entities.Add(e.Id, e);
         foreach (var cell in e.Cells()) _grid[cell] = e;
@@ -182,4 +215,14 @@ public sealed class World
         new() { Uid = NextItemUid++, Type = type, Count = count, UnitValue = unitValue };
 
     internal void AddMoney(BigNum amount) => Money += amount;
+
+    /// <summary>Money a building returns when removed (price plus upgrades).</summary>
+    public BigNum InvestedIn(Entity e) => e.Def.Upgrade?.Invested(e.Def, e.Level) ?? e.Def.Cost;
+
+    /// <summary>Plot bounds for a tier (square from the origin, same vertical range).</summary>
+    public GridBounds BoundsForTier(int tier)
+    {
+        int size = Content.Tiers[Math.Clamp(tier, 0, Content.Tiers.Count - 1)].PlotSize;
+        return new GridBounds(new GridPos(0, 0, Bounds.Min.Z), new GridPos(size - 1, size - 1, Bounds.Max.Z));
+    }
 }

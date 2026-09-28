@@ -30,12 +30,16 @@ public sealed class ContentRegistry
     /// <summary>Upgrades in declaration order.</summary>
     public IReadOnlyList<UpgradeDef> UpgradeList { get; }
 
+    /// <summary>Progression tiers; index 0 is available from the start.</summary>
+    public IReadOnlyList<TierDef> Tiers { get; }
+
     private ContentRegistry(
         BehaviorRegistry behaviors,
         List<ItemDef> items,
         List<BuildingDef> buildings,
         List<RecipeDef> recipes,
-        List<UpgradeDef> upgrades)
+        List<UpgradeDef> upgrades,
+        List<TierDef> tiers)
     {
         Behaviors = behaviors;
         Items = items.ToDictionary(x => x.Id);
@@ -44,6 +48,7 @@ public sealed class ContentRegistry
         Upgrades = upgrades.ToDictionary(x => x.Id);
         BuildingList = buildings;
         UpgradeList = upgrades;
+        Tiers = tiers.Count > 0 ? tiers : new List<TierDef> { new() { Name = "Start", PlotSize = 32 } };
     }
 
     /// <summary>The built-in base pack, optionally with extra packs layered on top.</summary>
@@ -73,15 +78,21 @@ public sealed class ContentRegistry
         var buildings = new OrderedById<BuildingDef>(x => x.Id);
         var recipes = new OrderedById<RecipeDef>(x => x.Id);
         var upgrades = new OrderedById<UpgradeDef>(x => x.Id);
+        var tiers = new List<TierDef>();
         foreach (var pack in packs)
         {
+            if (pack.Tiers.Count > 0)
+            {
+                tiers.Clear();
+                tiers.AddRange(pack.Tiers);
+            }
             pack.Items.ForEach(items.Put);
             pack.Buildings.ForEach(buildings.Put);
             pack.Recipes.ForEach(recipes.Put);
             pack.Upgrades.ForEach(upgrades.Put);
         }
 
-        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List);
+        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers);
         registry.Validate();
         return registry;
     }
@@ -120,9 +131,19 @@ public sealed class ContentRegistry
                 if (!b.Footprint.Contains(port.Cell))
                     throw new ContentException($"Building '{b.Id}': port cell {port.Cell} is not in the footprint.");
 
+            if (b.Tier < 0 || b.Tier >= Tiers.Count)
+                throw new ContentException($"Building '{b.Id}': tier {b.Tier} does not exist (tiers 0..{Tiers.Count - 1}).");
+
             b.Params = BindParams(b, behavior);
             behavior.Bind(b, this);
+            b.Upgrade ??= behavior.DefaultUpgrade(b);
+            if (b.Upgrade.CostGrowth < 1 || b.Upgrade.MaxLevel < 1)
+                throw new ContentException($"Building '{b.Id}': invalid upgrade track.");
         }
+
+        for (int i = 1; i < Tiers.Count; i++)
+            if (Tiers[i].PlotSize < Tiers[i - 1].PlotSize)
+                throw new ContentException($"Tier '{Tiers[i].Name}': plot size must not shrink.");
     }
 
     private static object BindParams(BuildingDef def, IBehavior behavior)

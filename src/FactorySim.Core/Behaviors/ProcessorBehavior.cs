@@ -85,7 +85,7 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         foreach (var o in s.Output) waiting += o.Count;
         if (waiting >= p.OutputCapacity) return; // output backed up: pause, don't bank work
 
-        s.Work += ctx.Stat(StatIds.MachineSpeed);
+        s.Work += ctx.Stat(StatIds.MachineSpeed) * e.SpeedFactor;
         if (s.Work < recipe.Ticks) return;
 
         long crafts = Math.Min((long)(s.Work / recipe.Ticks), MaxCrafts(recipe, s));
@@ -129,7 +129,7 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
 
         long outUnits = 0;
         foreach (var o in recipe.Outputs) outUnits += o.Count * crafts;
-        BigNum unitValue = consumedValue * recipe.ValueMultiplier / outUnits;
+        BigNum unitValue = consumedValue * (recipe.ValueMultiplier * e.ValueFactor) / outUnits;
 
         long maxStack = ctx.MaxStackSize;
         foreach (var o in recipe.Outputs)
@@ -163,13 +163,16 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         {
             string ins = string.Join(" + ", r.Inputs.Select(i => $"{i.Count} {p.ItemNames[i.Item]}"));
             string outs = string.Join(" + ", r.Outputs.Select(o => $"{o.Count} {p.ItemNames[o.Item]}"));
-            into.Add(new InfoLine("Recipe", $"{ins} → {outs} ({r.Ticks / (double)Simulation.TicksPerSecond:0.##}s, ×{r.ValueMultiplier:0.##})"));
+            into.Add(new InfoLine("Recipe", $"{ins} → {outs} ({r.Ticks / (Simulation.TicksPerSecond * e.SpeedFactor):0.##}s, ×{r.ValueMultiplier * e.ValueFactor:0.##} value)"));
         }
         foreach (var (item, buf) in s.Inputs)
             if (buf.Count > 0) into.Add(new InfoLine("Input", $"{buf.Count}/{p.InputCapacity} {p.ItemNames.GetValueOrDefault(item, item)}"));
         long waiting = s.Output.Sum(o => o.Count);
         if (waiting > 0) into.Add(new InfoLine("Output", $"{waiting}/{p.OutputCapacity} waiting"));
     }
+
+    public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
+        new() { MaxLevel = 25, SpeedPerLevel = 0.35, ValuePerLevel = 0.04, CostFactor = 1.2, CostGrowth = 1.7 };
 
     protected override EntityStatus GetStatus(Entity e, ProcessorParams p, ProcessorState s)
     {

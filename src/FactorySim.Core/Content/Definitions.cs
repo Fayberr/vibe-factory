@@ -57,6 +57,22 @@ public sealed class BuildingDef
 
     public string Category { get; init; } = "misc";
 
+    /// <summary>Progression tier that unlocks this building (index into the content's tiers).</summary>
+    public int Tier { get; init; }
+
+    /// <summary>How the building levels up. Filled from the behavior's default when omitted.</summary>
+    public UpgradeTrack? Upgrade { get; set; }
+
+    /// <summary>Replacement group this building belongs to (e.g. "belt", "machine").</summary>
+    public string Group { get; init; } = "";
+
+    /// <summary>
+    /// Groups this building may be placed over: the occupants are removed (refunded) and this
+    /// takes their place. A splitter lists "belt" so it can be dropped into a line; a belt does
+    /// not list "machine", so dragging belts never destroys machines.
+    /// </summary>
+    public string[] Replaces { get; init; } = Array.Empty<string>();
+
     /// <summary>
     /// Behavior-specific tuning. From JSON this arrives as a JsonElement and is bound to
     /// the behavior's params type when the registry is built; in code, assign the typed object.
@@ -77,6 +93,54 @@ public sealed class BuildingDef
         Enumerable.Range(0, Ports.Length).Where(i => Ports[i].Kind == kind).ToArray();
 
     public string MetaOr(string key, string fallback) => Meta.TryGetValue(key, out var v) ? v : fallback;
+}
+
+/// <summary>
+/// Per-building upgrade levels (1 = as built). Each level multiplies speed and/or value;
+/// costs grow geometrically from the building's price. MaxLevel null = uncapped.
+/// </summary>
+public sealed class UpgradeTrack
+{
+    public int? MaxLevel { get; init; } = 10;
+
+    /// <summary>First upgrade costs Cost × CostFactor; each further one × CostGrowth.</summary>
+    public double CostFactor { get; init; } = 1.5;
+    public double CostGrowth { get; init; } = 1.8;
+
+    /// <summary>Added to the speed multiplier per level above 1.</summary>
+    public double SpeedPerLevel { get; init; }
+
+    /// <summary>Added to the value multiplier per level above 1.</summary>
+    public double ValuePerLevel { get; init; }
+
+    public double SpeedFactor(int level) => 1 + SpeedPerLevel * (Math.Max(1, level) - 1);
+    public double ValueFactor(int level) => 1 + ValuePerLevel * (Math.Max(1, level) - 1);
+
+    public bool CanUpgrade(int level) => MaxLevel is not int max || level < max;
+
+    /// <summary>Price of going from <paramref name="level"/> to level + 1.</summary>
+    public BigNum UpgradeCost(BuildingDef def, int level) =>
+        def.Cost * CostFactor * BigNum.Pow(CostGrowth, Math.Max(1, level) - 1);
+
+    /// <summary>Total spent on a building at <paramref name="level"/> (price plus all upgrades); refunded on removal.</summary>
+    public BigNum Invested(BuildingDef def, int level)
+    {
+        BigNum total = def.Cost;
+        for (int l = 1; l < level; l++) total += UpgradeCost(def, l);
+        return total;
+    }
+}
+
+/// <summary>A progression tier: unlocking it costs money, needs lifetime earnings, and grows the plot.</summary>
+public sealed class TierDef
+{
+    public string Name { get; init; } = "";
+    public string Description { get; init; } = "";
+    public BigNum Cost { get; init; }
+    public BigNum RequiredEarnings { get; init; }
+
+    /// <summary>Side length of the square buildable plot once this tier is unlocked.</summary>
+    public int PlotSize { get; init; } = 32;
 }
 
 public sealed record ItemAmount(string Item, int Count);
@@ -142,4 +206,7 @@ public sealed class ContentPack
     public List<BuildingDef> Buildings { get; init; } = new();
     public List<RecipeDef> Recipes { get; init; } = new();
     public List<UpgradeDef> Upgrades { get; init; } = new();
+
+    /// <summary>Progression tiers in order; a pack that defines tiers replaces the whole list.</summary>
+    public List<TierDef> Tiers { get; init; } = new();
 }

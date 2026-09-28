@@ -40,6 +40,9 @@ public interface IBehavior
 
     /// <summary>Inspector details (buffers, recipe, totals). Purely informational.</summary>
     void Describe(Entity entity, List<InfoLine> into);
+
+    /// <summary>Level-up track used when a building def doesn't specify one.</summary>
+    UpgradeTrack DefaultUpgrade(BuildingDef def);
 }
 
 /// <summary>Typed convenience base: casts params/state once so implementations stay readable.</summary>
@@ -65,6 +68,8 @@ public abstract class Behavior<TParams, TState> : IBehavior
     public EntityStatus GetStatus(Entity entity) => GetStatus(entity, P(entity), S(entity));
 
     public void Describe(Entity entity, List<InfoLine> into) => Describe(entity, P(entity), S(entity), into);
+
+    public virtual UpgradeTrack DefaultUpgrade(BuildingDef def) => new() { MaxLevel = 10, SpeedPerLevel = 0.25 };
 
     protected virtual void Bind(BuildingDef def, TParams p, ContentRegistry content) { }
 
