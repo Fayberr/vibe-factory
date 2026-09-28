@@ -222,6 +222,13 @@ public partial class MenuLayer : CanvasLayer
 
         _settingsWindow = new HudWindow("Settings", Icon.Game, 520);
         _settingsPanel = new SettingsPanel(_settings, () => _actions.SettingsChanged());
+        // Tabs differ in height: re-centre once the window has taken the new page's size.
+        _settingsPanel.PageChanged += async () =>
+        {
+            if (!IsInsideTree() || !_settingsWindow.Visible) return;
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            Center(_settingsWindow);
+        };
         _settingsWindow.Body.AddChild(_settingsPanel.Root);
         AddWindow(_settingsWindow);
 
@@ -363,6 +370,10 @@ public partial class MenuLayer : CanvasLayer
         switch (which)
         {
             case "settings": OpenSettings(); break;
+            case "controls":
+                OpenSettings();
+                _settingsPanel.ShowPage(2);
+                break;
             case "new": OpenSlots(forNew: true); break;
             case "load": OpenSlots(forNew: false); break;
             case "credits": Open(_credits); break;
@@ -401,6 +412,7 @@ public sealed class SettingsPanel
     private readonly GameSettings _s;
     private readonly Action _changed;
     private readonly Control[] _pages = new Control[4];
+    private readonly Button[] _tabs = new Button[4];
     private readonly Dictionary<string, Button> _bindings = new();
     private readonly Label _keyStatus = Ui.Label("", 12, UiTheme.Muted);
     private Button? _listening;
@@ -427,6 +439,7 @@ public sealed class SettingsPanel
                 CustomMinimumSize = new Vector2(0, 36),
             };
             tab.Toggled += on => { if (on) ShowPage(page); };
+            _tabs[i] = tab;
             tabs.AddChild(tab);
         }
         col.AddChild(Ui.Pad(tabs, 14, 10));
@@ -508,10 +521,18 @@ public sealed class SettingsPanel
         Root = col;
     }
 
+    /// <summary>Raised when another tab is shown (the window resizes to it).</summary>
+    public event Action? PageChanged;
+
     public void ShowPage(int page)
     {
-        for (int i = 0; i < _pages.Length; i++) _pages[i].Visible = i == page;
+        for (int i = 0; i < _pages.Length; i++)
+        {
+            _pages[i].Visible = i == page;
+            _tabs[i]?.SetPressedNoSignal(i == page);
+        }
         StopListening();
+        PageChanged?.Invoke();
     }
 
     private static Control Page(params Control[] rows)

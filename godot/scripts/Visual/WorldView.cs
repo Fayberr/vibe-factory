@@ -59,7 +59,7 @@ public partial class WorldView : Node3D
     private float _gridTarget, _grid;
 
     private static readonly Material HoverOverlay = Shaders.HighlightMaterial(Colors.White, 0.07f, 0.55f);
-    private static readonly Material SelectOverlay = Shaders.HighlightMaterial(Palette.Select, 0.1f, 1f);
+    private static readonly Material SelectOverlay = Shaders.HighlightMaterial(Palette.Select, 0.14f, 1.2f);
     private static readonly Material DangerOverlay = Shaders.HighlightMaterial(Palette.Danger, 0.35f, 1f);
     private static readonly Material MovingOverlay = Shaders.HighlightMaterial(Colors.White, 0.4f, 0.6f);
     private static readonly Material UpgradeOverlay = Shaders.HighlightMaterial(Palette.Upgrade, 0.14f, 1f);

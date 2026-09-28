@@ -110,6 +110,12 @@ public partial class Main : Node3D
             }
             if (arg.StartsWith("--tool=") && host.Content.Buildings.TryGetValue(arg["--tool=".Length..], out var toolDef))
                 tools.SelectTool(toolDef); // with the pointer over the world, shows the ghost there
+            if (arg.StartsWith("--drag="))
+            {
+                // --drag=x0,y0,x1,y1: press on one cell and hold the drag over another (box select on screen).
+                var c = System.Array.ConvertAll(arg["--drag=".Length..].Split(','), int.Parse);
+                GetTree().CreateTimer(Math.Max(0.5, wait - 2)).Timeout += () => HoldDrag(camera, new GridPos(c[0], c[1], 0), new GridPos(c[2], c[3], 0));
+            }
             if (arg.StartsWith("--select="))
             {
                 // --select=x,y: open the Manage window for the building on that cell.
@@ -125,6 +131,22 @@ public partial class Main : Node3D
         }
 
         ScreenshotAndQuit(host, wait, requireEarnings: !showcase && !tutorial);
+    }
+
+    private static async void HoldDrag(CameraRig camera, GridPos from, GridPos to)
+    {
+        Vector2 At(GridPos c) => camera.Camera.UnprojectPosition(GridMapping.CellFloor(c));
+        var tree = (SceneTree)Engine.GetMainLoop();
+        var start = At(from);
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = start, GlobalPosition = start });
+        await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = start, GlobalPosition = start });
+        for (int i = 1; i <= 10; i++)
+        {
+            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            var p = start.Lerp(At(to), i / 10f);
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p, ButtonMask = MouseButtonMask.Left });
+        }
     }
 
     /// <summary>After <paramref name="wait"/> s: print stats, save --screenshot=path if given, quit (1 if nothing was earned).</summary>

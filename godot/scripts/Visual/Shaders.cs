@@ -88,6 +88,37 @@ public static class Shaders
         }
         """;
 
+    /// <summary>
+    /// The box-select / box-delete area: a light wash with a crisp border (and brighter corners), so it
+    /// reads as a marked area rather than a flat plate. <c>size</c> is the box in cells, to keep the
+    /// border the same width however big the box is.
+    /// </summary>
+    public const string AreaBox = """
+        shader_type spatial;
+        render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled;
+        uniform vec4 tint : source_color = vec4(0.2, 0.72, 1.0, 1.0);
+        uniform vec2 size = vec2(1.0);
+        uniform float fill = 0.06;
+        uniform float border = 0.08;
+        void fragment() {
+            vec2 d = min(UV, 1.0 - UV) * size;          // distance to the nearest edges, in cells
+            float edge = 1.0 - smoothstep(border, border + 0.02, min(d.x, d.y));
+            float corner = 1.0 - smoothstep(0.35, 0.37, max(d.x, d.y));
+            float inner = 1.0 - smoothstep(0.0, 0.5, min(d.x, d.y));
+            ALBEDO = mix(tint.rgb, vec3(1.0), edge * corner * 0.35);
+            ALPHA = clamp(fill + inner * 0.1 + edge * (0.8 + corner * 0.2), 0.0, 1.0);
+        }
+        """;
+
+    public static ShaderMaterial AreaBoxMaterial(Color tint)
+    {
+        var m = new ShaderMaterial { Shader = _areaBox ??= new Shader { Code = AreaBox } };
+        m.SetShaderParameter("tint", tint);
+        return m;
+    }
+
+    private static Shader? _areaBox;
+
     public static ShaderMaterial HighlightMaterial(Color tint, float fill, float rim)
     {
         var m = new ShaderMaterial { Shader = _highlight ??= new Shader { Code = Highlight } };

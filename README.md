@@ -168,7 +168,8 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # the Manage window for that cell), --windows (opens Progress and Statistics),
 # --orders (opens Progress and Orders), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
-# --menu=settings|new|load|credits to open one of its windows).
+# --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
+# (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).
 ```
 
 ## Continuous integration and downloads

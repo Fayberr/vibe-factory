@@ -26,7 +26,7 @@ public static class Palette
 
     public static readonly Color PortIn = new("#4fb6ff");
     public static readonly Color PortOut = new("#ffab40");
-    public static readonly Color Select = new("#4fc3ff");
+    public static readonly Color Select = new("#2fb8ff");
     public static readonly Color Danger = new("#ff5a5a");
     public static readonly Color Ok = new("#5de08a");
     public static readonly Color Upgrade = new("#ffd257");

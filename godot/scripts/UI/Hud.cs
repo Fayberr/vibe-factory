@@ -680,9 +680,9 @@ public partial class Hud : CanvasLayer
 
     private string HintsFor()
     {
-        static string K(string key) => $"[bgcolor=#ffffff24] {key} [/bgcolor]";
+        static string Chip(string key) => $"[bgcolor=#ffffff24] {key} [/bgcolor]";
         static string H(params (string Key, string Action)[] items) =>
-            string.Join("    ", items.Select(i => $"{K(i.Key)} [color=#c9d2dd]{i.Action}[/color]"));
+            string.Join("    ", items.Select(i => $"{Chip(i.Key)} [color=#c9d2dd]{i.Action}[/color]"));
         return _tools.Mode switch
         {
             ToolMode.Build => $"[color=#4fb6ff]{_tools.Tool?.Name}[/color] facing {_tools.ShownFacing} · {BuildController.HeightName(_tools.Height).ToLowerInvariant()}    " +

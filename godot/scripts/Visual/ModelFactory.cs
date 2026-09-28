@@ -448,7 +448,7 @@ public static partial class ModelFactory
             mb.Box(Palette.Solid(Palette.Hazard), new Vector3(0, 0.75f, 0), new Vector3(0.12f, 0.08f, 0.12f), 0.015f);
             return mb.Commit();
         }));
-        rig.Bobbers.Add((rod, Vector3.Zero, new Vector3(0, 0.07f, 0), 1.3f));
+        rig.Bobbers.Add((rod, rod.Position, new Vector3(0, 0.07f, 0), 1.3f)); // bob on the tower's axis, not the plinth's centre
 
         StatusLamp(rig, rig.Root, new Vector3(-0.3f, 0.54f, 0.3f));
         if (effects) Smoke(rig, rig.Root, new Vector3(0.28f, 0.76f, 0.3f), 0.6f);

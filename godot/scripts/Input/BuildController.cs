@@ -41,7 +41,7 @@ public partial class BuildController : Node3D
     private WorldView _view = null!;
     private GhostLayer _ghosts = null!;
     private MeshInstance3D _rect = null!;
-    private StandardMaterial3D _rectMat = null!;
+    private ShaderMaterial _rectMat = null!;
     private BuildPlanner _planner = null!;
 
     private Vector2 _mouse;
@@ -144,8 +144,7 @@ public partial class BuildController : Node3D
     {
         _ghosts = new GhostLayer { Name = "Ghosts" };
         AddChild(_ghosts);
-        _rectMat = Palette.Translucent(new Color(Palette.Select, 0.18f));
-        _rectMat.NoDepthTest = true;
+        _rectMat = Shaders.AreaBoxMaterial(Palette.Select);
         _rect = new MeshInstance3D
         {
             Mesh = new PlaneMesh { Size = Vector2.One },
@@ -814,13 +813,15 @@ public partial class BuildController : Node3D
         if (_dragging && Mode is ToolMode.Select or ToolMode.Delete or ToolMode.Upgrade && BoxCells() is var (min, max))
         {
             _rect.Visible = true;
-            _rectMat.AlbedoColor = Mode switch
+            _rectMat.SetShaderParameter("tint", Mode switch
             {
-                ToolMode.Delete => new Color(Palette.Danger, 0.22f),
-                ToolMode.Upgrade => new Color(Palette.Upgrade, 0.22f),
-                _ => new Color(Palette.Select, 0.18f),
-            };
-            _rect.Scale = new Vector3(max.X - min.X + 1, 1, max.Y - min.Y + 1);
+                ToolMode.Delete => Palette.Danger,
+                ToolMode.Upgrade => Palette.Upgrade,
+                _ => Palette.Select,
+            });
+            var size = new Vector2(max.X - min.X + 1, max.Y - min.Y + 1);
+            _rectMat.SetShaderParameter("size", size);
+            _rect.Scale = new Vector3(size.X, 1, size.Y);
             _rect.Position = new Vector3((min.X + max.X + 1) / 2f, Height * GridMapping.LayerHeight + 0.03f, (min.Y + max.Y + 1) / 2f);
         }
         else _rect.Visible = false;
@@ -920,12 +921,12 @@ public partial class BuildController : Node3D
             {
                 ToolMode.Delete => Highlight.Danger,
                 ToolMode.Upgrade => Highlight.Upgrade,
-                ToolMode.Select => Highlight.Hover,
+                ToolMode.Select => Highlight.Selected, // what the box will select, in the selection's own colour
                 _ => Highlight.None,
             };
             if (kind != Highlight.None)
                 foreach (var e in EntitiesInBox())
-                    if (!want.ContainsKey(e.Id) || kind != Highlight.Hover) want[e.Id] = kind;
+                    want[e.Id] = kind;
         }
 
         foreach (var (id, _) in _applied)
