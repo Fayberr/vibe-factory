@@ -48,6 +48,7 @@ godot/                   Godot 4.7 (.NET) client. Presentation and input only.
   audio/                   recorded sounds and music (see audio/CREDITS.md)
   scripts/Dev/             scripted end-to-end UI test
 docs/ARCHITECTURE.md     How the pieces fit, and where to extend them.
+tools/                   helper scripts for whoever plays the game (see Updating below).
 ```
 
 ## Quick start
@@ -79,6 +80,13 @@ A push to `main` rebuilds that release. A push that only touches documentation (
 `LICENSE`, `.gitignore`) does not, since there is no client to build. Run the
 [workflow](https://github.com/Fayberr/vibe-factory/actions/workflows/build.yml) by hand from the
 Actions tab to build one of those commits anyway.
+
+**Updating.** [`tools/Update-VibeFactory.cmd`](tools/Update-VibeFactory.cmd) keeps a folder on the
+newest build. Put it in the folder you play from and double-click it: it downloads the current
+release, replaces everything in that folder except the script itself, and deletes the zip. It does
+not start the game, it refuses to run while the game is open (its files cannot be replaced then),
+and it downloads before it deletes anything, so a failed download leaves the build you have alone.
+Saves are not in that folder (Godot keeps them in its own user folder), so they are never touched.
 
 **New to it?** A short tutorial walks you through your first factory (drill, belt, smelter,
 depot, first upgrade) the first time you play. Reopen it any time from the Game menu (`G`).
