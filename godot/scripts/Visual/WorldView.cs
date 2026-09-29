@@ -241,7 +241,7 @@ public partial class WorldView : Node3D
         SetLayer(_layer, _cutaway);
     }
 
-    /// <summary>Buy mode: plots you can buy glow and every plot you do not own shows its price.</summary>
+    /// <summary>While placing: plots you can buy glow gold and carry a big buy tag with their price.</summary>
     public void SetLandMode(bool on)
     {
         _landMode = on;
@@ -251,7 +251,7 @@ public partial class WorldView : Node3D
         else RefreshLandLabels();
     }
 
-    /// <summary>The plot under the cursor in buy mode (highlighted), or null.</summary>
+    /// <summary>The buyable plot under the cursor (highlighted), or null.</summary>
     public void SetHoverPlot(PlotId? plot) =>
         _ground?.SetShaderParameter("hover_plot", plot is { } p ? new Vector2(p.Column, p.Row) : new Vector2(-1, -1));
 
@@ -262,35 +262,32 @@ public partial class WorldView : Node3D
         AddChild(_landLabels);
         var land = World.Land;
         if (World.Sandbox) return; // everything is yours, nothing to buy
-        foreach (var plot in land.All())
+        foreach (var plot in land.Buyable())
         {
-            if (land.Owns(plot)) continue;
             var cells = land.CellsOf(plot);
+            var price = land.PriceOf(plot);
             var label = new Label3D
             {
-                Text = "$" + land.PriceOf(plot).Format(),
-                FontSize = 64,
-                PixelSize = 0.03f,
-                OutlineSize = 14,
+                Text = "BUY PLOT\n$" + price.Format(),
+                FontSize = 72,
+                PixelSize = 0.045f,
+                OutlineSize = 16,
                 Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
                 NoDepthTest = true,
-                Position = new Vector3((cells.MinX + cells.MaxX + 1) / 2f, 0.6f, (cells.MinY + cells.MaxY + 1) / 2f),
+                Position = new Vector3((cells.MinX + cells.MaxX + 1) / 2f, 0.8f, (cells.MinY + cells.MaxY + 1) / 2f),
             };
             _landLabels.AddChild(label);
-            _plotLabels[plot] = (label, land.PriceOf(plot));
+            _plotLabels[plot] = (label, price);
         }
         RefreshLandLabels();
     }
 
-    /// <summary>Colours the price labels: green when you can afford the plot, red when not, grey when it is not next to your land yet.</summary>
+    /// <summary>Colours the buy tags: green when you can afford the plot, red when you cannot yet.</summary>
     private void RefreshLandLabels()
     {
-        var land = World.Land;
-        foreach (var (plot, (label, price)) in _plotLabels)
+        foreach (var (label, price) in _plotLabels.Values)
         {
-            var colour = land.WhyNot(plot) != null ? new Color("#9aa7b4")
-                : World.Money >= price ? new Color("#7dffb0") : new Color("#ff8a80");
-            label.Modulate = colour;
+            label.Modulate = World.Money >= price ? new Color("#7dffb0") : new Color("#ff8a80");
             label.OutlineModulate = new Color(0.05f, 0.08f, 0.12f, 0.95f);
         }
     }

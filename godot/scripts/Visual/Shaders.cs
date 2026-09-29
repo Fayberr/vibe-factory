@@ -62,8 +62,8 @@ public static class Shaders
             float luma = dot(c, vec3(0.30, 0.59, 0.11));
             c = mix(c, vec3(luma) * 0.78, locked * 0.55);
             c = mix(c, c * plot_tint, owned);
-            // Buy mode: plots you can buy are gold, the one under the cursor glows.
-            c = mix(c, buy_tint * (0.75 + 0.25 * d), buyable * land_mode * 0.42);
+            // While placing: plots you can buy are gold, the one under the cursor glows.
+            c = mix(c, buy_tint * (0.75 + 0.25 * d), buyable * land_mode * 0.30);
             float hovered = on_map * step(abs(pid.x - hover_plot.x), 0.5) * step(abs(pid.y - hover_plot.y), 0.5);
             c = mix(c, c * 1.25 + vec3(0.10, 0.08, 0.02), hovered * land_mode * 0.7);
 

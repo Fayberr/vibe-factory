@@ -49,7 +49,7 @@ public static class SceneSetup
 
     /// <summary>
     /// Grass ground with the map laid out on it: your plots are bright, land you do not own is dull, plots
-    /// you can buy glow gold in buy mode, the outer ring of cells is blue (depots work there), and a
+    /// you can buy glow gold while placing, the outer ring of cells is blue (depots work there), and a
     /// concrete kerb runs around the whole map. Ownership reaches the shader as one texel per plot.
     /// </summary>
     public static ShaderMaterial AddGround(Node3D parent, World world)

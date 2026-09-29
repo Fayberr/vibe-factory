@@ -17,7 +17,6 @@ public enum ToolMode
     Delete,
     Move,
     Paste,
-    Land,
 }
 
 /// <summary>
@@ -29,7 +28,8 @@ public enum ToolMode
 ///  • Upgrade: click or drag a box to raise building levels; Shift-click upgrades a whole line.
 ///  • Delete:  click or drag a box.
 ///  • Move / Paste: a blueprint follows the cursor; R rotates it; click to drop.
-///  • Land:    plots you can buy glow; click one to buy it (price grows with distance from the start).
+///  While building, moving or pasting, plots you can buy show a buy tag; clicking land that is not
+///  yours yet asks <see cref="BuyPlotRequested"/> (the HUD confirms, then buys).
 /// Height: everything is built at the current build height (0 = ground, the lowest there is).
 /// Q/E, PageDown/PageUp or Shift+wheel change it; ramps carry it along (a ramp up leaves you
 /// one level higher). Tab hides everything above it. All edits go through the undo history.
@@ -96,6 +96,9 @@ public partial class BuildController : Node3D
 
     /// <summary>Esc with nothing to cancel (no tool, no selection): the game opens its pause menu.</summary>
     public event Action? EscapeIdle;
+
+    /// <summary>Raised when a click lands on a plot that can be bought; the HUD asks "Buy plot for $X?".</summary>
+    public event Action<PlotId>? BuyPlotRequested;
 
     /// <summary>Off while menus own the screen: no input, no previews, no highlights.</summary>
     public bool Enabled
@@ -182,7 +185,7 @@ public partial class BuildController : Node3D
         _lmbDown = false;
         _view.ShowGrid(mode is ToolMode.Build or ToolMode.Move or ToolMode.Paste);
         _hoverPlot = null;
-        _view.SetLandMode(mode == ToolMode.Land);
+        _view.SetLandMode(mode is ToolMode.Build or ToolMode.Move or ToolMode.Paste);
         Changed?.Invoke();
     }
 
@@ -491,7 +494,6 @@ public partial class BuildController : Node3D
                 : Keybinds.Is(key, "upgrade") ? UpgradeKey
                 : Keybinds.Is(key, "hide_above") ? ToggleHideAbove
                 : Keybinds.Is(key, "delete_tool") ? () => SetMode(Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete)
-                : Keybinds.Is(key, "land_tool") ? () => SetMode(Mode == ToolMode.Land ? ToolMode.Select : ToolMode.Land)
                 : Keybinds.Is(key, "select_tool") ? () => SetMode(ToolMode.Select)
                 : Keybinds.Is(key, "move") ? BeginMove
                 : Keybinds.Is(key, "copy") ? () => CopySelection(enterPaste: true)
@@ -561,6 +563,9 @@ public partial class BuildController : Node3D
     {
         switch (Mode)
         {
+            case ToolMode.Move or ToolMode.Paste when ClickOnLockedLand():
+                _lmbDown = false;
+                break;
             case ToolMode.Move when _floating != null && _hoverCell is { } at:
                 var delta = at - _floatingOrigin;
                 if (Report(History.Execute(new MoveBuildings(_moveCells, delta, _floatingTurns, _floatingOrigin)))) SetMode(ToolMode.Select);
@@ -586,6 +591,7 @@ public partial class BuildController : Node3D
                 else ClickSelect();
                 break;
             case ToolMode.Build:
+                if (!wasDrag && ClickOnLockedLand()) break;
                 CommitPlacement();
                 break;
             case ToolMode.Upgrade:
@@ -594,9 +600,6 @@ public partial class BuildController : Node3D
                     : Input.IsKeyPressed(Key.Shift) ? ConnectedLine(_hoverEntity)
                     : new List<Entity> { _hoverEntity };
                 if (toUpgrade.Count > 0) UpgradeEntities(toUpgrade);
-                break;
-            case ToolMode.Land:
-                if (!wasDrag) BuyHoveredPlot();
                 break;
             case ToolMode.Delete:
                 var targets = wasDrag ? EntitiesInBox() : _hoverEntity != null ? new List<Entity> { _hoverEntity } : new List<Entity>();
@@ -743,7 +746,7 @@ public partial class BuildController : Node3D
             _hoverCell = null;
             _hoverPlot = null;
             _hoverEntity = null;
-            if (Mode == ToolMode.Land) _view.SetHoverPlot(null);
+            _view.SetHoverPlot(null);
             return;
         }
         var cam = _camera.Camera;
@@ -759,27 +762,35 @@ public partial class BuildController : Node3D
         }
         _hoverEntity = _view.Pick(origin, dir);
 
-        // Buying land points at the ground itself, whatever the build height.
+        // Plots you can buy are marked while placing: the one under the cursor is the one a click would buy.
         _hoverPlot = null;
-        if (Mode == ToolMode.Land && new Plane(Vector3.Up, 0).IntersectsRay(origin, dir) is { } ground)
-        {
-            var plot = World.Land.PlotAt(Mathf.FloorToInt(ground.X), Mathf.FloorToInt(ground.Z));
-            if (World.Land.OnMap(plot)) _hoverPlot = plot;
-        }
-        if (Mode == ToolMode.Land) _view.SetHoverPlot(_hoverPlot);
+        if (ShowsBuyTags && _hoverCell is { } over && World.Land.PlotAt(over.X, over.Y) is var plot && World.Land.OnMap(plot))
+            _hoverPlot = plot;
+        _view.SetHoverPlot(_hoverPlot is { } hp && World.Land.WhyNot(hp) == null ? hp : null);
     }
 
-    /// <summary>Buys the plot under the cursor (the price and the "next to your land" rule are the simulation's).</summary>
-    private void BuyHoveredPlot()
+    /// <summary>Buy tags on the ground show while building, moving or pasting (not in sandbox: all of it is yours).</summary>
+    private bool ShowsBuyTags => Mode is ToolMode.Build or ToolMode.Move or ToolMode.Paste;
+
+    /// <summary>
+    /// A click on land that is not yours yet: asks to buy the plot (the HUD confirms) or says why it cannot be
+    /// bought. Returns true when the click was about land, so nothing gets placed there.
+    /// </summary>
+    private bool ClickOnLockedLand()
     {
-        if (_hoverPlot is not { } plot) return;
-        if (World.Sandbox)
+        if (World.Sandbox || _hoverCell is not { } cell || World.Land.Owns(cell.X, cell.Y)) return false;
+        var land = World.Land;
+        var plot = land.PlotAt(cell.X, cell.Y);
+        if (!land.OnMap(plot)) return false;
+        if (land.WhyNot(plot) is { } why)
         {
-            Notice("Sandbox: the whole map is already yours");
-            return;
+            _host.Fail(why);
+            return true;
         }
-        var price = World.Land.PriceOf(plot);
-        if (_host.Execute(new BuyPlot(plot.Column, plot.Row)).Ok) Notice($"Bought {plot} for ${price.Format()}");
+        var price = land.PriceOf(plot);
+        if (World.Money < price) _host.Fail($"This plot costs ${price.Format()} (you have ${World.Money.Format()})");
+        else BuyPlotRequested?.Invoke(plot);
+        return true;
     }
 
     private void UpdatePreview()
@@ -812,10 +823,6 @@ public partial class BuildController : Node3D
                     : ($"Move {_floating.Count} here{AtHeight()}", true);
                 break;
 
-            case ToolMode.Land when _hoverPlot is { } plot:
-                CursorInfo = LandInfo(plot);
-                break;
-
             case ToolMode.Upgrade when !_dragging && _hoverEntity is { } up:
                 var line = Input.IsKeyPressed(Key.Shift) ? ConnectedLine(up) : null;
                 if (line is { Count: > 1 })
@@ -846,6 +853,7 @@ public partial class BuildController : Node3D
                 CursorInfo = (Mode == ToolMode.Delete ? $"Remove {box.Count} buildings" : $"Upgrade {box.Count} buildings", true);
                 break;
         }
+        if (LockedLandInfo() is { } land) CursorInfo = land;
         _ghosts.Show(_specs, ports);
 
         // Selection / action rectangle on the build plane.
@@ -975,16 +983,18 @@ public partial class BuildController : Node3D
         foreach (var kv in want) _applied[kv.Key] = kv.Value;
     }
 
-    private (string Text, bool Ok) LandInfo(PlotId plot)
+    /// <summary>The cursor tip over land that is not yours yet (while placing): what a click does, or why it cannot.</summary>
+    private (string Text, bool Ok)? LockedLandInfo()
     {
+        if (!ShowsBuyTags || World.Sandbox || _hoverCell is not { } cell || World.Land.Owns(cell.X, cell.Y)) return null;
         var land = World.Land;
-        if (World.Sandbox) return ("Sandbox: the whole map is yours", false);
-        if (land.Owns(plot)) return ($"{plot}: yours", false);
+        var plot = land.PlotAt(cell.X, cell.Y);
+        if (!land.OnMap(plot)) return null;
         var price = land.PriceOf(plot);
-        if (land.WhyNot(plot) is { } why) return ($"{plot} ${price.Format()}: {why}", false);
+        if (land.WhyNot(plot) is { } why) return (why, false);
         return World.Money >= price
-            ? ($"Buy {plot} for ${price.Format()}", true)
-            : ($"{plot} costs ${price.Format()} (have ${World.Money.Format()})", false);
+            ? ($"Click to buy this plot for ${price.Format()}", true)
+            : ($"This plot costs ${price.Format()} (you have ${World.Money.Format()})", false);
     }
 
     private bool Report(CommandResult r)

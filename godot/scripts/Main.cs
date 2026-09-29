@@ -112,7 +112,6 @@ public partial class Main : Node3D
                 hud.ProgressWindow.Visible = true;
                 hud.OrdersWindow.Visible = true;
             }
-            if (arg == "--land") tools.SetMode(ToolMode.Land); // the buy-land overlay, for screenshots
             if (arg.StartsWith("--tool=") && host.Content.Buildings.TryGetValue(arg["--tool=".Length..], out var toolDef))
                 tools.SelectTool(toolDef); // with the pointer over the world, shows the ghost there
             if (arg.StartsWith("--drag="))

@@ -29,7 +29,6 @@ public enum Icon
     Search,
     Auto,
     Orders,
-    Land,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -100,12 +99,6 @@ public partial class IconView : Control
                 Poly(12, 22, 9, 18, 15, 18);
                 Poly(2, 12, 6, 9, 6, 15);
                 Poly(22, 12, 18, 15, 18, 9);
-                break;
-            case Icon.Land:
-                Outline(1.8f, 3, 3, 21, 3, 21, 21, 3, 21);
-                L(12, 3, 12, 21, 1.6f);
-                L(3, 12, 21, 12, 1.6f);
-                Poly(4, 13, 11, 13, 11, 20, 4, 20);
                 break;
             case Icon.Copy:
                 Outline(2, 9, 9, 20, 9, 20, 20, 9, 20);

@@ -45,6 +45,9 @@ public partial class Hud : CanvasLayer
     private ManageWindow _manage = null!;
     private ProgressPanel _progress = null!;
     private StatsPanel _stats = null!;
+    private HudWindow _buyWindow = null!;
+    private Label _buyText = null!;
+    private PlotId _buyPlot;
     private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!;
     private OrdersPanel _orders = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
@@ -111,6 +114,7 @@ public partial class Hud : CanvasLayer
             _slotsDirty = true;
             _refresh = 0; // selection changes show in the Manage window right away
             RefreshToolState();
+            if (_buyWindow != null && _tools.Mode is not (ToolMode.Build or ToolMode.Move or ToolMode.Paste)) _buyWindow.Visible = false;
         };
         thumbs.Updated += _ => RefreshHotbar();
     }
@@ -180,8 +184,6 @@ public partial class Hud : CanvasLayer
         Keyed(_toolButtons[ToolMode.Move], () => $"Move selection ({K("move")})");
         Tool(ToolMode.Paste, Icon.Copy, "", () => _tools.CopySelection(enterPaste: true));
         Keyed(_toolButtons[ToolMode.Paste], () => $"Copy selection & paste ({K("copy")})\nCtrl+C / Ctrl+V / Ctrl+X");
-        Tool(ToolMode.Land, Icon.Land, "", () => _tools.SetMode(_tools.Mode == ToolMode.Land ? ToolMode.Select : ToolMode.Land));
-        Keyed(_toolButtons[ToolMode.Land], () => $"Buy land ({K("land_tool")})\nClick a glowing plot next to your land.\nFurther from the start costs more.");
         bar.AddChild(new VSeparator());
         _undo = Ui.IconButton(Icon.Undo, "Undo (Ctrl+Z)", () => _tools.Undo());
         _redo = Ui.IconButton(Icon.Redo, "Redo (Ctrl+Y)", () => _tools.Redo());
@@ -361,6 +363,49 @@ public partial class Hud : CanvasLayer
         };
         AddWindow(_tutorial.Window);
         _root.AddChild(_tutorial.Highlight);
+
+        BuildBuyWindow();
+    }
+
+    /// <summary>"Buy this plot for $X?": opened by a click on a buy tag while placing.</summary>
+    private void BuildBuyWindow()
+    {
+        _buyWindow = new HudWindow("Buy land", Icon.Coin, 340);
+        _buyText = Ui.Label("", 17);
+        _buyText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _buyText.CustomMinimumSize = new Vector2(300, 0);
+        _buyWindow.Body.AddChild(Ui.Pad(_buyText, 16, 14));
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 0);
+        var cancel = new Button { ThemeTypeVariation = "FlatButton", Text = "Cancel", FocusMode = Control.FocusModeEnum.None, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 46) };
+        cancel.Pressed += _buyWindow.Close;
+        row.AddChild(cancel);
+        var buy = new Button { ThemeTypeVariation = "PrimaryButton", Text = "Buy", FocusMode = Control.FocusModeEnum.None, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 46) };
+        buy.Pressed += ConfirmBuy;
+        row.AddChild(buy);
+        _buyWindow.Body.AddChild(row);
+        AddWindow(_buyWindow);
+        _tools.BuyPlotRequested += AskToBuy;
+    }
+
+    private void AskToBuy(PlotId plot)
+    {
+        var world = _host.Sim.World;
+        _buyPlot = plot;
+        _buyText.Text = $"Buy this plot for ${world.Land.PriceOf(plot).Format()}?\nYou have ${world.Money.Format()}.";
+        _buyWindow.Placed = true; // centred here, not by PlaceWindow
+        _buyWindow.Visible = true;
+        _buyWindow.Fit();
+        var screen = _root.GetViewportRect().Size;
+        _buyWindow.Root.Position = new Vector2(Mathf.Round((screen.X - _buyWindow.Root.Size.X) / 2), Mathf.Round((screen.Y - _buyWindow.Root.Size.Y) / 2 - 60));
+        _buyWindow.Fit();
+    }
+
+    private void ConfirmBuy()
+    {
+        _buyWindow.Close();
+        var price = _host.Sim.World.Land.PriceOf(_buyPlot);
+        if (_host.Execute(new BuyPlot(_buyPlot.Column, _buyPlot.Row)).Ok) _host.Notify($"Bought the plot for ${price.Format()}");
     }
 
     public void StartTutorial()
@@ -454,7 +499,7 @@ public partial class Hud : CanvasLayer
             ("Shift+wheel", "Build height"), (K("hide_above"), "Hide above build height"),
             (K("pick"), "Pick hovered building"), (K("upgrade"), "Upgrade tool / selection"),
             ($"Shift+LMB ({K("upgrade")})", "Upgrade whole belt line"), (K("delete_tool"), "Delete tool"),
-            (K("land_tool"), "Buy land (plots next to yours)"), ("Del", "Delete selection"), (K("move"), "Move selection"),
+            ("Click a buy tag", "Buy a plot (it asks first)"), ("Del", "Delete selection"), (K("move"), "Move selection"),
             (K("copy"), "Copy & paste selection"), ("Ctrl+C / V / X", "Copy / paste / cut"),
             ("Ctrl+Z / Y", "Undo / redo"), ("Ctrl+A", "Select all"),
             ("Esc / RMB click", "Cancel tool"), ($"{K("pan_forward")}{K("pan_left")}{K("pan_back")}{K("pan_right")}, arrows", "Pan (Shift = fast)"),
@@ -701,9 +746,8 @@ public partial class Hud : CanvasLayer
             ToolMode.Delete => H(("LMB", "Delete"), ("Drag", "Delete area"), ("Ctrl+Z", "Undo"), ("Esc", "Cancel")),
             ToolMode.Move => H(("LMB", "Drop here"), (K("rotate"), "Rotate"), (UpDown, "Up/down"), ("Esc", "Cancel")),
             ToolMode.Paste => H(("LMB", "Paste"), (K("rotate"), "Rotate"), (UpDown, "Height"), ("Esc", "Done")),
-            ToolMode.Land => H(("LMB", "Buy plot"), (K("land_tool"), "Done"), ("Esc", "Cancel")),
             _ when _tools.Selection.Count > 0 => H((K("upgrade"), "Upgrade"), (K("rotate"), "Rotate"), (K("move"), "Move"), (K("copy"), "Copy"), ("Del", "Delete"), ("Shift+LMB", "Add"), ("Esc", "Deselect")),
-            _ => H(("1-0", "Hotbar"), (K("build_menu"), "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), (K("upgrade"), "Upgrade"), (K("delete_tool"), "Delete"), (K("land_tool"), "Land"), (K("progress"), "Progress"), (K("help"), "Help")),
+            _ => H(("1-0", "Hotbar"), (K("build_menu"), "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), (K("upgrade"), "Upgrade"), (K("delete_tool"), "Delete"), (K("progress"), "Progress"), (K("help"), "Help")),
         };
     }
 

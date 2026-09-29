@@ -103,7 +103,6 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `Tab` | Hide everything above the build height |
 | `U` | Upgrade the selection, or open the upgrade tool (click, drag a box, `Shift`-click a whole belt line) |
 | `X` | Delete tool (click or drag a box) · `Del` deletes the selection |
-| `L` | Buy land: plots you can buy glow gold with their price, click one to buy it |
 | `M` | Move the selection (keeps items on belts; `E`/`Q` lifts or lowers it) |
 | `C` · `Ctrl+C` / `Ctrl+V` / `Ctrl+X` | Copy & paste selection · copy / paste / cut |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo (a dragged line is one step) |
@@ -157,7 +156,7 @@ their choice.
   inputs at the plain rate, so polishing an ingredient is wasted: put it right before the
   depot. Raw ore keeps its 25% cut, so polished ore still sells for 1.5× that.
 - **Land.** The map is a fixed 5 x 5 grid of plots, each 15 x 15 cells (75 x 75). Everyone starts
-  with the one plot at the bottom middle and buys the rest (`L`, then click a glowing plot).
+  with the one plot at the bottom middle and buys the rest (while you build, move or paste, plots you can buy carry a big buy tag; click the plot and confirm).
   A plot must share an edge with land you own, never just a corner. The price depends on how far
   the plot is from your starting plot, not on how many you own: the three plots next to the start
   cost the same ($2.5K), and every step further out costs eight times more, up to $82M in the far
@@ -199,7 +198,6 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).
-# --land (the buy-land overlay).
 ```
 
 ## Continuous integration and downloads
