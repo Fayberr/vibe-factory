@@ -1,7 +1,7 @@
 # Roadmap: depth and long-term play
 
 Where the game is going and why. Decisions are Fabian's; numbers are starting points that the
-balance tool (`dotnet run --project src/FactorySim.Cli -- balance`) checks before they ship.
+balance tool (step 0 below) checks before they ship.
 
 ## The problem
 

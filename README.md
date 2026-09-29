@@ -58,8 +58,8 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download). The client nee
 ```bash
 dotnet test                                   # core test suite
 dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, stats, save/load, offline catch-up
-dotnet run --project src/FactorySim.Cli -- balance          # economy report over the content file
-dotnet run --project src/FactorySim.Cli -- balance item robot   # what a robot line needs, ore to depot
+dotnet run --project "src/FactorySim.Cli" -- balance        # economy report over the content file
+dotnet run --project "src/FactorySim.Cli" -- balance item robot  # what one robot needs, ore to depot
 ```
 
 **Balance tool.** `balance` is a calculator over `base.json`: `balance tiers` estimates how long
