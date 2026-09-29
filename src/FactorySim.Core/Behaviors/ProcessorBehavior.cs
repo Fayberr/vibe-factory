@@ -224,6 +224,6 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         var recipe = s.Recipe == null ? null : Array.Find(p.ResolvedRecipes, r => r.Id == s.Recipe);
         return recipe == null
             ? new EntityStatus(false, 0, "idle")
-            : new EntityStatus(true, (float)Math.Min(1, s.Work / recipe.Ticks), $"making {p.ItemNames[recipe.Outputs[0].Item]}");
+            : new EntityStatus(true, (float)Math.Min(1, s.Work / recipe.Ticks), $"making {string.Join(" + ", recipe.Outputs.Select(o => p.ItemNames[o.Item]))}");
     }
 }
