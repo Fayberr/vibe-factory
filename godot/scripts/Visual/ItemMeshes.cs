@@ -3,7 +3,12 @@ using Godot;
 
 namespace FactorySim.Client;
 
-/// <summary>Meshes for items on belts, chosen by the item's "shape" meta. Coloured per instance.</summary>
+/// <summary>
+/// Meshes for items on belts, chosen by the item's "shape" meta. Coloured per instance.
+/// A belt tile holds four slots (a quarter tile each) and items are drawn facing the travel
+/// direction, so no mesh may be longer than its slot: past that, neighbouring items touch and
+/// a busy belt looks like one continuous ribbon instead of separate goods.
+/// </summary>
 public static class ItemMeshes
 {
     private static readonly Dictionary<string, Mesh> Cache = new();
@@ -40,25 +45,25 @@ public static class ItemMeshes
                 Rock(mb, mat);
                 break;
             case "log":
-                LyingCylinder(mb, mat, Vector3.Zero, 0.07f, 0.28f, 8);
+                LyingCylinder(mb, mat, Vector3.Zero, 0.06f, 0.17f, 8);
                 break;
             case "pile":
                 // Heap of sand: low faceted cone.
-                mb.Cylinder(mat, Vector3.Zero, 0.13f, 0.11f, 9, topRadius: 0.03f);
+                mb.Cylinder(mat, Vector3.Zero, 0.09f, 0.1f, 9, topRadius: 0.025f);
                 break;
             case "barrel":
                 mb.Cylinder(mat, Vector3.Zero, 0.085f, 0.22f, 10);
                 foreach (float y in new[] { 0.04f, 0.18f }) mb.Cylinder(mat, new Vector3(0, y, 0), 0.092f, 0.025f, 10);
                 break;
             case "plank":
-                mb.Box(mat, Vector3.Zero, new Vector3(0.3f, 0.04f, 0.1f), 0.008f);
+                mb.Box(mat, Vector3.Zero, new Vector3(0.17f, 0.04f, 0.09f), 0.008f);
                 break;
             case "plate":
-                mb.Box(mat, Vector3.Zero, new Vector3(0.21f, 0.04f, 0.21f), 0.01f);
+                mb.Box(mat, Vector3.Zero, new Vector3(0.16f, 0.04f, 0.16f), 0.01f);
                 break;
             case "pane":
-                mb.Box(mat, Vector3.Zero, new Vector3(0.22f, 0.025f, 0.18f), 0.004f);
-                mb.Box(mat, new Vector3(0, 0.016f, 0), new Vector3(0.24f, 0.012f, 0.02f), 0f);
+                mb.Box(mat, Vector3.Zero, new Vector3(0.15f, 0.025f, 0.14f), 0.004f);
+                mb.Box(mat, new Vector3(0, 0.016f, 0), new Vector3(0.17f, 0.012f, 0.018f), 0f);
                 break;
             case "coil":
                 Coil(mb, mat);
@@ -70,19 +75,19 @@ public static class ItemMeshes
                 Toy(mb, mat);
                 break;
             case "chip":
-                mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.035f, 0.16f), 0.006f);
+                mb.Box(mat, Vector3.Zero, new Vector3(0.16f, 0.035f, 0.14f), 0.006f);
                 for (int i = 0; i < 4; i++)
                 foreach (int side in new[] { -1, 1 })
-                    mb.Box(mat, new Vector3(-0.06f + i * 0.04f, -0.01f, side * 0.095f), new Vector3(0.018f, 0.02f, 0.03f), 0f);
+                    mb.Box(mat, new Vector3(-0.054f + i * 0.036f, -0.01f, side * 0.082f), new Vector3(0.016f, 0.02f, 0.026f), 0f);
                 break;
             case "motor":
-                LyingCylinder(mb, mat, Vector3.Zero, 0.075f, 0.18f, 12);
-                LyingCylinder(mb, mat, new Vector3(0.12f, 0, 0), 0.018f, 0.08f, 6);
-                mb.Box(mat, new Vector3(0, -0.07f, 0), new Vector3(0.16f, 0.025f, 0.14f), 0.005f);
+                LyingCylinder(mb, mat, Vector3.Zero, 0.07f, 0.12f, 12);
+                LyingCylinder(mb, mat, new Vector3(0.075f, 0, 0), 0.016f, 0.05f, 6);
+                mb.Box(mat, new Vector3(0, -0.065f, 0), new Vector3(0.12f, 0.022f, 0.12f), 0.005f);
                 break;
             case "gem":
-                mb.Cylinder(mat, Vector3.Zero, 0.1f, 0.05f, 8, topRadius: 0.06f);
-                mb.Cylinder(mat, new Vector3(0, -0.1f, 0), 0.001f, 0.1f, 8, topRadius: 0.1f, capTop: false);
+                mb.Cylinder(mat, Vector3.Zero, 0.085f, 0.05f, 8, topRadius: 0.05f);
+                mb.Cylinder(mat, new Vector3(0, -0.085f, 0), 0.001f, 0.085f, 8, topRadius: 0.085f, capTop: false);
                 break;
             case "robot":
                 Robot(mb, mat);
@@ -94,7 +99,7 @@ public static class ItemMeshes
                 Satellite(mb, mat);
                 break;
             default:
-                mb.Box(mat, Vector3.Zero, new Vector3(0.22f, 0.22f, 0.22f), 0.03f);
+                mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.18f, 0.18f), 0.03f);
                 break;
         }
         return Cache[shape] = mb.Commit();
@@ -115,49 +120,49 @@ public static class ItemMeshes
     /// <summary>Slatted wooden crate.</summary>
     private static void Crate(MeshBuilder mb, Material m)
     {
-        mb.Box(m, Vector3.Zero, new Vector3(0.2f, 0.2f, 0.2f), 0.012f);
+        mb.Box(m, Vector3.Zero, new Vector3(0.16f, 0.16f, 0.16f), 0.012f);
         foreach (int s in new[] { -1, 1 })
         {
-            mb.Box(m, new Vector3(0, s * 0.085f, 0.102f), new Vector3(0.21f, 0.03f, 0.01f), 0f);
-            mb.Box(m, new Vector3(0, s * 0.085f, -0.102f), new Vector3(0.21f, 0.03f, 0.01f), 0f);
+            mb.Box(m, new Vector3(0, s * 0.068f, 0.082f), new Vector3(0.17f, 0.026f, 0.01f), 0f);
+            mb.Box(m, new Vector3(0, s * 0.068f, -0.082f), new Vector3(0.17f, 0.026f, 0.01f), 0f);
         }
     }
 
     /// <summary>Little toy car: body, cabin and four wheels.</summary>
     private static void Toy(MeshBuilder mb, Material m)
     {
-        mb.Box(m, new Vector3(0, 0.07f, 0), new Vector3(0.22f, 0.07f, 0.13f), 0.02f);
-        mb.Box(m, new Vector3(-0.02f, 0.13f, 0), new Vector3(0.11f, 0.06f, 0.11f), 0.02f);
+        mb.Box(m, new Vector3(0, 0.06f, 0), new Vector3(0.17f, 0.06f, 0.11f), 0.02f);
+        mb.Box(m, new Vector3(-0.015f, 0.11f, 0), new Vector3(0.09f, 0.05f, 0.09f), 0.02f);
         foreach (int sx in new[] { -1, 1 })
         foreach (int sz in new[] { -1, 1 })
-            mb.With(new Transform3D(new Basis(Vector3.Right, Mathf.Pi / 2), new Vector3(sx * 0.07f, 0.035f, sz * 0.07f)),
-                b => b.Cylinder(m, new Vector3(0, -0.015f, 0), 0.035f, 0.03f, 8, capBottom: true));
+            mb.With(new Transform3D(new Basis(Vector3.Right, Mathf.Pi / 2), new Vector3(sx * 0.055f, 0.03f, sz * 0.058f)),
+                b => b.Cylinder(m, new Vector3(0, -0.015f, 0), 0.03f, 0.026f, 8, capBottom: true));
     }
 
     /// <summary>Quadcopter: a body, four arms and four rotor discs.</summary>
     private static void Drone(MeshBuilder mb, Material m)
     {
-        mb.Box(m, Vector3.Zero, new Vector3(0.1f, 0.05f, 0.1f), 0.015f);
+        mb.Box(m, Vector3.Zero, new Vector3(0.075f, 0.045f, 0.075f), 0.015f);
         foreach (int sx in new[] { -1, 1 })
         foreach (int sz in new[] { -1, 1 })
         {
-            var tip = new Vector3(sx * 0.1f, 0.01f, sz * 0.1f);
-            mb.Beam(m, Vector3.Zero, tip, 0.02f);
-            mb.Cylinder(m, tip + new Vector3(0, 0.015f, 0), 0.05f, 0.008f, 10);
+            var tip = new Vector3(sx * 0.055f, 0.01f, sz * 0.055f);
+            mb.Beam(m, Vector3.Zero, tip, 0.016f);
+            mb.Cylinder(m, tip + new Vector3(0, 0.014f, 0), 0.03f, 0.008f, 10);
         }
     }
 
     /// <summary>Satellite: a body, two solar panels and a dish.</summary>
     private static void Satellite(MeshBuilder mb, Material m)
     {
-        mb.Box(m, new Vector3(0, 0.08f, 0), new Vector3(0.09f, 0.12f, 0.09f), 0.01f);
+        mb.Box(m, new Vector3(0, 0.07f, 0), new Vector3(0.07f, 0.1f, 0.07f), 0.01f);
         foreach (int sx in new[] { -1, 1 })
         {
-            mb.Beam(m, new Vector3(sx * 0.045f, 0.09f, 0), new Vector3(sx * 0.08f, 0.09f, 0), 0.012f);
-            mb.Box(m, new Vector3(sx * 0.15f, 0.09f, 0), new Vector3(0.14f, 0.008f, 0.08f), 0f);
+            mb.Beam(m, new Vector3(sx * 0.035f, 0.08f, 0), new Vector3(sx * 0.05f, 0.08f, 0), 0.01f);
+            mb.Box(m, new Vector3(sx * 0.07f, 0.08f, 0), new Vector3(0.04f, 0.008f, 0.05f), 0f);
         }
-        mb.Cylinder(m, new Vector3(0, 0.14f, 0), 0.01f, 0.03f, 6);
-        mb.Cylinder(m, new Vector3(0, 0.16f, 0), 0.02f, 0.03f, 10, topRadius: 0.05f);
+        mb.Cylinder(m, new Vector3(0, 0.12f, 0), 0.008f, 0.025f, 6);
+        mb.Cylinder(m, new Vector3(0, 0.135f, 0), 0.016f, 0.025f, 10, topRadius: 0.04f);
     }
 
     /// <summary>Boxy robot: legs, torso, arms and a head with an antenna.</summary>
@@ -178,7 +183,7 @@ public static class ItemMeshes
         // Trapezoid bar, long axis along X (belts rotate it to face the travel direction).
         Vector3 B(float x, float z) => new(x, -0.05f, z);
         Vector3 T(float x, float z) => new(x, 0.05f, z);
-        float bx = 0.16f, bz = 0.08f, tx = 0.125f, tz = 0.055f;
+        float bx = 0.09f, bz = 0.055f, tx = 0.07f, tz = 0.04f;
         mb.Quad(m, T(-tx, -tz), T(tx, -tz), T(tx, tz), T(-tx, tz), Vector3.Up);
         mb.Quad(m, B(-bx, -bz), B(bx, -bz), T(tx, -tz), T(-tx, -tz), new Vector3(0, 0.4f, -1));
         mb.Quad(m, B(bx, bz), B(-bx, bz), T(-tx, tz), T(tx, tz), new Vector3(0, 0.4f, 1));
@@ -199,7 +204,7 @@ public static class ItemMeshes
         float[] jitter = { 1.0f, 0.86f, 1.08f, 0.93f, 1.12f, 0.9f, 1.0f, 1.1f, 0.88f, 1.04f, 0.95f, 1.07f };
         for (int i = 0; i < v.Length; i++)
         {
-            var p = v[i].Normalized() * jitter[i] * 0.125f;
+            var p = v[i].Normalized() * jitter[i] * 0.08f;
             v[i] = new Vector3(p.X, p.Y * 0.78f, p.Z);
         }
         int[,] f =
