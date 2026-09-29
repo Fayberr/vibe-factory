@@ -218,7 +218,7 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 The version is one line in [`VERSION`](VERSION) at the repository root, in `major.minor.patch` form,
 and that file is the only place it is written. The build reads it into every assembly, so the number
 the game shows is the number it was compiled with. The client stamps it in a small dim label in the
-bottom right corner of the screen, reading `Build 0.1.0`; hovering that label adds the commit the
+bottom right corner of the screen, reading `Build 3.7.1`; hovering that label adds the commit the
 build came from, which is what a bug report needs to name the exact build.
 
 Bump it by hand when a build is worth telling apart:
@@ -226,6 +226,10 @@ Bump it by hand when a build is worth telling apart:
 - **major**: a change that breaks existing saves or the shape of the game.
 - **minor**: new content or a new system.
 - **patch**: fixes and balance only.
+
+The starting number was counted back from the history rather than started at zero: the 56 commits
+before versioning existed contain 3 changes that reshaped the game, 20 that added something to do or
+see, and 33 fixes, which is where 3.7.1 comes from. The next change to land moves it on from there.
 
 CI checks the shape of the file before compiling and names each release after the version, so any
 download can be traced back to the commit that made it.
