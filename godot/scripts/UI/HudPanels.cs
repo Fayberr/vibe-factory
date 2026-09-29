@@ -91,6 +91,12 @@ public static class Ui
         _ => char.ToUpperInvariant(category[0]) + category[1..],
     };
 
+    /// <summary>An item's display name. An item the content no longer has gets a readable name, never its raw id.</summary>
+    public static string ItemName(ContentRegistry content, string id) =>
+        content.Items.TryGetValue(id, out var item) ? item.Name
+            : id.Length == 0 ? "Unknown item"
+            : char.ToUpperInvariant(id[0]) + id[1..].Replace('_', ' ');
+
     public static readonly string[] CategoryOrder = { "logistics", "production", "processing", "crafting", "economy" };
 
     /// <summary>Why a building can't be placed right now (tier lock or build limit), or null.</summary>
@@ -486,33 +492,104 @@ public sealed class OrdersPanel
     }
 }
 
-/// <summary>Production statistics.</summary>
+/// <summary>Production statistics, with the income broken down by product.</summary>
 public sealed class StatsPanel
 {
+    private const int Columns = 4; // product, rate, share, lifetime
+
     public readonly Control Root;
     private readonly Label _text = Ui.Label("", 14);
+    private readonly GridContainer _byItem = new() { Columns = Columns };
+    private readonly Label _byItemEmpty = Ui.Label("", 13, UiTheme.Muted);
+    private readonly Label _idle = Ui.Label("", 12, UiTheme.Muted);
+    private readonly Label _sold = Ui.Label("", 14);
 
     public StatsPanel()
     {
-        Root = Ui.Pad(_text, 14, 12);
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 6);
+        box.AddChild(_text);
+        box.AddChild(new HSeparator());
+        var title = Ui.Label($"Income by product ({StatsTracker.WindowSeconds} s)", 14);
+        title.AddThemeFontOverride("font", UiTheme.Bold);
+        box.AddChild(title);
+        _byItem.AddThemeConstantOverride("h_separation", 12);
+        _byItem.AddThemeConstantOverride("v_separation", 2);
+        _byItem.AddChild(Cell("Product", UiTheme.Muted, right: false, 12));
+        foreach (var head in new[] { "Rate", "Share", "Lifetime" })
+            _byItem.AddChild(Cell(head, UiTheme.Muted, right: true, 12));
+        box.AddChild(_byItem);
+        box.AddChild(_byItemEmpty);
+        _idle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _idle.CustomMinimumSize = new Vector2(250, 0);
+        box.AddChild(_idle);
+        box.AddChild(new HSeparator());
+        box.AddChild(_sold);
+        Root = Ui.Pad(box, 14, 12);
+    }
+
+    private static Label Cell(string text, Color color, bool right, int size = 13)
+    {
+        var l = Ui.Label(text, size, color);
+        if (right) l.HorizontalAlignment = HorizontalAlignment.Right;
+        return l;
     }
 
     public void Refresh(World world)
     {
         var s = world.Stats;
-        var lines = new List<string>
-        {
+        _text.Text = string.Join("\n",
             $"Income (10 s):   ${s.IncomePerSecond(10).Format()}/s",
             $"Income (60 s):   ${s.IncomePerSecond().Format()}/s",
             $"Lifetime:        ${s.TotalEarned.Format()}",
-            $"Buildings:       {world.EntityCount}",
-            "",
-            "Sold",
-        };
+            $"Buildings:       {world.EntityCount}");
+
+        // Highest earner first; the id breaks ties so the order does not flicker.
+        var ranked = s.IncomePerSecondByItem()
+            .OrderByDescending(kv => kv.Value)
+            .ThenBy(kv => kv.Key, StringComparer.Ordinal)
+            .ToList();
+        int cells = Columns * (ranked.Count + 1);
+        while (_byItem.GetChildCount() < cells)
+        {
+            _byItem.AddChild(Cell("", UiTheme.Text, right: false));
+            _byItem.AddChild(Cell("", UiTheme.Money, right: true));
+            _byItem.AddChild(Cell("", UiTheme.Text, right: true));
+            _byItem.AddChild(Cell("", UiTheme.Muted, right: true));
+        }
+        for (int i = 0; i < ranked.Count; i++)
+        {
+            var (item, rate) = ranked[i];
+            int at = Columns * (i + 1);
+            ((Label)_byItem.GetChild(at)).Text = Ui.ItemName(world.Content, item);
+            ((Label)_byItem.GetChild(at + 1)).Text = $"${rate.Format()}/s";
+            ((Label)_byItem.GetChild(at + 2)).Text = Percent(s.IncomeShareOf(item).ToDouble());
+            ((Label)_byItem.GetChild(at + 3)).Text = "$" + s.EarnedByItem.GetValueOrDefault(item).Format();
+        }
+        for (int i = 0; i < _byItem.GetChildCount(); i++)
+            ((Control)_byItem.GetChild(i)).Visible = i < cells;
+        _byItem.Visible = ranked.Count > 0;
+        _byItemEmpty.Visible = ranked.Count == 0;
+        _byItemEmpty.Text = s.TotalEarned.IsZero ? "Nothing sold yet." : $"No sales in the last {StatsTracker.WindowSeconds} s.";
+
+        // The other half of the question: what the factory makes that brings in nothing.
+        var idle = s.Produced
+            .Where(kv => kv.Value > 0 && s.IncomePerSecondOf(kv.Key).IsZero)
+            .Select(kv => Ui.ItemName(world.Content, kv.Key))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+        _idle.Visible = idle.Count > 0;
+        _idle.Text = $"Made, but earning nothing: {string.Join(", ", idle)}";
+
+        var sold = new List<string> { "Sold" };
         foreach (var (item, count) in s.Sold.OrderByDescending(kv => kv.Value))
-            lines.Add($"  {world.Content.Items.GetValueOrDefault(item)?.Name ?? item}: {count}");
-        _text.Text = string.Join("\n", lines);
+            sold.Add($"  {Ui.ItemName(world.Content, item)}: {count}");
+        _sold.Text = string.Join("\n", sold);
     }
+
+    /// <summary>"42.5%", and "<0.1%" for a product that earns something but rounds away.</summary>
+    private static string Percent(double share) =>
+        share > 0 && share < 0.001 ? "<0.1%" : $"{share * 100:0.0}%";
 }
 
 /// <summary>Temporary messages under the top bar.</summary>

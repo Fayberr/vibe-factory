@@ -156,8 +156,13 @@ underneath. Lifts and multi-level machines use the same mechanism.
   survive a swap between belt pieces.
 - Global stat upgrades still exist as a mechanism for mod packs (research, events).
   The base game defines none. `World.Stat(key)` composes them and caches the result.
-- `StatsTracker` keeps lifetime totals and a rolling 60 s income window.
-  `Snapshot()` is the deterministic summary for leaderboards and shared stats.
+- `StatsTracker` keeps lifetime totals and a rolling 60 s income window, both in total and per
+  item: `EarnedByItem` is the money each item's sales paid, and per item buckets aligned with the
+  total window give `IncomePerSecondOf`/`IncomePerSecondByItem` and `IncomeShareOf` (rate over the
+  total rate, zero when nothing was earned). They are saved with the stats; a save from before
+  them loads with no per item income. Order rewards and offline extrapolation count toward
+  `TotalEarned` only, so the per item numbers are sales. `Snapshot()` is the deterministic summary
+  for leaderboards and shared stats, including `EarnedByItem`.
 
 ### Orders and goals
 
@@ -280,7 +285,7 @@ falling back, so the next save can't overwrite it with the older backup.
 | `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
 | `UI/TutorialPanel` | Presents the tutorial steps with a pulsing outline on the control each step is about |
 | `UI/Menus` | `MenuLayer`: title screen, pause menu, save slots, name and confirm dialogs, `SettingsPanel`, credits. It keeps processing while the tree is paused |
-| `UI/HudPanels` | Progress (tiers, limits, next goals), `OrdersPanel` (order cards with a swap button), statistics |
+| `UI/HudPanels` | Progress (tiers, limits, next goals), `OrdersPanel` (order cards with a swap button), statistics (with income by product, and what is made but earns nothing) |
 | `Audio/` | `AudioManager`: Music, Effects (positional) and Interface buses; random clip and pitch per play, per-sound cool-downs, crossfading playlists; maps `SimEvent`s to sounds and gives every button a click |
 | `GameFlow` | Title → playing ⇄ paused. The title runs a demo factory with goals off behind the menu and an orbiting camera; the pause menu pauses the whole tree, `Space` only the simulation |
 | `GameSettings` | Preferences in `user://settings.json`: audio (volumes, mute in background), display (window mode, vsync, FPS cap and counter, quality, UI scale capped to the window), camera (pan speed, edge pan, inverted zoom), gameplay toggles, autosave, tutorial seen, rebound keys |
