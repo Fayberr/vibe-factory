@@ -106,7 +106,8 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - **Router** (splitter 1→3, merger 3→1): a hub tile that picks outputs round-robin
   at mid-tile and skips blocked ones at the exit. Merging is fair: while the
   preferred input has items waiting, other inputs are refused, then the preference
-  rotates. Both are tested with saturated inputs.
+  rotates. Both are tested with saturated inputs. A splitter can also sort, with a
+  filter per output (see Byproducts below).
 - **Shared geometry.** `View/TransportPath` defines every path in building-local
   space: straight, S-curved ramps (smoothstep), quarter-circle curves, and hub
   entry→centre→exit. The simulation positions items with it, and the Godot client
@@ -142,6 +143,8 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - **Choices.** `SelectRecipe` sets what a machine makes (null = automatic): it then only
   accepts that recipe's ingredients and drops buffered ones it can't use. Behaviors expose
   it through `IBehavior.Selection`/`Select`; it is undoable, saved, and kept by blueprints.
+  `SetFilter` is the same for a splitter output (`IBehavior.Filters`/`SetFilter`), and
+  `IBehavior.CheckLoaded` repairs such state when a save loads (a filter for a removed item).
 - **Reference values.** `ItemValues` (`ContentRegistry.ItemValue`) follows the recipes from
   raw resources to give every item's level-1 value and the tier it becomes available. The
   Manage window shows it, and a test checks that each tier's best product is worth at
@@ -163,6 +166,49 @@ underneath. Lifts and multi-level machines use the same mechanism.
   them loads with no per item income. Order rewards and offline extrapolation count toward
   `TotalEarned` only, so the per item numbers are sales. `Snapshot()` is the deterministic summary
   for leaderboards and shared stats, including `EarnedByItem`.
+
+### Byproducts
+
+A recipe can have several outputs: one craft makes all of them. `ProcessorBehavior.Craft` splits
+the craft's value evenly over **every output unit**, whatever the item, and each output leaves as
+its own stack through the machine's one output port, so a byproduct recipe puts a mixed stream on
+the belt. The output buffer counts the units of all outputs. `ItemValues` and the balance tool use
+the same split, and an item's reference value comes from the earliest tier that makes it (then the
+most valuable recipe), so a byproduct recipe must not make an existing item earlier or at a higher
+value than today, or that item's value changes.
+
+The mixed belt is sorted by the splitter. `RouterState.Filters` holds one rule per output, in the
+def's output order: null takes anything, an item id takes only that item, and
+`RouterBehavior.Overflow` takes only what the others will not. An item goes to the connected
+outputs set to its type, else to those that take anything, else to an overflow output; within that
+group the outputs take turns (`LastPicked`) and a blocked one is skipped, and an overflow output
+also takes what a full group refuses. An item that no output takes waits at the centre and holds up
+the splitter. With no filter set `Filters` is null and the old round-robin code path runs, so a
+plain splitter routes and saves exactly as before. The lazy answer to a byproduct is one splitter:
+set the wanted item on one output and overflow on another that runs to a depot.
+
+`ItemDef.Byproduct` (`"byproduct": true`) marks an item that is made on the side. It sells and
+crafts like any other item, but is never asked for in an order, so dealing with it stays optional.
+
+**The trial content** in `base.json` is marked "Byproduct trial" in comments: an Oil Refinery can
+crack crude oil (2 crude oil → 3 plastic + 1 tar), and a Blast Furnace can burn tar instead of coal
+(iron ingot + tar → steel). Both are tuned so that every unit is worth what the plain recipes make:
+plastic $1, tar $1 (the coal it replaces), steel $7.5. Cracking gives less plastic per oil but works
+through oil 50% faster, and its tar saves coal. A refinery only cracks when the player chooses it.
+`ByproductTrialTests` covers the content; `MultiOutputTests` and `SplitterFilterTests` cover the
+mechanism with their own test machines, so they stay when the content goes.
+
+**To tune it**, edit `base.json`: counts, `ticks` and `valueMultiplier` of `crack_oil` and
+`forge_steel_tar`, then check with `balance items`, `balance item tar` and `balance item plastic`.
+Keep plastic at $1 and steel at $7.5 per unit, or existing items change value.
+
+**To remove it**, delete from `base.json`: the `tar` item, the `crack_oil` and `forge_steel_tar`
+recipes, those two ids from the `refinery` and `blast_furnace` recipe lists, and the two comment
+blocks marked "Byproduct trial"; then delete
+`tests/FactorySim.Tests/ByproductTrialTests.cs`. Nothing else refers to them. Old saves keep every
+building: a machine set to a removed recipe runs automatically, a filter for tar is cleared, an order
+for tar is dropped (each with a load warning), and tar already on a belt still sells at a depot.
+The filters, overflow and the `byproduct` flag are general and stay.
 
 ### Orders and goals
 
@@ -281,7 +327,7 @@ falling back, so the next save can't overwrite it with the older backup.
 |---|---|
 | `Visual/` | `MeshBuilder` (procedural geometry), `ModelFactory` (all building models), `WorldView` (instancing, curve/pillar-aware rebuilds, item MultiMeshes with tick interpolation, highlights, floating income), shaders, lighting and ground |
 | `Input/` | `CameraRig` (orbit/pan/zoom-to-cursor), `BuildController` (select, build, upgrade, delete, move, paste, pipette, undo, build height; uses `BuildPlanner`), `GhostLayer` (translucent previews with port arrows and pillars) |
-| `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip), `HudWindow` (draggable windows, several open at once), `ManageWindow` (the selection: stats, upgrade, recipe choice), build menu with locks and limits, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders building and item icons from the 3D models) |
+| `UI/` | `Hud` (tool bar, sidebar, factory card with the next goal, height ladder, hotbar, key hints, cursor tooltip), `HudWindow` (draggable windows, several open at once), `ManageWindow` (the selection: stats, upgrade, recipe choice with every output, splitter filters), build menu with locks and limits, progress (tiers, limits), stats, vector `IconView`, `Thumbnails` (renders building and item icons from the 3D models) |
 | `Dev/` | `UiScenario`: scripted end-to-end test that injects real input events |
 | `UI/TutorialPanel` | Presents the tutorial steps with a pulsing outline on the control each step is about |
 | `UI/Menus` | `MenuLayer`: title screen, pause menu, save slots, name and confirm dialogs, `SettingsPanel`, credits. It keeps processing while the tree is paused |
@@ -303,7 +349,7 @@ keys first (hotbar, menus, Esc for panels). Everything else falls through to the
 
 ## Roadmap (suggested next steps)
 
-1. **Logistics depth:** filters/sorters, lifts, belt tiers, and hotbar drag-and-drop.
+1. **Logistics depth:** lifts, belt tiers, and hotbar drag-and-drop (splitter filters are done).
 2. **Active loop:** per-entity overclock (a stat scoped to an entity) and anomalies
    (seeded `Rng` events that spawn on machines and reward a click).
 3. **Status effects:** a heat model on items (`heat` tag + decay), heaters,

@@ -236,7 +236,25 @@ Open items (design, not technology): shared or separate money, tier and land; wh
 upgrade whose buildings; what pause means when one player is mid-build; and whether the service
 lives on fayber.dev.
 
+### 9. Byproducts (trial)
+
+A recipe can make two things from one craft, and a splitter can sort a mixed belt: each output takes
+anything, one item, or the overflow (what the other outputs do not take or refuse because they are
+full). The lazy way out is one splitter with the wanted item on one output and overflow into a depot;
+no sink building. Filters are a `SetFilter` command: undoable, saved, kept by blueprints.
+
+The content is a trial, to see if it is liked: an Oil Refinery can crack crude oil into plastic and
+**tar**, and a Blast Furnace burns tar instead of coal. Every output is worth what the plain recipes
+make, so no existing value changed (`balance items`, `balance tiers` and `balance land` are identical
+apart from the new Tar row), and tar is used by steel, so the satellite is still the only dead end.
+
+To remove the trial in one pass, delete exactly these from `base.json`: the item `tar`, the recipes
+`crack_oil` and `forge_steel_tar`, those two ids in the `refinery` and `blast_furnace` recipe lists,
+and the comment blocks marked "Byproduct trial"; and delete `ByproductTrialTests.cs`. The numbers to tune are the counts, `ticks` and
+`valueMultiplier` of those two recipes. Details: "Byproducts" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): which products and tiers to add on top of the tree.
 - Step 8 (multiplayer): the open items listed above, and when to start it.
+- Step 9 (byproducts): keep, extend or remove the trial after playing it.
