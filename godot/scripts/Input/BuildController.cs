@@ -810,7 +810,7 @@ public partial class BuildController : Node3D
             case ToolMode.Move or ToolMode.Paste when _floating != null && _hoverCell is { } at:
                 var moving = Mode == ToolMode.Move ? Selection : null;
                 bool allOk = true;
-                foreach (var (defId, pos, facing, _, _) in _floating.Placements(at, _floatingTurns))
+                foreach (var (defId, pos, facing, _, _, _) in _floating.Placements(at, _floatingTurns))
                 {
                     if (!World.Content.Buildings.TryGetValue(defId, out var def)) continue;
                     bool ok = Entity.CellsFor(def, pos, facing).All(c =>

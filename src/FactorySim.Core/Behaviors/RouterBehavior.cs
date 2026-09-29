@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using FactorySim.Content;
 using FactorySim.View;
 
@@ -7,6 +8,8 @@ public sealed class RouterParams
 {
     public int Speed { get; init; } = 100;
     public int Spacing { get; init; } = 250;
+
+    [JsonIgnore] internal IReadOnlyDictionary<string, ItemDef> Items { get; set; } = new Dictionary<string, ItemDef>();
 }
 
 public sealed class RouterState
@@ -22,6 +25,19 @@ public sealed class RouterState
 
     /// <summary>Per port: last tick an offer through it was refused (i.e. it has items waiting).</summary>
     public long[] RefusedAt { get; set; } = Array.Empty<long>();
+
+    /// <summary>
+    /// Sorting rule per output, in the def's output order: null takes anything, an item id takes only
+    /// that item, <see cref="RouterBehavior.Overflow"/> takes only what no other output will. Null when
+    /// nothing is set, which routes exactly as a hub without filters (and keeps saves unchanged).
+    /// </summary>
+    public string?[]? Filters { get; set; }
+
+    /// <summary>
+    /// Per output: tick an item was last sent to it. Only kept while filters are set, where each group
+    /// of outputs takes turns on its own (one shared cursor would send every other item to one output).
+    /// </summary>
+    public long[]? LastPicked { get; set; }
 }
 
 /// <summary>An item crossing a hub: entered through <see cref="From"/>, leaving through <see cref="To"/> (-1 = not chosen yet).</summary>
@@ -34,6 +50,11 @@ public record struct RouterItem(ItemStack Item, int Pos, int From, int To);
 ///    output is skipped at the exit, so one jammed branch never stalls the others.
 ///  • Inputs are served fairly: while the preferred input has items waiting, other
 ///    inputs are refused, then the preference moves on.
+///  • A hub with two or more outputs can sort (<see cref="RouterState.Filters"/>): an item goes to
+///    the outputs set to its type, else to the outputs that take anything, else to an overflow
+///    output. The round-robin and the skipping of blocked outputs work within that group, and an
+///    overflow output also takes what its group refuses. With no filter set every output is in one
+///    group, which is the plain splitter.
 /// </summary>
 public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
 {
@@ -46,6 +67,7 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         Require(def.InputPorts.Count >= 1 && def.OutputPorts.Count >= 1, def, "needs input and output ports.");
         Require(p.Speed > 0 && p.Spacing > 0, def, "speed and spacing must be > 0.");
         Require(def.Footprint.Length == 1, def, "must be a single cell.");
+        p.Items = content.Items;
     }
 
     public override object CreateState(BuildingDef def)
@@ -74,7 +96,7 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
             int target = it.Pos + speed;
             if (w > 0) target = Math.Min(target, items[w - 1].Pos - p.Spacing);
 
-            if (it.To < 0 && target >= Length / 2) it.To = PickOutput(e, s);
+            if (it.To < 0 && target >= Length / 2) it.To = PickOutput(ctx, e, s, it.Item.Type);
             if (it.To < 0) target = Math.Min(target, Length / 2); // nowhere to go yet: wait at the centre
 
             if (w == 0 && target >= Length)
@@ -89,29 +111,89 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         if (w < items.Count) items.RemoveRange(w, items.Count - w);
     }
 
-    private static int PickOutput(Entity e, RouterState s)
+    /// <summary>Filter value for an output that takes only what the other outputs refuse.</summary>
+    public const string Overflow = "@overflow";
+
+    private enum Group : byte { None, Matched, Open, Overflow }
+
+    private static Group GroupOf(RouterState s, int output, string type)
+    {
+        string? rule = s.Filters is { } f && output < f.Length ? f[output] : null;
+        return rule == null ? Group.Open : rule == Overflow ? Group.Overflow : rule == type ? Group.Matched : Group.None;
+    }
+
+    /// <summary>Where an item belongs: outputs set to its type, else open ones, else overflow (connected ones only).</summary>
+    private static Group HomeOf(Entity e, RouterState s, string type)
+    {
+        if (s.Filters == null) return Group.Open;
+        var home = Group.None;
+        var outs = e.Def.OutputPorts;
+        for (int i = 0; i < outs.Count; i++)
+        {
+            if (!e.Link(outs[i]).IsConnected) continue;
+            var g = GroupOf(s, i, type);
+            if (g != Group.None && (home == Group.None || g < home)) home = g;
+        }
+        return home;
+    }
+
+    private static int PickOutput(TickContext ctx, Entity e, RouterState s, string type)
     {
         var outs = e.Def.OutputPorts;
+        if (s.Filters == null)
+        {
+            for (int k = 0; k < outs.Count; k++)
+            {
+                int idx = (s.NextOut + k) % outs.Count;
+                if (!e.Link(outs[idx]).IsConnected) continue;
+                s.NextOut = (idx + 1) % outs.Count;
+                return outs[idx];
+            }
+            return -1;
+        }
+
+        // Sorting: the output of the item's group that waited longest, so a group takes turns.
+        var home = HomeOf(e, s, type);
+        if (home == Group.None) return -1; // no connected output takes it: wait at the centre
+        if (s.LastPicked?.Length != outs.Count) s.LastPicked = new long[outs.Count];
+        int best = -1;
         for (int k = 0; k < outs.Count; k++)
         {
             int idx = (s.NextOut + k) % outs.Count;
-            if (!e.Link(outs[idx]).IsConnected) continue;
-            s.NextOut = (idx + 1) % outs.Count;
-            return outs[idx];
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != home) continue;
+            if (best < 0 || s.LastPicked[idx] < s.LastPicked[best]) best = idx;
         }
-        return -1;
+        if (best < 0) return -1;
+        s.LastPicked[best] = ctx.Tick;
+        s.NextOut = (best + 1) % outs.Count;
+        return outs[best];
     }
 
-    /// <summary>Leave through the chosen output, or any other connected one if it is blocked.</summary>
+    /// <summary>
+    /// Leave through the chosen output, or another connected one of the same group if it is blocked,
+    /// or an overflow output. The group is checked again here, since filters may have changed.
+    /// </summary>
     private static bool TryExit(TickContext ctx, Entity e, RouterState s, ref RouterItem it, int overflow)
     {
-        if (ctx.Push(e, it.To, it.Item, overflow)) return true;
         var outs = e.Def.OutputPorts;
-        int start = outs.ToList().IndexOf(it.To);
+        int start = 0;
+        while (start < outs.Count - 1 && outs[start] != it.To) start++;
+        string type = it.Item.Type;
+        var home = HomeOf(e, s, type);
+        if (home == Group.None) return false; // nothing takes it any more: wait until a filter or belt changes
+        var chosen = GroupOf(s, start, type);
+        if ((chosen == home || chosen == Group.Overflow) && ctx.Push(e, it.To, it.Item, overflow)) return true;
         for (int k = 1; k < outs.Count; k++)
         {
-            int port = outs[(start + k) % outs.Count];
-            if (!e.Link(port).IsConnected || !ctx.Push(e, port, it.Item, overflow)) continue;
+            int idx = (start + k) % outs.Count;
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != home || !ctx.Push(e, outs[idx], it.Item, overflow)) continue;
+            return true;
+        }
+        if (home == Group.Overflow || s.Filters == null) return false;
+        for (int k = 1; k < outs.Count; k++)
+        {
+            int idx = (start + k) % outs.Count;
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != Group.Overflow || !ctx.Push(e, outs[idx], it.Item, overflow)) continue;
             return true;
         }
         return false;
@@ -149,6 +231,47 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         return -1;
     }
 
+    /// <summary>Where output number <paramref name="output"/> points, as the player sees it ("Front", "Left").</summary>
+    public static string OutputName(BuildingDef def, int output) => def.Ports[def.OutputPorts[output]].Side.ToString();
+
+    protected override IReadOnlyList<string?>? Filters(Entity e, RouterParams p, RouterState s) => s.Filters?.ToArray();
+
+    protected override string? SetFilter(Entity e, RouterParams p, RouterState s, int output, string? filter)
+    {
+        int outs = e.Def.OutputPorts.Count;
+        if (outs < 2) return $"{e.Def.Name} has one output, so there is nothing to sort";
+        if (output < 0 || output >= outs) return $"{e.Def.Name} has no output {output}";
+        if (filter != null && filter != Overflow && !p.Items.ContainsKey(filter)) return $"Unknown item '{filter}'";
+        var f = s.Filters ?? new string?[outs];
+        if (f.Length != outs) Array.Resize(ref f, outs);
+        f[output] = filter;
+        s.Filters = Array.TrueForAll(f, x => x == null) ? null : f;
+        if (s.Filters == null) s.LastPicked = null;
+        return null;
+    }
+
+    protected override void CheckLoaded(Entity e, RouterParams p, RouterState s, List<string> warnings)
+    {
+        if (s.Filters is not { } f) return;
+        int outs = e.Def.OutputPorts.Count;
+        if (outs < 2)
+        {
+            s.Filters = null;
+            s.LastPicked = null;
+            warnings.Add($"Cleared the filters of entity #{e.Id} ({e.Def.Id}): it has one output.");
+            return;
+        }
+        if (f.Length != outs) Array.Resize(ref f, outs);
+        for (int i = 0; i < outs; i++)
+            if (f[i] is { } rule && rule != Overflow && !p.Items.ContainsKey(rule))
+            {
+                f[i] = null;
+                warnings.Add($"Cleared the {OutputName(e.Def, i).ToLowerInvariant()} filter of entity #{e.Id} ({e.Def.Id}): unknown item '{rule}'.");
+            }
+        s.Filters = Array.TrueForAll(f, x => x == null) ? null : f;
+        if (s.Filters == null) s.LastPicked = null;
+    }
+
     protected override void CollectItems(Entity e, RouterParams p, RouterState s, List<ItemView> into)
     {
         foreach (var it in s.Items) into.Add(new ItemView(it.Item, it.Pos / (float)Length, it.From, it.To));
@@ -165,5 +288,15 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         double speed = Math.Min(p.Speed * e.SpeedFactor, p.Spacing);
         into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
         into.Add(new InfoLine("Inside", s.Items.Count.ToString()));
+        if (s.Filters is { } f)
+            into.Add(new InfoLine("Sorting", string.Join(" · ", f.Select((rule, i) => $"{OutputName(e.Def, i)}: {RuleName(p, rule)}"))));
     }
+
+    /// <summary>How a filter reads to the player: "anything", "overflow" or the item's name.</summary>
+    public static string RuleName(RouterParams p, string? rule) => rule switch
+    {
+        null => "anything",
+        Overflow => "overflow",
+        _ => p.Items.TryGetValue(rule, out var item) ? item.Name : rule,
+    };
 }

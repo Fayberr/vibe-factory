@@ -49,6 +49,21 @@ public interface IBehavior
 
     /// <summary>Applies a choice (null = automatic). Returns an error, or null on success.</summary>
     string? Select(Entity entity, string? option);
+
+    /// <summary>
+    /// Sorting rules on the outputs (a splitter's filters), one per output in the def's output order,
+    /// or null when none is set. A copy: changing it changes nothing.
+    /// </summary>
+    IReadOnlyList<string?>? Filters(Entity entity);
+
+    /// <summary>Sets the rule of output number <paramref name="output"/> (null = anything). Returns an error, or null on success.</summary>
+    string? SetFilter(Entity entity, int output, string? filter);
+
+    /// <summary>
+    /// Checks state just restored from a save against today's content and repairs what no longer
+    /// fits (a filter for an item that was removed), adding a warning for each repair.
+    /// </summary>
+    void CheckLoaded(Entity entity, List<string> warnings);
 }
 
 /// <summary>Typed convenience base: casts params/state once so implementations stay readable.</summary>
@@ -81,10 +96,23 @@ public abstract class Behavior<TParams, TState> : IBehavior
 
     public string? Select(Entity entity, string? option) => Select(entity, P(entity), S(entity), option);
 
+    public IReadOnlyList<string?>? Filters(Entity entity) => Filters(entity, P(entity), S(entity));
+
+    public string? SetFilter(Entity entity, int output, string? filter) => SetFilter(entity, P(entity), S(entity), output, filter);
+
+    public void CheckLoaded(Entity entity, List<string> warnings) => CheckLoaded(entity, P(entity), S(entity), warnings);
+
     protected virtual string? Selection(Entity e, TParams p, TState s) => null;
 
     protected virtual string? Select(Entity e, TParams p, TState s, string? option) =>
         option == null ? null : $"{e.Def.Name} has nothing to choose";
+
+    protected virtual IReadOnlyList<string?>? Filters(Entity e, TParams p, TState s) => null;
+
+    protected virtual string? SetFilter(Entity e, TParams p, TState s, int output, string? filter) =>
+        filter == null ? null : $"{e.Def.Name} can't sort items";
+
+    protected virtual void CheckLoaded(Entity e, TParams p, TState s, List<string> warnings) { }
 
     protected virtual void Bind(BuildingDef def, TParams p, ContentRegistry content) { }
 

@@ -152,6 +152,10 @@ public sealed class EditHistory
                 return before.Count > 0 ? One(new SetBuildingLevels(before)) : null;
             case SelectRecipe sr:
                 return world.EntityAt(sr.Cell) is { } chosen ? One(new SelectRecipe(chosen.Pos, chosen.Behavior.Selection(chosen))) : null;
+            case SetFilter sf:
+                return world.EntityAt(sf.Cell) is { } hub
+                    ? One(new SetFilter(hub.Pos, sf.Output, hub.Behavior.Filters(hub) is { } now && sf.Output >= 0 && sf.Output < now.Count ? now[sf.Output] : null))
+                    : null;
             default:
                 return null; // research, tiers and unknown commands are not undoable
         }

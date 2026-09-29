@@ -96,6 +96,7 @@ public sealed partial class Simulation
             MoveBuildings c => Move(c),
             SetBuildingLevels c => SetLevels(c),
             SelectRecipe c => Choose(c),
+            SetFilter c => Filter(c),
             RerollContract c => Reroll(c),
             UnlockTier => Unlock(),
             BuyPlot c => BuyLand(c),
@@ -179,10 +180,10 @@ public sealed partial class Simulation
 
     private CommandResult PlaceMany(PlaceBlueprint c)
     {
-        var plan = new List<(BuildingDef Def, GridPos Pos, Dir Facing, int Level, string? Recipe)>();
+        var plan = new List<(BuildingDef Def, GridPos Pos, Dir Facing, int Level, string? Recipe, IReadOnlyList<string?>? Filters)>();
         var claimed = new HashSet<GridPos>();
         BigNum cost = BigNum.Zero;
-        foreach (var (defId, pos, facing, level, recipe) in c.Blueprint.Placements(c.At, c.QuarterTurns))
+        foreach (var (defId, pos, facing, level, recipe, filters) in c.Blueprint.Placements(c.At, c.QuarterTurns))
         {
             if (!Content.Buildings.TryGetValue(defId, out var def)) return CommandResult.Fail($"Unknown building '{defId}'");
             if (LockReason(def) is { } locked) return CommandResult.Fail(locked);
@@ -192,7 +193,7 @@ public sealed partial class Simulation
                 if (!claimed.Add(cell)) return CommandResult.Fail($"Blueprint overlaps itself at {cell}");
             int lv = Math.Clamp(level, 1, def.Upgrade?.MaxLevel ?? int.MaxValue);
             cost += def.Upgrade?.Invested(def, lv) ?? def.Cost;
-            plan.Add((def, pos, facing, lv, recipe));
+            plan.Add((def, pos, facing, lv, recipe, filters));
         }
         if (plan.Count == 0) return CommandResult.Fail("Nothing to place");
         foreach (var g in plan.GroupBy(x => x.Def))
@@ -204,10 +205,13 @@ public sealed partial class Simulation
         }
 
         var ids = new List<int>(plan.Count);
-        foreach (var (def, pos, facing, level, recipe) in plan)
+        foreach (var (def, pos, facing, level, recipe, filters) in plan)
         {
             var e = World.AddEntity(def, pos, facing, level: level);
             if (recipe != null) e.Behavior.Select(e, recipe); // copies keep their chosen recipe
+            if (filters != null) // and their filters; one for an item this game doesn't have is left open
+                for (int i = 0; i < filters.Count; i++)
+                    if (filters[i] != null) e.Behavior.SetFilter(e, i, filters[i]);
             ids.Add(e.Id);
             if (Events.Enabled) Events.Add(new EntityPlaced(World.Tick, e.Id, def.Id, e.Pos, e.Facing));
         }
@@ -267,6 +271,17 @@ public sealed partial class Simulation
         if (e.Behavior.Selection(e) == c.Recipe) return CommandResult.Success(e.Id);
         if (e.Behavior.Select(e, c.Recipe) is { } error) return CommandResult.Fail(error);
         if (Events.Enabled) Events.Add(new EntitySelectionChanged(World.Tick, e.Id, c.Recipe));
+        return CommandResult.Success(e.Id);
+    }
+
+    private CommandResult Filter(SetFilter c)
+    {
+        if (World.EntityAt(c.Cell) is not { } e) return CommandResult.Fail("Nothing here");
+        var now = e.Behavior.Filters(e);
+        if (c.Filter == null && now == null) return CommandResult.Success(e.Id);
+        if (now != null && c.Output >= 0 && c.Output < now.Count && now[c.Output] == c.Filter) return CommandResult.Success(e.Id);
+        if (e.Behavior.SetFilter(e, c.Output, c.Filter) is { } error) return CommandResult.Fail(error);
+        if (Events.Enabled) Events.Add(new EntityFilterChanged(World.Tick, e.Id, c.Output, c.Filter));
         return CommandResult.Success(e.Id);
     }
 

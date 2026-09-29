@@ -47,6 +47,13 @@ public sealed record SetBuildingLevels(IReadOnlyList<LevelChange> Changes) : Com
 /// </summary>
 public sealed record SelectRecipe(GridPos Cell, string? Recipe) : Command;
 
+/// <summary>
+/// Sets what output number <paramref name="Output"/> of the hub at <paramref name="Cell"/> takes (a
+/// splitter's filter): an item id, <see cref="Behaviors.RouterBehavior.Overflow"/> for what the other
+/// outputs refuse, or null for anything. Outputs count in the def's output order.
+/// </summary>
+public sealed record SetFilter(GridPos Cell, int Output, string? Filter) : Command;
+
 /// <summary>Swaps an open contract for a new one, for a fee (a tenth of its reward).</summary>
 public sealed record RerollContract(int ContractId) : Command;
 

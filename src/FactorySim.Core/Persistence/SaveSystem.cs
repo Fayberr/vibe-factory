@@ -147,7 +147,8 @@ public static class SaveSystem
             {
                 warnings.Add($"Reset state of entity #{es.Id} ({es.Def}): {ex.Message}");
             }
-            world.AddEntity(def, es.Pos, es.Facing, es.Id, state, Math.Max(1, es.Level));
+            var entity = world.AddEntity(def, es.Pos, es.Facing, es.Id, state, Math.Max(1, es.Level));
+            entity.Behavior.CheckLoaded(entity, warnings);
         }
 
         // Restore counters last: AddEntity bumps NextEntityId past loaded ids.

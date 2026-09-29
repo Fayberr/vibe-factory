@@ -4,7 +4,7 @@ using FactorySim.Persistence;
 
 namespace FactorySim.Editing;
 
-public sealed record BlueprintEntry(string Def, GridPos Offset, Dir Facing, int Level = 1, string? Recipe = null);
+public sealed record BlueprintEntry(string Def, GridPos Offset, Dir Facing, int Level = 1, string? Recipe = null, IReadOnlyList<string?>? Filters = null);
 
 /// <summary>
 /// A reusable arrangement of buildings relative to an origin: the clipboard for
@@ -21,7 +21,7 @@ public sealed class Blueprint
     public static Blueprint FromEntities(IEnumerable<Entity> entities, GridPos origin) => new()
     {
         Entries = entities.OrderBy(e => e.Id)
-            .Select(e => new BlueprintEntry(e.Def.Id, e.Pos - origin, e.Facing, e.Level, e.Behavior.Selection(e))).ToList(),
+            .Select(e => new BlueprintEntry(e.Def.Id, e.Pos - origin, e.Facing, e.Level, e.Behavior.Selection(e), e.Behavior.Filters(e))).ToList(),
     };
 
     /// <summary>
@@ -38,9 +38,10 @@ public sealed class Blueprint
     }
 
     /// <summary>World placements when pasted at <paramref name="at"/>, rotated clockwise by <paramref name="quarterTurns"/>.</summary>
-    public IEnumerable<(string Def, GridPos Pos, Dir Facing, int Level, string? Recipe)> Placements(GridPos at, int quarterTurns = 0)
+    public IEnumerable<(string Def, GridPos Pos, Dir Facing, int Level, string? Recipe, IReadOnlyList<string?>? Filters)> Placements(GridPos at, int quarterTurns = 0)
     {
-        foreach (var e in Entries) yield return (e.Def, at + e.Offset.Rotate(quarterTurns), e.Facing.RotateCW(quarterTurns), e.Level, e.Recipe);
+        // Filters belong to the building's own outputs, so they turn with it.
+        foreach (var e in Entries) yield return (e.Def, at + e.Offset.Rotate(quarterTurns), e.Facing.RotateCW(quarterTurns), e.Level, e.Recipe, e.Filters);
     }
 
     /// <summary>Price of pasting: every building at its captured level.</summary>

@@ -128,6 +128,10 @@ public sealed class ContentRegistry
 
     private void Validate()
     {
+        // "@" marks a splitter rule that is not an item (RouterBehavior.Overflow).
+        foreach (var id in Items.Keys)
+            if (id.Length == 0 || id[0] == '@') throw new ContentException($"Item '{id}': ids must not be empty or start with '@'.");
+
         foreach (var r in Recipes.Values)
         {
             if (r.Ticks <= 0) throw new ContentException($"Recipe '{r.Id}': ticks must be > 0.");

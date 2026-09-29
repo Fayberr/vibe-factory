@@ -16,6 +16,7 @@ public sealed record CraftCompleted(long Tick, int EntityId, string Recipe, long
 public sealed record UpgradePurchased(long Tick, string UpgradeId, int Level, BigNum Cost) : SimEvent(Tick);
 public sealed record EntityLevelChanged(long Tick, int EntityId, int Level) : SimEvent(Tick);
 public sealed record EntitySelectionChanged(long Tick, int EntityId, string? Selection) : SimEvent(Tick);
+public sealed record EntityFilterChanged(long Tick, int EntityId, int Output, string? Filter) : SimEvent(Tick);
 public sealed record TierUnlocked(long Tick, int Tier, string Name) : SimEvent(Tick);
 public sealed record PlotBought(long Tick, int Column, int Row, BigNum Price) : SimEvent(Tick);
 public sealed record ContractOffered(long Tick, Contract Contract) : SimEvent(Tick);
