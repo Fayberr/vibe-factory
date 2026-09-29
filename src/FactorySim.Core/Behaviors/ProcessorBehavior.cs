@@ -195,10 +195,11 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
     }
 
     /// <summary>
-    /// The same two checks <see cref="TryAccept"/> makes, buffered room excepted: a machine takes only what
-    /// its recipe uses, and only while its buffer for that item has room. The buffer frees up only as it
-    /// crafts, so a sender asking about a later arrival gets the answer for now, which is exact and
-    /// conservative: a hub feeding a machine can wait in its middle instead of on its edge.
+    /// The checks <see cref="TryAccept"/> makes, made without taking anything: a machine takes only what its
+    /// recipe uses, and only while its buffer for that item has room. A buffer frees up only as the machine
+    /// crafts, so an item arriving later can never find less room than there is now because of this machine:
+    /// the answer is exact for the item in flight, and it is what lets a hub feeding a machine wait in its
+    /// middle instead of on its edge.
     /// </summary>
     protected override bool? WouldAccept(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s, ItemStack item, int port, int inTicks)
     {
