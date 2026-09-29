@@ -42,9 +42,9 @@ that: more content, more versatility, more things to do.
 
 So every system has to work on two levels, and the following rules follow from that:
 
-1. **Shallow floor, deep ceiling.** Every mechanic needs a lazy default that just works. Barrels
-   instead of a pipe network, one machine instead of a balanced sub-factory, a single input instead
-   of a perfect ratio. The advanced version is available, never mandatory.
+1. **Shallow floor, deep ceiling.** Every mechanic needs a lazy default that just works. One machine
+   instead of a balanced sub-factory, a single input instead of a perfect ratio, and selling the
+   excess instead of a perfect loop. The advanced version is available, never mandatory.
 2. **Depth pays off, it never gates.** Playing deep means earning more per minute and getting there
    faster, not being the only way to progress. A casual factory still reaches the last tier, just
    later.

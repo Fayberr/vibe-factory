@@ -256,7 +256,7 @@ link to the chain helper (`F9`) once that exists.
 
 **Option A: cheap to tune, cheap to remove.**
 - Tune: every number (pack recipes, lab speed, prices in packs, growth, effect per level, caps) is in
-  `base.json`. A `--pack` overlay can try a retune with the balance tool without touching the file.
+  `base.json`. A pack overlay can try a retune with the balance tool without touching the file.
 - Remove, content only: delete the pack items, their recipes, the two buildings and the upgrades
   from `base.json`. The save loader already drops unknown upgrades and unknown buildings with a
   warning, and the bank would drop unknown ids the same way, so old saves load. The game is then
@@ -283,8 +283,8 @@ link to the chain helper (`F9`) once that exists.
 
 All commands were run in this worktree at commit `94e8527`, with the CLI built once in Release
 (`dotnet build src/FactorySim.Cli -c Release`). The hypothetical packs are **not** in `base.json`;
-they live in a throwaway overlay loaded with `--pack`, so the numbers are exactly what the shipping
-tool computes for that content.
+they live in a throwaway overlay loaded through the pack option, so the numbers are exactly what the
+shipping tool computes for that content.
 
 ### The overlay: three plausible packs
 
@@ -360,9 +360,9 @@ Build cost: machines $29.82K, with belts and depots $30.53K. Pays back in 38m 46
 The heavy variant, same command with `science_3h`: worth $81.9, **4.67 iron ore/s (5 of 10 drills)
 and 2 coal/s (3 of 5) per pack/s**, iron rods at 133% of a belt, $101.25K to build for 1/s.
 
-The other two eras, for scale: `balance item science_1 0.25 --pack ... --tier 1` costs $1.62K to
-build (half the $3.27K tier 1 factory), 1 of 6 iron drills and 1 of 3 copper drills; `science_2` is
-worth $25.3 and needs 3.33 iron ore/s per pack/s.
+The other two eras, for scale: a `science_1` line at 0.25 per second costs $1.62K to build (half the
+$3.27K tier 1 factory), 1 of 6 iron drills and 1 of 3 copper drills; `science_2` is worth $25.3 and
+needs 3.33 iron ore/s per pack/s.
 
 ### Packs per minute, and whether that is a real constraint
 
@@ -419,9 +419,9 @@ drill-rate research pays back almost one to one, so its price and cap need care;
 barely moves pacing (machine count is unlimited, so it only saves build cost), and `conveyor.speed`
 is capped by belt spacing. The strong rewards are `miner.rate` and `sell.multiplier`.
 
-Before anything ships, the tool should learn this directly: a `--research id=level` option that
-applies upgrade levels to `RecipeBook` (drill rate, sale multiplier, belt speed), and a
-`balance research` report listing each research's price in packs, in lab minutes and in ore.
+Before anything ships, the tool should learn this directly: a research option that applies upgrade
+levels to `RecipeBook` (drill rate, sale multiplier, belt speed), and a `balance research` report
+listing each research's price in packs, in lab minutes and in ore.
 
 ---
 
@@ -476,7 +476,7 @@ Client:
 - A Research window with the bank, the three upgrades and Buy buttons, opened from the HUD.
 - A lab model (reuse the depot model with an accent) and a toast on purchase.
 
-Not in the slice: tier 2 and 3 packs, prerequisites, unlocks, the `--research` balance option.
+Not in the slice: tier 2 and 3 packs, prerequisites, unlocks, the research option in the balance tool.
 
 Try it by playing one run to tier 3 with and without a lab. Keep it if building the pack line feels
 like progress; remove it by deleting the seven content entries, which leaves the game as it is today.
