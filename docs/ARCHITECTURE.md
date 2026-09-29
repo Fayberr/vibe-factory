@@ -104,12 +104,19 @@ underneath. Lifts and multi-level machines use the same mechanism.
   recounted afterwards, so the receiving belt stays straight. The planner mirrors it
   (`ConveyorBehavior.TakesBeltAt`): no route ends at a side a belt would refuse.
 - **Router** (splitter 1→3, merger 3→1): a hub tile that picks outputs round-robin
-  at mid-tile and skips blocked ones at the exit. When every output an item may use is
-  full the item waits at its place and blocks the belt behind it, and that back
-  pressure is the only thing that holds a line back when something downstream cannot
-  take any more. Merging is fair: while the preferred input has items waiting, other
-  inputs are refused, then the preference rotates. Both are tested with saturated
-  inputs. A splitter can also sort, with a filter per output (see Byproducts below).
+  at its middle and skips blocked ones at the exit. An item rides from its entry edge to the
+  **middle** of the hub (`RouterBehavior.Middle`, half the lane), which is where it chooses its
+  output, where it is handed over, and where it waits when that output cannot take it. The lane
+  deliberately stops there: a lane that ran on to the cell edge parked a refused item on the edge
+  it shares with the belt that was refusing it, drawn on that belt's own first item, so the
+  picture said "it has already left" while the hub still held it (3.8.7 clamped the drawing,
+  3.8.8 moved the lane itself). Waiting where it leaves from also means a congested belt never
+  costs the hub time, which travelling to the edge first would have. When every output an item
+  may use is full the item waits at its place and blocks the belt behind it, and that back
+  pressure is the only thing that holds a line back when something downstream cannot take any
+  more. Merging is fair: while the preferred input has items waiting, other inputs are refused,
+  then the preference rotates. Both are tested with saturated inputs. A splitter can also sort,
+  with a filter per output (see Byproducts below).
   A hub that cannot pass something says so instead of looking busy: once an output has
   refused items for a full second (`RouterState.RefusedTicks`, `JamTicks`) the status
   names it ("Left blocked", red lamp) and the panel adds "(belt full)" to its row, or
@@ -126,12 +133,14 @@ underneath. Lifts and multi-level machines use the same mechanism.
   entry→centre→exit. The simulation positions items with it, and the Godot client
   sweeps belt meshes along it, so items ride exactly on the drawn belt.
 - **Items keep clear of the shared edge.** A path ends on the cell edge, and that edge
-  belongs to the neighbour too, whose own first item is drawn on it. `ItemPoint` therefore
-  clamps the progress it samples to `EdgeMargin` (0.12) off both ends, so an item is always
-  drawn inside the building that actually holds it. Without it a hub holding an item it
-  cannot send drew that item on top of the belt's own item, and the picture read as "it has
-  already left" while the hub was still stuck on it: 3.8.7, and the reason Fabian's tar
-  looked as if it had left the splitter while it was still first in the hub.
+  belongs to the neighbour too, whose own first item is drawn on it: two backed-up belts facing
+  each other drew their edge items in the same spot, one inside the other. `ItemPoint` therefore
+  insets the progress it samples by `EdgeMargin` (0.12) at both ends, and insets the whole range
+  by the same amount (`DrawnProgress`) rather than clipping at the ends: clipping moved only the
+  items within a margin of an end and left the others alone, so a belt's items stopped being
+  evenly spaced near its ends (3.8.8; "pairs of two that are closer together"). An item is
+  always drawn inside the building that really holds it, and 0.12 per side is what keeps two
+  0.19-wide meshes apart at a shared edge.
 
 ### Machines
 

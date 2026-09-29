@@ -117,11 +117,20 @@ public static class TransportPath
     /// </summary>
     private const float EdgeMargin = 0.12f;
 
+    /// <summary>
+    /// Progress a drawn item reports: the whole path is inset by <see cref="EdgeMargin"/> at both ends, by
+    /// the same amount everywhere, rather than clipped at the ends. Clipping moved only the items within a
+    /// margin of an end and left every other item where it was, so a belt's items stopped being evenly
+    /// spaced near its ends: "pairs of two that are closer together" (3.8.8).
+    /// </summary>
+    private static float DrawnProgress(float progress) =>
+        EdgeMargin + Math.Clamp(progress, 0f, 1f) * (1f - 2f * EdgeMargin);
+
     /// <summary>World position of an item reported by <see cref="IBehavior.CollectItems"/>.</summary>
     public static GridPoint ItemPoint(Entity e, PathShape shape, in ItemView v)
     {
         // Never on the shared edge: see <see cref="EdgeMargin"/>.
-        float t = Math.Clamp(v.Progress, EdgeMargin, 1f - EdgeMargin);
+        float t = DrawnProgress(v.Progress);
         switch (shape.Kind)
         {
             case PathKind.None:

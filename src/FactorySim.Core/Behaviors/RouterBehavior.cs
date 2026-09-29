@@ -65,7 +65,11 @@ public record struct RouterItem(ItemStack Item, int Pos, int From, int To);
 /// <summary>
 /// Belt hub that routes between several inputs and outputs. Splitters (1 → 3) and
 /// mergers (3 → 1) are this behavior with different ports.
-///  • Outputs are chosen round-robin at mid-tile among connected outputs; a blocked
+///  • An item rides from its entry edge to the middle of the hub, picks a way out there and leaves from
+///    there. The lane stops at the middle, so an item whose output is full waits in the middle of the
+///    building instead of running on to the cell edge; a lane that reached the edge parked such an item
+///    on the neighbour's own first item, which read as "it has already left".
+///  • Outputs are chosen round-robin at the middle among connected outputs; a blocked
 ///    output is skipped at the exit, so one jammed branch never stalls the others.
 ///  • Inputs are served fairly: while the preferred input has items waiting, other
 ///    inputs are refused, then the preference moves on.
@@ -78,6 +82,16 @@ public record struct RouterItem(ItemStack Item, int Pos, int From, int To);
 public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
 {
     private const int Length = ConveyorBehavior.Length;
+
+    /// <summary>
+    /// Middle of a hub's lane: where an item chooses its output, where it leaves from, and where it waits
+    /// when the way out is blocked. The hub hands an item over from its own middle, so it never draws or
+    /// parks an item on the cell edge it shares with its neighbour: an item parked there sat on the
+    /// neighbour's own first item, and the picture read as "it has already gone" while the hub still held
+    /// it. Waiting where it leaves from also keeps a congested hub at full rate: it can send the moment the
+    /// belt has room, without having to travel to the edge first.
+    /// </summary>
+    private const int Middle = Length / 2;
 
     public override string Name => "router";
 
@@ -130,22 +144,22 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
             int target = it.Pos + speed;
             if (w > 0) target = Math.Min(target, items[w - 1].Pos - p.Spacing);
 
-            if (it.To < 0 && target >= Length / 2)
+            if (it.To < 0 && target >= Middle)
             {
                 it.To = PickOutput(ctx, e, s, it.Item.Type);
                 if (it.To < 0)
                 {
-                    // Nothing connected takes it at all: it waits at the centre and holds up the belt behind.
+                    // Nothing connected takes it at all: it waits at the middle and holds up the belt behind.
                     s.NoOutputNow = true;
                     s.NoOutputItem = it.Item.Type;
                 }
             }
-            if (it.To < 0) target = Math.Min(target, Length / 2); // nowhere to go yet: wait at the centre
+            if (it.To < 0) target = Math.Min(target, Middle); // nowhere to go yet: wait at the middle
 
-            if (w == 0 && target >= Length)
+            if (w == 0 && target >= Middle)
             {
-                if (TryExit(ctx, e, s, ref it, target - Length)) continue;
-                target = Length;
+                if (TryExit(ctx, e, s, ref it, target - Middle)) continue;
+                target = Middle; // its output refused it: it waits in the middle, not out on the edge
             }
 
             if (target < it.Pos) target = it.Pos;
