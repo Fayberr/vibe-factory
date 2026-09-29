@@ -106,9 +106,22 @@ public static class TransportPath
 
     public static GridPoint Center(GridPos cell) => new(cell.X + 0.5f, cell.Y + 0.5f, cell.Z);
 
+    /// <summary>
+    /// How much of a cell an item never rides, at either end of its path. A path ends on the cell edge,
+    /// and the edge is shared: the next building draws its own first item on the same line, so an item
+    /// drawn there sat on top of it. That is what made a full belt look as if it had swallowed the item
+    /// the splitter was still holding: the waiting item was drawn on the belt's edge, on the belt's own
+    /// item, and the picture read as "the tar has left, the plastic is first" while the tar was in fact
+    /// still the first item in the hub. Keeping the item's centre clear of the edge also keeps its mesh
+    /// (up to 0.19 wide) inside the cell it is really in.
+    /// </summary>
+    private const float EdgeMargin = 0.12f;
+
     /// <summary>World position of an item reported by <see cref="IBehavior.CollectItems"/>.</summary>
     public static GridPoint ItemPoint(Entity e, PathShape shape, in ItemView v)
     {
+        // Never on the shared edge: see <see cref="EdgeMargin"/>.
+        float t = Math.Clamp(v.Progress, EdgeMargin, 1f - EdgeMargin);
         switch (shape.Kind)
         {
             case PathKind.None:
@@ -116,9 +129,9 @@ public static class TransportPath
             case PathKind.Hub:
                 var from = v.FromPort >= 0 ? e.Def.Ports[v.FromPort].Side : Side.Back;
                 Side? to = v.ToPort >= 0 ? e.Def.Ports[v.ToPort].Side : null;
-                return ToWorld(e, SampleHubLocal(from, to, v.Progress));
+                return ToWorld(e, SampleHubLocal(from, to, t));
             default:
-                return ToWorld(e, SampleLocal(shape, v.Progress));
+                return ToWorld(e, SampleLocal(shape, t));
         }
     }
 

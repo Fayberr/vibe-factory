@@ -125,6 +125,13 @@ underneath. Lifts and multi-level machines use the same mechanism.
   space: straight, S-curved ramps (smoothstep), quarter-circle curves, and hub
   entry→centre→exit. The simulation positions items with it, and the Godot client
   sweeps belt meshes along it, so items ride exactly on the drawn belt.
+- **Items keep clear of the shared edge.** A path ends on the cell edge, and that edge
+  belongs to the neighbour too, whose own first item is drawn on it. `ItemPoint` therefore
+  clamps the progress it samples to `EdgeMargin` (0.12) off both ends, so an item is always
+  drawn inside the building that actually holds it. Without it a hub holding an item it
+  cannot send drew that item on top of the belt's own item, and the picture read as "it has
+  already left" while the hub was still stuck on it: 3.8.7, and the reason Fabian's tar
+  looked as if it had left the splitter while it was still first in the hub.
 
 ### Machines
 

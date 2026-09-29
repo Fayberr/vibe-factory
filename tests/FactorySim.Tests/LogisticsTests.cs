@@ -175,4 +175,39 @@ public class LogisticsTests
         Assert.Contains(points, p => p.X < 1.5f && Math.Abs(p.Y - 0.5f) < 0.01f);  // entered from the west edge
         Assert.Contains(points, p => Math.Abs(p.X - 1.5f) < 0.01f && p.Y > 0.6f); // left through the south edge
     }
+
+    [Fact]
+    public void An_item_the_hub_still_holds_is_drawn_inside_the_hub_not_on_the_belt()
+    {
+        // His report: the tar belt is full, the splitter holds a tar bound for it, and the picture showed
+        // that tar on the belt's edge, on top of the belt's own item, so it looked as if the tar had left
+        // and the plastic behind it was first. Both were drawn on the cell edge they share.
+        var sim = TestUtil.NewSim();
+        sim.Place("splitter", 2, 2, 0, Dir.East);
+        sim.Place("conveyor", 2, 3, 0, Dir.South); // the right output, packed solid
+        var hub = sim.World.EntityAt(new GridPos(2, 2, 0))!;
+        Assert.True(sim.Execute(new SetFilter(hub.Pos, 0, "plastic")).Ok);
+        Assert.True(sim.Execute(new SetFilter(hub.Pos, 2, "tar")).Ok);
+        var right = sim.Belt(2, 3, 0);
+        var rightEntity = sim.World.EntityAt(new GridPos(2, 3, 0))!;
+        for (int pos = 1000; pos >= 0; pos -= 250)
+            right.Items.Add(new BeltItem(sim.World.CreateItem("tar", 1, 1), pos));
+        // A tar at the end of the hub's lane, bound for the right output, which cannot take it.
+        ((RouterState)hub.State).Items.Add(
+            new RouterItem(sim.World.CreateItem("tar", 1, 1), 1000, 0, hub.Def.OutputPorts[2]));
+        sim.Step(20);
+
+        var seen = new List<PositionedItem>();
+        TransportPath.CollectAll(sim.World, seen);
+        var held = seen.Single(s => s.EntityId == hub.Id).Point;
+        var nearest = seen.Where(s => s.EntityId == rightEntity.Id).MinBy(s => s.Point.Y).Point;
+
+        // The hub's cell ends at y = 3 and the belt's begins there. The tar the hub still holds has to be
+        // drawn inside the hub, the belt's own item inside the belt, and the two must not coincide.
+        Assert.Equal(2.5f, held.X, 3);
+        Assert.True(held.Y <= 2.9f, $"the tar the hub holds is drawn at y={held.Y}, out on the belt's edge");
+        Assert.True(nearest.Y >= 3.1f, $"the belt's own tar is drawn at y={nearest.Y}, up on the hub's edge");
+        Assert.True(Math.Abs(held.Y - nearest.Y) >= 0.2f,
+            $"the held tar (y={held.Y}) and the belt's tar (y={nearest.Y}) are drawn on top of each other");
+    }
 }
