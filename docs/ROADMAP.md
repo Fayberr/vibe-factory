@@ -240,8 +240,10 @@ lives on fayber.dev.
 
 A recipe can make two things from one craft, and a splitter can sort a mixed belt: each output takes
 anything, one item, or the overflow (what the other outputs do not take or refuse because they are
-full). The lazy way out is one splitter with the wanted item on one output and overflow into a depot;
-no sink building. Filters are a `SetFilter` command: undoable, saved, kept by blueprints.
+full). A full output only stalls the items bound for it: the splitter holds a bounded number of them
+aside so items with a free output of their own keep leaving. The lazy way out is one splitter with
+the wanted item on one output and overflow into a depot; no sink building. Filters are a `SetFilter`
+command: undoable, saved, kept by blueprints.
 
 The content is a trial, to see if it is liked: an Oil Refinery can crack crude oil into plastic and
 **tar**, and a Blast Furnace burns tar instead of coal. Every output is worth what the plain recipes

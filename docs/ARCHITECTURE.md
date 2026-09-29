@@ -104,10 +104,13 @@ underneath. Lifts and multi-level machines use the same mechanism.
   recounted afterwards, so the receiving belt stays straight. The planner mirrors it
   (`ConveyorBehavior.TakesBeltAt`): no route ends at a side a belt would refuse.
 - **Router** (splitter 1→3, merger 3→1): a hub tile that picks outputs round-robin
-  at mid-tile and skips blocked ones at the exit. Merging is fair: while the
-  preferred input has items waiting, other inputs are refused, then the preference
-  rotates. Both are tested with saturated inputs. A splitter can also sort, with a
-  filter per output (see Byproducts below).
+  at mid-tile and skips blocked ones at the exit. An item whose own output (or, when
+  sorted, its whole group of outputs) is full is held aside in `RouterState.Held`
+  instead of blocking the belt behind it, up to a bounded capacity; once that is
+  full it blocks as before. Merging is fair: while the preferred input has items
+  waiting, other inputs are refused, then the preference rotates. Both are tested
+  with saturated inputs. A splitter can also sort, with a filter per output (see
+  Byproducts below).
 - **Shared geometry.** `View/TransportPath` defines every path in building-local
   space: straight, S-curved ramps (smoothstep), quarter-circle curves, and hub
   entry→centre→exit. The simulation positions items with it, and the Godot client
@@ -182,10 +185,14 @@ def's output order: null takes anything, an item id takes only that item, and
 `RouterBehavior.Overflow` takes only what the others will not. An item goes to the connected
 outputs set to its type, else to those that take anything, else to an overflow output; within that
 group the outputs take turns (`LastPicked`) and a blocked one is skipped, and an overflow output
-also takes what a full group refuses. An item that no output takes waits at the centre and holds up
-the splitter. With no filter set `Filters` is null and the old round-robin code path runs, so a
-plain splitter routes and saves exactly as before. The lazy answer to a byproduct is one splitter:
-set the wanted item on one output and overflow on another that runs to a depot.
+also takes what a full group refuses. When an item's whole group is full it is held aside
+(`RouterState.Held`) rather than blocking the belt behind it, so a jammed output only stalls the
+items that need it; the hold is bounded, and once it is full the splitter blocks as it always has.
+An item that no output takes at all (no connected output is in its group) still waits at the centre
+and holds up the splitter, since holding it aside would never help. With no filter set `Filters` is
+null and the old round-robin code path runs, so a plain splitter routes and saves exactly as before.
+The lazy answer to a byproduct is one splitter: set the wanted item on one output and overflow on
+another that runs to a depot.
 
 `ItemDef.Byproduct` (`"byproduct": true`) marks an item that is made on the side. It sells and
 crafts like any other item, but is never asked for in an order, so dealing with it stays optional.

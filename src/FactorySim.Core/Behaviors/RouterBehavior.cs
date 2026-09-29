@@ -38,6 +38,14 @@ public sealed class RouterState
     /// of outputs takes turns on its own (one shared cursor would send every other item to one output).
     /// </summary>
     public long[]? LastPicked { get; set; }
+
+    /// <summary>
+    /// Items that have a home output but found it full: held out of <see cref="Items"/> so the belt
+    /// behind them keeps moving, retried every tick, first in line first. Bounded by
+    /// <see cref="RouterBehavior.HoldCapacity"/>; once full an item goes back to blocking the belt, the
+    /// same as an item with nowhere to go at all. Empty on old saves, which load with none held.
+    /// </summary>
+    public List<RouterItem> Held { get; set; } = new();
 }
 
 /// <summary>An item crossing a hub: entered through <see cref="From"/>, leaving through <see cref="To"/> (-1 = not chosen yet).</summary>
@@ -83,11 +91,19 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
         new() { MaxLevel = 9, SpeedPerLevel = 0.5, CostFactor = 1.5, CostGrowth = 2.2 };
 
+    /// <summary>
+    /// How many items a full output can hold out of the belt at once, on top of what fits between it
+    /// and the entrance: as much as the belt itself can carry, so the side buffer never dwarfs it.
+    /// </summary>
+    private static int HoldCapacity(RouterParams p) => Math.Max(1, Length / p.Spacing);
+
     protected override void Tick(TickContext ctx, Entity e, RouterParams p, RouterState s)
     {
+        int speed = Speed(ctx, e, p);
+        DrainHeld(ctx, e, s, speed);
+
         var items = s.Items;
         if (items.Count == 0) return;
-        int speed = Speed(ctx, e, p);
         int w = 0;
 
         for (int i = 0; i < items.Count; i++)
@@ -102,6 +118,14 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
             if (w == 0 && target >= Length)
             {
                 if (TryExit(ctx, e, s, ref it, target - Length)) continue;
+                // Its own output (or group) is full: hold it aside so the belt behind it keeps moving,
+                // unless a) nothing will ever take this item (no fallback, same as before) or b) the
+                // hold is already full, in which case it blocks the belt exactly as it used to.
+                if (HomeOf(e, s, it.Item.Type) != Group.None && s.Held.Count < HoldCapacity(p))
+                {
+                    s.Held.Add(it with { Pos = Length });
+                    continue;
+                }
                 target = Length;
             }
 
@@ -199,6 +223,21 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         return false;
     }
 
+    /// <summary>Retry items held aside for a full output, first in line first. A retry that still fails stays held.</summary>
+    private static void DrainHeld(TickContext ctx, Entity e, RouterState s, int speed)
+    {
+        var held = s.Held;
+        if (held.Count == 0) return;
+        int w = 0;
+        for (int i = 0; i < held.Count; i++)
+        {
+            var it = held[i];
+            if (TryExit(ctx, e, s, ref it, speed)) continue;
+            held[w++] = it;
+        }
+        if (w < held.Count) held.RemoveRange(w, held.Count - w);
+    }
+
     protected override bool TryAccept(TickContext ctx, Entity e, RouterParams p, RouterState s, ItemStack item, int port, int overflow)
     {
         var items = s.Items;
@@ -275,10 +314,13 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     protected override void CollectItems(Entity e, RouterParams p, RouterState s, List<ItemView> into)
     {
         foreach (var it in s.Items) into.Add(new ItemView(it.Item, it.Pos / (float)Length, it.From, it.To));
+        // Held items wait right at the mouth of the output they are queued for, so they still read as
+        // "about to leave through there" rather than vanishing from the belt.
+        foreach (var it in s.Held) into.Add(new ItemView(it.Item, 1f, it.From, it.To));
     }
 
     protected override EntityStatus GetStatus(Entity e, RouterParams p, RouterState s) =>
-        new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
+        new(s.Items.Count > 0 || s.Held.Count > 0, 0, s.Items.Count + s.Held.Count == 0 ? "empty" : $"{s.Items.Count + s.Held.Count} item(s)");
 
     protected override void Describe(Entity e, RouterParams p, RouterState s, List<InfoLine> into)
     {
@@ -287,7 +329,7 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         into.Add(new InfoLine("Connected", $"{ins} in / {outs} out"));
         double speed = Math.Min(p.Speed * e.SpeedFactor, p.Spacing);
         into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
-        into.Add(new InfoLine("Inside", s.Items.Count.ToString()));
+        into.Add(new InfoLine("Inside", (s.Items.Count + s.Held.Count).ToString()));
         if (s.Filters is { } f)
             into.Add(new InfoLine("Sorting", string.Join(" · ", f.Select((rule, i) => $"{OutputName(e.Def, i)}: {RuleName(p, rule)}"))));
     }
