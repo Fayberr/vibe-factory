@@ -48,8 +48,9 @@ So every system has to work on two levels, and the following rules follow from t
 2. **Depth pays off, it never gates.** Playing deep means earning more per minute and getting there
    faster, not being the only way to progress. A casual factory still reaches the last tier, just
    later.
-3. **Additive, not invalidating.** A new mechanic must not make simple play wrong. Fluids should be
-   optional for most of a run, and a byproduct must be removable with something as dumb as a vent.
+3. **Additive, not invalidating.** A new mechanic must not make simple play wrong. A fluid network
+   must work without perfect ratios, and an unwanted byproduct must be removable with one cheap
+   building. The system is there for everyone; only the mastery is opt in.
 4. **Soft costs, few hard fail states.** Prefer slower, cheaper, uglier over stopped, dead or
    punished. Anything that can halt a factory (a brownout, a meltdown, waste fines) is either gentle
    or opt in behind a mode.
@@ -64,7 +65,8 @@ So every system has to work on two levels, and the following rules follow from t
 
 Judged against this:
 
-- **Serve it:** byproducts with a simple vent, fluids as barrels first, research paid in goods with
+- **Serve it:** byproducts with a one building way to dispose of the excess, fluids that need no
+  perfect ratios, research paid in goods with
   simple early packs, income by product, the away report, bottleneck ranking, diagnostics overlay,
   history graphs, side branches on top of the linear tiers, new game modifiers, the codex.
 - **Neutral:** megaprojects, cross-run unlocks, terraforming, machine families, operating modes.
