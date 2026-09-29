@@ -23,6 +23,9 @@ public sealed class SaveData
     public bool Sandbox { get; set; }
     public int UnlockedTier { get; set; }
     public Dictionary<string, int> Upgrades { get; set; } = new();
+
+    /// <summary>Research packs in the bank, per item id (missing in saves from before research).</summary>
+    public Dictionary<string, long> Science { get; set; } = new();
     public StatsTracker Stats { get; set; } = new();
     public bool Goals { get; set; } = true;
     public ContractBoard Contracts { get; set; } = new();
@@ -78,6 +81,7 @@ public static class SaveSystem
         Sandbox = world.Sandbox,
         UnlockedTier = world.UnlockedTier,
         Upgrades = new Dictionary<string, int>(world.UpgradeLevels),
+        Science = world.ScienceBank.Where(kv => kv.Value > 0).OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
         Stats = world.Stats,
         Goals = world.Goals,
         Contracts = world.Contracts,
@@ -128,6 +132,12 @@ public static class SaveSystem
         {
             if (content.Upgrades.ContainsKey(id)) world.SetUpgradeLevel(id, level);
             else warnings.Add($"Dropped unknown upgrade '{id}'.");
+        }
+
+        foreach (var (id, count) in data.Science)
+        {
+            if (content.Items.ContainsKey(id)) world.AddScience(id, count);
+            else warnings.Add($"Dropped {count} banked '{id}': unknown item.");
         }
 
         foreach (var es in data.Entities)

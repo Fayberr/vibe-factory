@@ -158,6 +158,13 @@ public sealed class ContentRegistry
         {
             if (string.IsNullOrEmpty(u.Stat)) throw new ContentException($"Upgrade '{u.Id}' has no stat.");
             if (u.CostGrowth < 1) throw new ContentException($"Upgrade '{u.Id}': costGrowth must be ≥ 1.");
+            if (u.Tier < 0 || u.Tier >= Tiers.Count)
+                throw new ContentException($"Upgrade '{u.Id}': tier {u.Tier} does not exist (tiers 0..{Tiers.Count - 1}).");
+            foreach (var p in u.Packs)
+            {
+                if (!Items.ContainsKey(p.Item)) throw new ContentException($"Upgrade '{u.Id}': unknown pack '{p.Item}'.");
+                if (p.Count <= 0) throw new ContentException($"Upgrade '{u.Id}': pack counts must be > 0.");
+            }
         }
 
         foreach (var b in Buildings.Values)

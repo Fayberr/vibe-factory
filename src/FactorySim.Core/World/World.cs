@@ -63,6 +63,7 @@ public sealed class World
     public HashSet<string> Milestones { get; internal set; } = new();
 
     internal Dictionary<string, int> UpgradeLevels { get; } = new();
+    internal Dictionary<string, long> ScienceBank { get; } = new();
     internal int NextEntityId { get; set; } = 1;
     internal long NextItemUid { get; set; } = 1;
 
@@ -109,6 +110,34 @@ public sealed class World
     {
         UpgradeLevels[upgradeId] = level;
         _statCache.Clear();
+    }
+
+    // ---- Research bank ---------------------------------------------------
+
+    /// <summary>
+    /// Research packs banked by labs, per item id, waiting to be spent on upgrades priced in packs
+    /// (see <see cref="UpgradeDef.Packs"/>).
+    /// </summary>
+    public IReadOnlyDictionary<string, long> Science => ScienceBank;
+
+    public long ScienceOf(string item) => ScienceBank.GetValueOrDefault(item);
+
+    internal void AddScience(string item, long count)
+    {
+        if (count > 0) ScienceBank[item] = ScienceOf(item) + count;
+    }
+
+    /// <summary>Whether the bank holds every pack in <paramref name="price"/>.</summary>
+    public bool CanPay(IReadOnlyList<ItemAmount> price)
+    {
+        foreach (var p in price)
+            if (ScienceOf(p.Item) < p.Count) return false;
+        return true;
+    }
+
+    internal void PayScience(IReadOnlyList<ItemAmount> price)
+    {
+        foreach (var p in price) ScienceBank[p.Item] = ScienceOf(p.Item) - p.Count;
     }
 
     /// <summary>Deterministic integer power (no Math.Pow).</summary>

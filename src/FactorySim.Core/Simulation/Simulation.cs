@@ -365,10 +365,17 @@ public sealed partial class Simulation
         int level = World.UpgradeLevel(def.Id);
         if (def.MaxLevel is int max && level >= max) return CommandResult.Fail($"{def.Name} is maxed");
         var cost = def.CostForLevel(level);
+        var packs = def.PacksForLevel(level);
         if (!World.Sandbox)
         {
+            if (def.Tier > World.UnlockedTier)
+                return CommandResult.Fail($"{def.Name} opens with tier {def.Tier} ({Content.Tiers[def.Tier].Name})");
             if (World.Money < cost) return CommandResult.Fail($"Need {cost.Format()} (have {World.Money.Format()})");
+            foreach (var p in packs)
+                if (World.ScienceOf(p.Item) < p.Count)
+                    return CommandResult.Fail($"Need {p.Count} {Content.Items[p.Item].Name} (have {World.ScienceOf(p.Item)})");
             World.Money -= cost;
+            World.PayScience(packs);
         }
         World.SetUpgradeLevel(def.Id, level + 1);
         if (Events.Enabled) Events.Add(new UpgradePurchased(World.Tick, def.Id, level + 1, cost));

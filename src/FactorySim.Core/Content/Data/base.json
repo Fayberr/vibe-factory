@@ -82,7 +82,12 @@
     { "id": "satellite",    "name": "Satellite",    "baseValue": 0,               "meta": { "color": "#dfe8f2", "shape": "satellite" } },
     // Byproduct trial (see "Byproducts" in docs/ARCHITECTURE.md): tar comes out of cracking crude oil
     // next to plastic, and a blast furnace burns it instead of coal. "byproduct" keeps it out of orders.
-    { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } }
+    { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } },
+
+    // Research trial (see "Research" in docs/ARCHITECTURE.md): a pack is made from parts, a lab banks it,
+    // and the bank buys the upgrades below. Nothing needs research: remove the pack, its recipe, the
+    // Science Bench, the Lab and the upgrades, and the game is as it was. "science" keeps packs out of orders.
+    { "id": "science_1",    "name": "Basic Science Pack", "baseValue": 0, "science": true, "meta": { "color": "#8f7cff", "shape": "flask" } }
   ],
 
   "recipes": [
@@ -123,7 +128,11 @@
     // blast furnace left on automatic burns any tar it is holding before it touches its coal, so a
     // player who feeds it both does not bank tar for ever and stall the splitter that sorts it out.
     { "id": "crack_oil", "inputs": [ { "item": "crude_oil", "count": 2 } ], "outputs": [ { "item": "plastic", "count": 3 }, { "item": "tar", "count": 1 } ], "ticks": 40, "valueMultiplier": 2 },
-    { "id": "forge_steel_tar", "inputs": [ { "item": "iron_ingot", "count": 1 }, { "item": "tar", "count": 1 } ], "outputs": [ { "item": "steel", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 }
+    { "id": "forge_steel_tar", "inputs": [ { "item": "iron_ingot", "count": 1 }, { "item": "tar", "count": 1 } ], "outputs": [ { "item": "steel", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 },
+
+    // Research trial. Value multiplier 1: a pack sells for exactly its parts, so selling packs is never a
+    // reason to make them.
+    { "id": "pack_1", "inputs": [ { "item": "iron_plate", "count": 1 }, { "item": "copper_wire", "count": 1 } ], "outputs": [ { "item": "science_1", "count": 1 } ], "ticks": 40, "valueMultiplier": 1 }
   ],
 
   "buildings": [
@@ -414,10 +423,40 @@
       "ports": [ { "kind": "in", "side": "back" } ],
       "params": { "multiplier": 2 },
       "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price, through one input (the blue side), from the edge of the map like a market depot." }
+    },
+
+    // ---- Research trial ------------------------------------------------------------------
+    // A bench makes packs, a lab banks them (one every 4 seconds at level 1), the Research window spends
+    // the bank. Labs take packs whether or not anything is being bought, so they never back up a belt
+    // for want of a choice.
+    {
+      "id": "science_bench", "name": "Science Bench", "behavior": "processor", "cost": 500, "category": "research", "tier": 1,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "pack_1" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#8f7cff", "glyph": "B", "description": "Puts an iron plate and a copper wire together into a Basic Science Pack. Belt the packs into a Lab." }
+    },
+    {
+      "id": "lab", "name": "Lab", "behavior": "lab", "cost": 500, "category": "research", "tier": 1,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" } ],
+      "params": { "interval": 80, "capacity": 10 },
+      "meta": { "model": "lab", "accent": "#8f7cff", "glyph": "L", "description": "Studies science packs, one every 4 seconds, and banks them. Spend the bank in the Research window on permanent bonuses. Optional: nothing in the game needs research." }
     }
   ],
 
-  "upgrades": [],
+  // Global bonuses. "packs" is the price of the first level in research packs (later levels grow by
+  // "costGrowth", rounded up); "baseCost" is the price in money, 0 for research. "tier" hides an upgrade
+  // until that tier is open. "stat" is one of: conveyor.speed, miner.rate, machine.speed,
+  // sell.multiplier, logistics.stackSize.
+  // Research trial: drills and prices +5% a level, machines +10%, five levels each, so the whole list
+  // is worth at most about +28% ore, +28% price and +61% machine speed. All five drill levels (620
+  // packs) take one lab about 41 minutes.
+  "upgrades": [
+    { "id": "research_drills",   "name": "Drill output",  "description": "Every drill mines 5% faster per level.",           "tier": 1, "stat": "miner.rate",      "effect": "multiply", "perLevel": 1.05, "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 20 } ] },
+    { "id": "research_prices",   "name": "Market prices", "description": "Depots pay 5% more for everything per level.",     "tier": 1, "stat": "sell.multiplier", "effect": "multiply", "perLevel": 1.05, "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 20 } ] },
+    { "id": "research_machines", "name": "Machine speed", "description": "Every machine works 10% faster per level.",         "tier": 1, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 10 } ] }
+  ],
 
   // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, built,
   // level, contracts, tier (see MilestoneDef).

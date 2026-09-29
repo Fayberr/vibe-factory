@@ -36,6 +36,7 @@ public static class Keybinds
         new("build_menu", "Build menu", Key.B, "Windows"),
         new("progress", "Progress", Key.P, "Windows"),
         new("orders", "Orders", Key.O, "Windows"),
+        new("research", "Research", Key.L, "Windows"),
         new("stats", "Statistics", Key.I, "Windows"),
         new("game_menu", "Game menu", Key.G, "Windows"),
         new("help", "Help", Key.F1, "Windows"),

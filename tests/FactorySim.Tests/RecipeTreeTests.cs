@@ -27,7 +27,10 @@ public class RecipeTreeTests
     [Fact]
     public void Every_craft_adds_value_so_the_more_work_in_an_item_the_more_it_is_worth()
     {
-        Assert.All(C.Recipes.Values, r => Assert.True(r.ValueMultiplier > 1, $"{r.Id} does not add value"));
+        // Research packs are the exception: a pack sells for exactly its parts, so selling is never a reason to make one.
+        bool MakesPacks(RecipeDef r) => r.Outputs.Any(o => C.Items[o.Item].Science);
+        Assert.All(C.Recipes.Values.Where(r => !MakesPacks(r)), r => Assert.True(r.ValueMultiplier > 1, $"{r.Id} does not add value"));
+        Assert.All(C.Recipes.Values.Where(MakesPacks), r => Assert.Equal(1, r.ValueMultiplier));
 
         var v = C.ItemValue;
         double Parts(string recipe) => C.Recipes[recipe].Inputs.Sum(i => v[i.Item].Value * i.Count);
@@ -58,8 +61,9 @@ public class RecipeTreeTests
     [Fact]
     public void Only_the_final_product_is_a_dead_end()
     {
+        // Research packs end in a lab, not a recipe, so they are dead ends by design.
         var used = UsedIn();
-        var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id)).ToList();
+        var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science).ToList();
         Assert.Equal(new[] { "satellite" }, deadEnds);
     }
 

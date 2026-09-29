@@ -24,6 +24,12 @@ public sealed class ItemDef
     /// </summary>
     public bool Byproduct { get; init; }
 
+    /// <summary>
+    /// A research pack. Labs bank it, and research upgrades are paid from the bank (see
+    /// <see cref="UpgradeDef.Packs"/>). Packs sell like anything else but are never asked for in an order.
+    /// </summary>
+    public bool Science { get; init; }
+
     public Dictionary<string, string> Meta { get; init; } = new();
 }
 
@@ -247,6 +253,12 @@ public sealed class UpgradeDef
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
 
+    /// <summary>What the upgrade does, in words, for the research window.</summary>
+    public string Description { get; init; } = "";
+
+    /// <summary>Tier from which the upgrade is shown and can be bought (index into the content's tiers).</summary>
+    public int Tier { get; init; }
+
     /// <summary>Stat key this upgrade modifies (see <see cref="StatIds"/>).</summary>
     public string Stat { get; init; } = "";
 
@@ -260,6 +272,22 @@ public sealed class UpgradeDef
     public int? MaxLevel { get; init; }
 
     public BigNum CostForLevel(int currentLevel) => BaseCost * BigNum.Pow(CostGrowth, currentLevel);
+
+    /// <summary>
+    /// Research packs paid for the first level, taken from the bank that labs fill (see
+    /// <see cref="World.Science"/>). Later levels scale by <see cref="CostGrowth"/>, like money,
+    /// rounded up. Empty = paid in money only. <see cref="BaseCost"/> may be 0 for a pack-only upgrade.
+    /// </summary>
+    public ItemAmount[] Packs { get; init; } = Array.Empty<ItemAmount>();
+
+    /// <summary>Packs paid to go from <paramref name="currentLevel"/> to the next level.</summary>
+    public ItemAmount[] PacksForLevel(int currentLevel)
+    {
+        if (Packs.Length == 0) return Packs;
+        double growth = 1;
+        for (int i = 0; i < currentLevel; i++) growth *= CostGrowth;
+        return Packs.Select(p => new ItemAmount(p.Item, (int)Math.Min(int.MaxValue, Math.Ceiling(p.Count * growth - 1e-9)))).ToArray();
+    }
 }
 
 /// <summary>Well-known stat keys read by the built-in behaviors. All default to 1.</summary>

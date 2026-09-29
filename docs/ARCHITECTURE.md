@@ -12,7 +12,7 @@
 │ FactorySim.Core  (net8.0, BCL only)                                                  │
 │  Simulation ── fixed 20 Hz tick, commands, event queue, offline catch-up             │
 │  World ─────── sparse 3D grid, entities, money, upgrades→stats, stats, RNG           │
-│  Behaviors ─── conveyor · router · miner · processor · seller  (state on entity)    │
+│  Behaviors ─── conveyor · router · miner · processor · seller · lab  (entity state) │
 │  Editing ───── blueprints, batch commands, undo/redo, BuildPlanner (drags, bridges) │
 │  Progression ─ customer orders (contracts), milestones                             │
 │  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes,   │
@@ -165,6 +165,7 @@ underneath. Lifts and multi-level machines use the same mechanism.
 | `seller` | sink | Pays value × count × `sell.multiplier` × level value, and only 25% for items marked `raw`. |
 | `conveyor` | transport | Belts, ramps and in-line effects. |
 | `router` | transport | Splitters and mergers (see above). |
+| `lab` | sink | Takes science packs off a belt and banks one per `interval` × level speed into `World.Science` (see "Research"). Refuses only while it holds `capacity` packs. |
 
 ### Economy, upgrades, stats
 
@@ -200,8 +201,9 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - **Replacing.** A def's `group` and `replaces` say what it may be dropped onto
   (`PlaceBuilding(Replace: true)`); the old building is refunded, and items on a belt
   survive a swap between belt pieces.
-- Global stat upgrades still exist as a mechanism for mod packs (research, events).
-  The base game defines none. `World.Stat(key)` composes them and caches the result.
+- Global stat upgrades (`upgrades` in content) raise a stat for the whole factory.
+  `World.Stat(key)` composes them and caches the result. The base game's only ones are the
+  research trial's (see "Research"); packs can add more, priced in money, packs or both.
 - `StatsTracker` keeps lifetime totals and a rolling 60 s income window, both in total and per
   item: `EarnedByItem` is the money each item's sales paid, and per item buckets aligned with the
   total window give `IncomePerSecondOf`/`IncomePerSecondByItem` and `IncomeShareOf` (rate over the
@@ -273,6 +275,55 @@ blocks marked "Byproduct trial"; then delete
 building: a machine set to a removed recipe runs automatically, a filter for tar is cleared, an order
 for tar is dropped (each with a load warning), and tar already on a belt still sells at a depot.
 The filters, overflow and the `byproduct` flag are general and stay.
+
+### Research
+
+Research sits beside the tiers and never gates them: nothing a tier needs is bought with it, so a
+player can ignore it and the game plays exactly as before. It is a bank, not a queue. A lab takes
+packs off a belt whether or not anything is being bought, so a research line never backs up for want
+of a choice, and the player spends the bank whenever they like in the Research window.
+
+- **Packs.** `ItemDef.Science` (`"science": true`) marks a pack. It is made, sold and belted like any
+  item and is never asked for in an order (orders skip it as they skip byproducts). The trial
+  recipe has `valueMultiplier: 1`, so a pack sells for exactly its parts and selling packs is never a
+  reason to make them. `balance items` lists packs on their own line and never as a dead end.
+- **The bank.** `World.Science` holds banked packs per item (`ScienceOf`, `CanPay`, internal
+  `AddScience`/`PayScience`). It is saved as `SaveData.Science`, sorted by id, zero entries left out,
+  so old saves load with an empty bank. A banked item the content no longer has is dropped with a
+  warning.
+- **Labs.** `LabBehavior` (`"behavior": "lab"`) accepts the items in `params.items` (empty = every
+  science item), holds up to `capacity`, and studies one per `interval` ticks times its level speed,
+  adding it to the bank. `LabState.Banked` counts what one lab has banked; `Held` keeps its keys, so
+  the save is a pure function of history. On load, held packs of an item the lab no longer takes are
+  dropped with a warning (`CheckLoaded`).
+- **Prices.** `UpgradeDef.Packs` prices a global upgrade in packs, which grow like the money cost
+  (`PacksForLevel`: `count × costGrowth^level`, rounded up). `Tier` keeps it closed until that tier is
+  unlocked, and `Description` is the line the window shows. `BuyUpgrade` checks the tier, the money
+  and the packs, then pays both; an upgrade may cost money, packs or both. `ContentRegistry` refuses
+  an upgrade whose tier or pack item does not exist, or a pack count below 1. Offline catch-up does
+  not add packs to the bank.
+- **Client.** The Research window (`ResearchPanel`, key L, flask button in the sidebar) shows the bank
+  and one card per upgrade, all read from the content. The button hides while no upgrade's tier is
+  open, and for good when the content has no upgrades. `--research` opens it in the smoke run.
+
+**The trial content** in `base.json` is marked "Research trial" in comments: `science_1` (Basic
+Science Pack, an iron plate and a copper wire), the `pack_1` recipe, the Science Bench (a processor
+that only makes packs), the Lab, and three upgrades from tier 1, each five levels with pack prices
+that double: `research_drills` (`miner.rate` +5% a level, 20 packs first), `research_prices`
+(`sell.multiplier` +5%, 20 packs) and `research_machines` (`machine.speed` +10%, 10 packs). One lab
+banks a pack every 4 seconds, so all five drill levels (620 packs) take about 41 minutes. The pack
+changes no other item's value or tier.
+
+**To tune it**, edit `base.json`: `perLevel`, `maxLevel`, `costGrowth` and `packs` on the upgrades, the
+lab's `interval` and `capacity`, or the pack recipe. `ResearchTrialTests` pins the current prices and
+speeds, so change it with them.
+
+**To remove it**, delete from `base.json` the seven entries (`science_1`, `pack_1`, `science_bench`,
+`lab`, and the three `research_*` upgrades) with their "Research trial" comment blocks, then delete
+`tests/FactorySim.Tests/ResearchTrialTests.cs`. The Research button then never shows. Old saves load
+with a warning each: the labs and benches are dropped (without a refund, like any building whose def
+is gone), bought levels and the bank are dropped, and every other building is kept. The lab behavior, the bank and pack prices are general and
+can stay dormant, as the upgrade mechanism did before.
 
 ### Orders and goals
 

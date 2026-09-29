@@ -8,8 +8,8 @@ internal static class TestUtil
     public static readonly ContentRegistry Content = ContentRegistry.LoadDefault();
 
     /// <summary>
-    /// Base content plus a very fast source for saturation tests and the kind of global
-    /// "research" upgrades a mod pack can add (the base game only has per-building levels).
+    /// Base content plus a very fast source for saturation tests and money-priced global upgrades
+    /// of the kind a mod pack can add (the base game's research upgrades are priced in packs).
     /// </summary>
     public static readonly ContentRegistry FastContent = ContentRegistry.LoadDefault(null, new ContentPack
     {

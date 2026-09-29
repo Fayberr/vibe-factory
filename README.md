@@ -132,7 +132,7 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `Ctrl+A` | Select all |
 | `Esc` / right-click | Cancel the tool, then clear the selection |
 | `WASD`, MMB drag · RMB drag · wheel | Pan · orbit · zoom toward the cursor |
-| `P` · `O` · `I` · `G` · `F1` | Progress (tiers, limits, goals) · orders · statistics · game menu · help. Windows can be open together and stay open until you close them (the same key, or ×); drag them by the title bar |
+| `P` · `O` · `L` · `I` · `G` · `F1` | Progress (tiers, limits, goals) · orders · research (from Workshop) · statistics · game menu · help. Windows can be open together and stay open until you close them (the same key, or ×); drag them by the title bar |
 | `Space` | Pause or resume the factory (you can keep building while it is paused) |
 | `Esc` | Cancels the tool, then clears the selection, then opens the pause menu (resume, save, settings, quit to the title screen or to the desktop). Open windows stay open |
 
@@ -169,13 +169,18 @@ their choice.
 - **Goals.** 29 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   first robot, first satellite, a trillion earned…), each with a cash reward. The Progress
   window shows the next four with progress bars.
-- **Per-building upgrades.** There are no global upgrades. Every building has its own
+- **Per-building upgrades.** Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
   splitters go from 4 to 20 items/s over 9 levels, mergers from 3.3 to 20 over 7 (a merger
   runs slower than a belt and spaces items wider, so it is a real throughput gate until it is
   levelled), market
   depots pay more. Ten drills means ten upgrades. Levels show as coloured trims (bronze,
   silver, gold, cyan, violet) and are kept by copy/paste.
+- **Research (trial, optional).** From Workshop on, a Science Bench makes Basic Science Packs from
+  an iron plate and a copper wire, and a Lab takes them off a belt and banks one every 4 seconds.
+  The Research window (`L`) spends the bank on three bonuses for the whole factory, five levels
+  each: drills +5%, market prices +5% and machines +10% a level, each level twice the packs of the
+  last. It never gates a tier, and packs sell for exactly their parts and are never ordered.
 - **Raw resources sell for 25%, and every ore is worth the same $1.** An item is worth the
   work in it: what went in times the recipe's multiplier, so processing is what pays, and a
   newer tier builds on the old chains instead of replacing them. Parts feed many recipes
@@ -225,7 +230,7 @@ godot --path godot -- --ui-test
 godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # Screenshot options: --wait=seconds, --view=yaw,pitch,distance,x,z, --select=x,y (opens
 # the Manage window for that cell), --windows (opens Progress and Statistics),
-# --orders (opens Progress and Orders), --tutorial (an empty factory at the tutorial's
+# --orders (opens Progress and Orders), --research (unlocks Workshop and opens Research), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).

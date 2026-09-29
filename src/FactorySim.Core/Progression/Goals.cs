@@ -92,7 +92,7 @@ public sealed partial class Simulation
         var board = World.Contracts;
         double income = Math.Max(0.5, World.Stats.IncomePerSecond().ToDouble());
         var candidates = Content.ItemValue
-            .Where(kv => kv.Value.Tier <= World.UnlockedTier && Content.Items[kv.Key] is { Raw: false, Byproduct: false } && kv.Value.Value > 0)
+            .Where(kv => kv.Value.Tier <= World.UnlockedTier && Content.Items[kv.Key] is { Raw: false, Byproduct: false, Science: false } && kv.Value.Value > 0)
             .Where(kv => board.Open.TrueForAll(c => c.Item != kv.Key))
             .OrderBy(kv => kv.Key, StringComparer.Ordinal)
             .ToList();

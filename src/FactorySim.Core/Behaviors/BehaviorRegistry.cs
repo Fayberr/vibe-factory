@@ -13,6 +13,7 @@ public sealed class BehaviorRegistry
         r.Register(new ProcessorBehavior());
         r.Register(new SellerBehavior());
         r.Register(new RouterBehavior());
+        r.Register(new LabBehavior());
         return r;
     }
 

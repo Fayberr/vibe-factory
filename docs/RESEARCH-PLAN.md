@@ -1,6 +1,10 @@
 # Research and laboratories: plan
 
-Planning only. Nothing here is built, and nothing in this document is decided beyond what the
+**Status (4.1.0): slice 1 (section 8) is built as a trial**, exactly as described there, with a lab
+model of its own instead of a recoloured depot. It is in the Research window (key L). How to tune or
+remove it: "Research" in `docs/ARCHITECTURE.md`. The rest of this document is still a plan.
+
+Planning only beyond slice 1, and nothing in this document is decided beyond what the
 owner already decided: **research is paid in items the player manufactures**, science packs made in
 the factory and eaten by a lab, never in money. Everything else (how big a tree, whether it
 branches, how it relates to tiers) is a proposal with a recommendation.

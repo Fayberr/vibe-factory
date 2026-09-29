@@ -31,6 +31,7 @@ public static class ItemMeshes
         "gem" => 0.1f,
         "toy" or "robot" or "satellite" => 0.01f,
         "drone" => 0.04f,
+        "flask" => 0.08f,
         _ => 0.11f,
     };
 
@@ -137,6 +138,12 @@ public static class ItemMeshes
                 break;
             case "satellite":
                 Satellite(mb, mat);
+                break;
+            case "flask":
+                // A science pack: a round-shouldered flask with a neck and a stopper.
+                mb.Cylinder(mat, new Vector3(0, -0.08f, 0), 0.08f, 0.1f, 12, topRadius: 0.032f, capBottom: true, smooth: true);
+                mb.Cylinder(mat, new Vector3(0, 0.02f, 0), 0.028f, 0.05f, 10, smooth: true);
+                mb.Cylinder(mat, new Vector3(0, 0.07f, 0), 0.036f, 0.025f, 10);
                 break;
             default:
                 mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.18f, 0.18f), 0.03f);

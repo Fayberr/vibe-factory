@@ -189,8 +189,11 @@ public static class BalanceCommand
         }
 
         var sb = new StringBuilder(table.ToString());
-        var deadEnds = book.Sources.Values.Where(s => !s.IsExtracted && !book.UsedBy.ContainsKey(s.Item)).Select(s => book.NameOf(s.Item)).ToList();
+        bool Science(string item) => book.Content.Items.TryGetValue(item, out var def) && def.Science;
+        var deadEnds = book.Sources.Values.Where(s => !s.IsExtracted && !book.UsedBy.ContainsKey(s.Item) && !Science(s.Item)).Select(s => book.NameOf(s.Item)).ToList();
         if (deadEnds.Count > 0) sb.AppendLine($"Only sold, used in nothing: {string.Join(", ", deadEnds)}.");
+        var packs = book.Sources.Values.Where(s => Science(s.Item)).Select(s => book.NameOf(s.Item)).ToList();
+        if (packs.Count > 0) sb.AppendLine($"Research packs, studied in labs: {string.Join(", ", packs)}.");
         sb.AppendLine("Value = worth as it leaves its machine; sells for = at the first depot. Steps = crafting steps from the ore.");
         return sb.ToString();
     }
@@ -231,6 +234,8 @@ public static class BalanceCommand
         if (book.UsedBy.TryGetValue(item, out var uses))
             sb.AppendLine("Used in: " + string.Join(", ", uses.Select(u =>
                 $"{string.Join(" + ", u.Recipe.Outputs.Select(o => book.NameOf(o.Item)))} ({u.Building.Name}, tier {u.Tier})")) + ".");
+        else if (book.Content.Items.TryGetValue(item, out var def) && def.Science)
+            sb.AppendLine("Used in: labs, as research (it sells for its parts' worth, never more).");
         else
             sb.AppendLine("Used in: nothing, only sold.");
         return sb.ToString();

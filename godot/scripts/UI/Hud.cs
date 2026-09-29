@@ -48,8 +48,10 @@ public partial class Hud : CanvasLayer
     private HudWindow _buyWindow = null!;
     private Label _buyText = null!;
     private PlotId _buyPlot;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!;
     private OrdersPanel _orders = null!;
+    private ResearchPanel _research = null!;
+    private Button _researchButton = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
     private TutorialPanel _tutorial = null!;
     private Button _progressButton = null!;
@@ -80,6 +82,7 @@ public partial class Hud : CanvasLayer
     public HudWindow ProgressWindow => _progressWindow;
     public HudWindow StatsWindow => _statsWindow;
     public HudWindow OrdersWindow => _ordersWindow;
+    public HudWindow ResearchWindow => _researchWindow;
 
     public void Init(SimHost host, BuildController tools, Thumbnails thumbs)
     {
@@ -106,10 +109,15 @@ public partial class Hud : CanvasLayer
                 case MilestoneReached m when Settings.ShowNotifications:
                     _toasts.Show(this, $"Goal reached: {m.Name}, +${m.Reward.Format()}");
                     return;
+                case UpgradePurchased u when host.Content.Upgrades.TryGetValue(u.UpgradeId, out var upgrade):
+                    _toasts.Show(this, $"Researched {upgrade.Name}, level {u.Level}");
+                    return;
             }
             if (ev is PlotBought) return; // the tool says so itself; a bought plot is not news to whoever clicked
             if (ev is not TierUnlocked t) return;
-            _toasts.Show(this, $"Tier {t.Tier} unlocked: {t.Name}! New buildings are in the build menu.");
+            bool research = host.Content.UpgradeList.Any(u => u.Tier == t.Tier);
+            _toasts.Show(this, $"Tier {t.Tier} unlocked: {t.Name}! New buildings are in the build menu." +
+                               (research ? $" Research opens too ({K("research")})." : ""));
             RefreshHotbar();
         };
         tools.Changed += () =>
@@ -208,6 +216,10 @@ public partial class Hud : CanvasLayer
         _progressButton = Keyed(Ui.IconButton(Icon.Progress, "", () => ToggleWindow(_progressWindow), 44), () => $"Progress: tiers, build limits and goals ({K("progress")})");
         col.AddChild(_progressButton);
         col.AddChild(Keyed(Ui.IconButton(Icon.Orders, "", () => ToggleWindow(_ordersWindow), 44), () => $"Orders: deliveries for bonus cash ({K("orders")})"));
+        // Hidden until research opens (see ResearchPanel.IsOpen), and for good if the content has none.
+        _researchButton = Keyed(Ui.IconButton(Icon.Research, "", () => ToggleWindow(_researchWindow), 44), () => $"Research: permanent bonuses paid in science packs ({K("research")})");
+        _researchButton.Visible = false;
+        col.AddChild(_researchButton);
         col.AddChild(Keyed(Ui.IconButton(Icon.Stats, "", () => ToggleWindow(_statsWindow), 44), () => $"Statistics ({K("stats")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Game, "", () => ToggleWindow(_gameWindow), 44), () => $"Game: save, speed, settings ({K("game_menu")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Help, "", () => _help.Visible = !_help.Visible, 44), () => $"Controls ({K("help")})"));
@@ -343,6 +355,11 @@ public partial class Hud : CanvasLayer
         _ordersWindow.Body.AddChild(_orders.Root);
         AddWindow(_ordersWindow);
 
+        _research = new ResearchPanel(id => _host.Execute(new BuyUpgrade(id)));
+        _researchWindow = new HudWindow("Research", Icon.Research, 420) { EscCloses = false };
+        _researchWindow.Body.AddChild(_research.Root);
+        AddWindow(_researchWindow);
+
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
         _statsWindow.Body.AddChild(_stats.Root);
@@ -471,6 +488,7 @@ public partial class Hud : CanvasLayer
             : w == _progressWindow ? new Vector2(84, 70)
             : w == _statsWindow ? new Vector2(84 + 350, 70)
             : w == _ordersWindow ? new Vector2(84 + 350 + 320, 70)
+            : w == _researchWindow ? new Vector2(84 + 350, 70)
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
@@ -515,7 +533,7 @@ public partial class Hud : CanvasLayer
             ("Esc / RMB click", "Cancel tool"), ($"{K("pan_forward")}{K("pan_left")}{K("pan_back")}{K("pan_right")}, arrows", "Pan (Shift = fast)"),
             ("RMB drag", "Orbit camera"), ("MMB drag", "Pan"),
             ("Wheel", "Zoom to cursor"), (K("progress"), "Progress: tiers, limits, goals"),
-            (K("orders"), "Orders"), (K("stats"), "Statistics"),
+            (K("orders"), "Orders"), (K("research"), "Research"), (K("stats"), "Statistics"),
             (K("pause"), "Pause the factory"), (K("game_menu"), "Game menu"),
             (K("help"), "This help"),
             ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
@@ -685,6 +703,9 @@ public partial class Hud : CanvasLayer
             case var _ when Keybinds.Is(key, "orders"):
                 ToggleWindow(_ordersWindow);
                 break;
+            case var _ when Keybinds.Is(key, "research") && _researchButton.Visible:
+                ToggleWindow(_researchWindow);
+                break;
             case var _ when Keybinds.Is(key, "game_menu"):
                 ToggleWindow(_gameWindow);
                 break;
@@ -789,7 +810,10 @@ public partial class Hud : CanvasLayer
         if (_progressWindow.Visible) _progress.Refresh(_host.Sim);
         if (_statsWindow.Visible) _stats.Refresh(world);
         if (_ordersWindow.Visible) _orders.Refresh(_host.Sim, _thumbs);
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow })
+        _researchButton.Visible = ResearchPanel.HasResearch(_host.Content) && ResearchPanel.IsOpen(world);
+        if (!_researchButton.Visible) _researchWindow.Visible = false;
+        if (_researchWindow.Visible) _research.Refresh(_host.Sim, _thumbs);
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;

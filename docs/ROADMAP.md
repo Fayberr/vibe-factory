@@ -255,8 +255,26 @@ To remove the trial in one pass, delete exactly these from `base.json`: the item
 and the comment blocks marked "Byproduct trial"; and delete `ByproductTrialTests.cs`. The numbers to tune are the counts, `ticks` and
 `valueMultiplier` of those two recipes. Details: "Byproducts" in the architecture notes.
 
+### 10. Research (trial)
+
+Research sits beside the tiers and never gates them. A Science Bench (tier 1) makes a Basic Science
+Pack from an iron plate and a copper wire, a Lab takes packs off a belt and banks them, and the
+Research window (key L) spends the bank on three global bonuses, five levels each: drill output +5%,
+market prices +5% and machine speed +10% a level, with pack prices that double (20, 40, 80, 160, 320;
+machine speed starts at 10). A lab banks one pack every 4 seconds whether or not anything is being
+bought, so a research line never backs up. Packs sell for exactly their parts and are never ordered,
+and no existing item's value or tier changed.
+
+This is slice 1 of `docs/RESEARCH-PLAN.md` (option A, a flat list, no tree). To remove it, delete the
+seven entries marked "Research trial" in `base.json` (`science_1`, `pack_1`, `science_bench`, `lab`
+and the three `research_*` upgrades) and `ResearchTrialTests.cs`; the Research button then never
+shows. The numbers to tune are the upgrades' `perLevel`, `maxLevel`, `costGrowth` and `packs`, and
+the lab's `interval`. Details: "Research" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): which products and tiers to add on top of the tree.
 - Step 8 (multiplayer): the open items listed above, and when to start it.
 - Step 9 (byproducts): keep, extend or remove the trial after playing it.
+- Step 10 (research): keep, retune or remove the trial after playing it; whether a second pack
+  (slice 2 of the research plan) should follow.

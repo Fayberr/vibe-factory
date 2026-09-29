@@ -51,6 +51,9 @@ public static partial class ModelFactory
             case "depot":
                 Depot(rig, def, accent);
                 break;
+            case "lab":
+                Lab(rig, def, accent);
+                break;
             case "treefarm":
                 TreeFarm(rig, def, accent, effects);
                 break;

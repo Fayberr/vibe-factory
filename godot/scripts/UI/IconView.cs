@@ -29,6 +29,7 @@ public enum Icon
     Search,
     Auto,
     Orders,
+    Research,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -212,6 +213,12 @@ public partial class IconView : Control
                 Arc(12, 12, 7.5f, Mathf.Pi * 0.8f, Mathf.Pi * 1.75f, 2.2f);
                 Poly(19.5f, 6.5f, 19.8f, 12.2f, 14.6f, 9.9f);
                 Poly(4.5f, 17.5f, 4.2f, 11.8f, 9.4f, 14.1f);
+                break;
+            case Icon.Research:
+                // A flask with liquid in it.
+                L(8.5f, 3, 15.5f, 3, 1.8f);
+                Outline(2, 10, 3.5f, 10, 9.5f, 4.5f, 19.5f, 5.8f, 21, 18.2f, 21, 19.5f, 19.5f, 14, 9.5f, 14, 3.5f);
+                Poly(7.4f, 15.2f, 16.6f, 15.2f, 18.6f, 19.2f, 17.6f, 20.2f, 6.4f, 20.2f, 5.4f, 19.2f);
                 break;
             case Icon.Lock:
                 Arc(12, 10, 4.2f, Mathf.Pi, Mathf.Tau, 2.2f);

@@ -112,6 +112,14 @@ public partial class Main : Node3D
                 hud.ProgressWindow.Visible = true;
                 hud.OrdersWindow.Visible = true;
             }
+            if (arg == "--research")
+            {
+                // Tier 1 opened for free, so the research window has something to show.
+                host.Sim.World.Sandbox = true;
+                host.Execute(new UnlockTier());
+                host.Sim.World.Sandbox = false;
+                hud.ResearchWindow.Visible = true;
+            }
             if (arg.StartsWith("--tool=") && host.Content.Buildings.TryGetValue(arg["--tool=".Length..], out var toolDef))
                 tools.SelectTool(toolDef); // with the pointer over the world, shows the ghost there
             if (arg.StartsWith("--drag="))
