@@ -27,6 +27,7 @@ public partial class MenuLayer : CanvasLayer
     private GameSettings _settings = null!;
     private Control _root = null!;
     private Control _title = null!;
+    private Label _titleVersion = null!;
     private Control _pause = null!;
     private Button _continue = null!;
     private Label _continueInfo = null!;
@@ -109,6 +110,12 @@ public partial class MenuLayer : CanvasLayer
 
         var credit = Ui.Label("Music by Kevin MacLeod · Sounds by Kenney · Made with Godot", 12, new Color(1, 1, 1, 0.45f));
         _title.AddChild(Ui.Anchor(credit, 0, 1, 96, -24, Control.GrowDirection.End, Control.GrowDirection.Begin));
+
+        // The same build stamp as the HUD, mirrored into the other bottom corner, so a screenshot of
+        // the menu names its build too. Dim white like the credits line, since the menu is drawn over
+        // the running factory rather than over a panel.
+        _titleVersion = Ui.VersionStamp(new Color(1, 1, 1, 0.45f));
+        _title.AddChild(Ui.Anchor(_titleVersion, 1, 1, -24, -24, Control.GrowDirection.Begin, Control.GrowDirection.Begin));
     }
 
     private static Button MenuButton(string text, Action action, bool primary = false)

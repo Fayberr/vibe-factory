@@ -140,11 +140,8 @@ public partial class Hud : CanvasLayer
         _root.AddChild(Ui.Anchor(_fps, 1, 0, -12, 8, Control.GrowDirection.Begin, Control.GrowDirection.End));
 
         // The version, always on screen but out of the way: bottom right, small and dim. Hovering it
-        // names the commit the build came from, which is what a bug report needs. Pass rather than
-        // Ignore so the tooltip fires; the label is over empty corner, so nothing is behind it.
-        _version = Ui.Label(BuildInfo.Label, 12, UiTheme.Muted);
-        _version.MouseFilter = Control.MouseFilterEnum.Pass;
-        _version.TooltipText = BuildInfo.Tooltip;
+        // names the commit the build came from, which is what a bug report needs.
+        _version = Ui.VersionStamp();
         _root.AddChild(Ui.Anchor(_version, 1, 1, -12, -10, Control.GrowDirection.Begin, Control.GrowDirection.Begin));
 
         _toasts = new Toasts();

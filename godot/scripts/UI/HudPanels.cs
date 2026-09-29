@@ -29,6 +29,17 @@ public static class Ui
         return l;
     }
 
+    /// <summary>The build stamp, for a corner of the HUD or of the title screen: small and dim, and
+    /// the commit on hover, which is what a bug report needs. Pass rather than Ignore so the tooltip
+    /// fires; callers place it where nothing is behind it.</summary>
+    public static Label VersionStamp(Color? color = null)
+    {
+        var stamp = Label(BuildInfo.Label, 12, color ?? UiTheme.Muted);
+        stamp.MouseFilter = Control.MouseFilterEnum.Pass;
+        stamp.TooltipText = BuildInfo.Tooltip;
+        return stamp;
+    }
+
     public static Button IconButton(Icon icon, string tooltip, Action onPressed, int size = 40, bool toggle = false)
     {
         var b = new Button
