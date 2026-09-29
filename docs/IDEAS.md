@@ -21,14 +21,33 @@ Weak, and this is what most of the list below attacks:
 - **There is only one progression axis.** Tiers. The global stat upgrade list is empty, so money
   only buys buildings, land and levels.
 
+## Fabian's picks (2026-09-29)
+
+Wanted, in his words:
+
+- **B1, byproducts, and with it B2 and B3** (priority outputs and filters, the tools that make
+  byproducts solvable).
+- **B9, fluids** (pipes, pumps, tanks). Called out as really liked.
+- **D1, branching research.** "Definitely something we should add."
+- **A1, ore deposits: liked but unsure**, because he does not want to have to place drills on
+  designated spots. Build the no-chore variant in A1 above, where a patch is a rate bonus and never a
+  requirement, or drop the idea entirely. Do not build the required-placement version.
+
+Parked but not rejected: the rest of Part 1. Part 2 below is the larger menu, requested the same day.
+
 ---
 
 ## A. The map as a place (spatial depth)
 
-- **A1. Ore deposits by seed (M).** Ore comes in patches of varying richness, so a drill must sit
-  on one. This single change makes land, rim depots, long belts and mergers all matter at once,
-  because distance becomes a real cost. It also relaxes the extractor `limit`, since placement
-  becomes the constraint. The real cost is that the balance tool needs an ore supply model.
+- **A1. Ore deposits by seed (M). Liked but hesitant: needs the no-chore variant below.** Ore comes
+  in patches of varying richness. This change makes land, rim depots, long belts and mergers all
+  matter at once, because distance becomes a real cost. The real cost is that the balance tool needs
+  an ore supply model.
+  - **The no-chore variant (preferred).** A drill still works anywhere, but standing on a patch
+    multiplies its rate. Nothing is ever invalid or impossible, so there is no hunting for spots and
+    no fussy placement, and the map still matters because a rich patch is worth reaching. The patch
+    can also come with the plot when land is bought, so it is never something you go looking for.
+    This is the version to build if A1 is built at all.
 - **A2. Terrain: water, cliffs, boulders (M).** Blocks building, must be routed around or cleared
   with dynamite. Turns every map into a different layout puzzle.
 - **A3. Map features (M).** A river for a water intake, a geothermal vent for power, a crater with
@@ -174,3 +193,102 @@ Weak, and this is what most of the list below attacks:
 - **Per copy price scaling on logistics.** Already decided against.
 - **Finite depleting ore as a punishment.** Prefer varying richness (A1): it creates the same
   pressure without ever bricking a running factory.
+
+---
+
+# Part 2: big systems
+
+The large additions. Each one is a project, not a task, and each changes the shape of the game
+rather than polishing a corner. Ranked inside each group roughly by fit with what the game already is
+(open-ended, data-driven, deterministic, no prestige). Effort: **L** large, **XL** very large.
+
+## I. Progression you build, not buy
+
+- **I1. Science packs and labs (L). This is the strongest idea on the page.** Instead of tiers that
+  open when you have earned and delivered enough, research is a *physical product*: labs consume
+  science packs, packs are made in the factory from increasingly complex parts, and the tech tree is
+  paid in packs rather than money. It turns progression into a production line, so every tier ends
+  with "build the next science chain" instead of "sell enough stuff". It marries directly with D1
+  (branching research) and it makes the whole factory matter, because packs pull from every chain.
+- **I2. A technology graph instead of a line (L).** Right now the 8 tiers are linear, so every run
+  follows the same order. A graph with parallel branches means a run is a set of choices: go deep on
+  electronics first, or on oil, or on logistics. This is the biggest structural replay lever
+  available, and it is the natural home for I1 and D1.
+- **I3. Launches as a real loop (L).** The satellite is already the final product and the only dead
+  end. Make it the engine: build a launch pad, launch what you build, and each launch grants a
+  permanent bonus (a stat, a recipe, a land ring) plus a record to beat. The endgame becomes a goal
+  you push toward repeatedly instead of a wall.
+- **I4. Megaprojects or wonders (L).** One huge structure that consumes the factory's output for
+  hours and visibly grows, so there is something to look at and something to feed. Optional, and the
+  player picks which one to attempt, so finished factories differ.
+- **I5. Cross-run unlocks (M).** Achievements and records that unlock new starting options for the
+  next run (a new starting plot, a modifier, a blueprint). Not prestige: nothing is ever lost, no
+  reset loop, but a fresh start is genuinely different. Strong replay value without the downward
+  pressure prestige brings.
+
+## II. Moving things at scale
+
+- **I6. Robots: construction and logistics (XL).** Construction bots build a blueprint for you,
+  logistics bots haul between chests without belts. This is the biggest change to *how you play* on
+  the whole list: laying out the factory stops being mouse work and becomes design. It also needs a
+  power network (C1) and it pairs with the blueprint library (G1).
+- **I7. The oil and chemistry layer, expanded from B9 (L).** Fluids done properly: a refinery splits
+  crude into fractions, cracking turns heavy into light, some processes produce waste heat or waste
+  products, and gases, liquids and solids each need the right container. This is what makes
+  petrochemicals feel like a different industry instead of another ore on a belt.
+- **I8. Trains with schedules, stations and signals (XL).** Long-haul logistics with real decisions:
+  where the stations go, how many trains, how to avoid one blocking another. Only makes sense once
+  distance costs something, so it builds on A1 or on ore that lives far from the factory.
+- **I9. Separate energy networks: heat, steam and electricity (L).** Instead of one generic power
+  number, different machines need different carriers, and waste heat has to be cooled away. Makes a
+  second factory whose product is energy, and gives every tier a new infrastructure layer.
+- **I10. Underground and multi-level factories (L).** A layer below the surface, or belts that stack
+  vertically, so a dense factory grows in three dimensions instead of sprawling. Also a way to cross
+  terrain and other lines without A4's single-tile tunnels.
+
+## III. A world worth being in
+
+- **I11. Regions or planets (XL).** A second and third place with its own climate, its own ores and
+  its own problems, connected by shipping. Each one reuses the whole content pipeline, so new ores
+  and recipes stay data.
+- **I12. Exploration and ruins (M/L).** Fog on the untouched map, wrecks and ruins to find, each
+  granting a unique recipe, a blueprint or a rare part you cannot make. Gives the map a reason to be
+  looked at, and a reason to buy land beyond space.
+- **I13. A second resource domain: agriculture (L).** Farms, animals, fertiliser and organics,
+  producing food, fibre and chemicals that mining cannot. It doubles the number of distinct chains
+  and it gives the map a living, renewable half next to the extracting half.
+
+## IV. The economy and the neighbours
+
+- **I14. A dynamic market (L).** Prices move with what you sell, so flooding the market for one
+  product makes it worthless and diversity becomes the winning strategy. This is the cleanest way to
+  make a big factory need many lines, and it makes every product stay relevant forever.
+- **I15. Rate contracts and customers with reputation (L).** Instead of "deliver 200 plates", a
+  client asks for a *rate* for a stretch of time, which cannot be met by hoarding, only by building
+  capacity. Customers gain trust, pay better, and unlock their own goods. Turns contracts from pocket
+  money into a business you are running.
+- **I16. A rival factory (L).** An AI producer working the same map or the same market, competing for
+  the same customers. It is the single player version of the neighbours concept, and it gives the
+  numbers an opponent.
+- **I17. An optional defense mode (XL).** Something comes for the factory and you must build
+  production for defense as well as for sale. This changes the identity of the game, so it belongs
+  behind a game mode toggle rather than in the default experience.
+
+## V. Structural
+
+- **I18. Factory compression (L).** Sketch the architecture notes' idea: measure a sub-layout's
+  steady-state input and output with the headless sim, then emit a single machine that does the same
+  thing. Factories inside factories. It also solves the performance ceiling, and it gives the endgame
+  a whole new kind of puzzle: designing the best block to compress.
+- **I19. A campaign of scenarios (M/L).** Hand authored maps with fixed seeds and fixed goals, some
+  teaching a mechanic, some a hard puzzle. This is how most players would meet fluids, trains or
+  robots, and it is also the leaderboard-ready content for later.
+
+## How they combine
+
+These are not nineteen separate games. The natural first act is **I1 + I2 + D1**: research becomes a
+product, progression becomes a graph, and suddenly the factory is feeding progression instead of
+money. The natural second act is **B9 + I7 + C1 + I9**: oil, fluids, power and heat, which is what
+turns a late game into a real industry. The natural third act is **II**: robots and trains, which is
+about scale. The world and economy ideas (III and IV) can be layered in any time, and each one is
+independent.
