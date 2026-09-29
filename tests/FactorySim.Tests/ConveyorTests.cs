@@ -70,18 +70,51 @@ public class ConveyorTests
     }
 
     [Fact]
-    public void Side_loading_merges_two_lines()
+    public void A_belt_does_not_merge_into_the_side_of_another_belt()
     {
         var sim = TestUtil.NewSim();
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
         sim.Line(new GridPos(1, 0, 0), Dir.East, 4);
         sim.Place("seller", 5, 0, 0, Dir.East);
         sim.Place("copper_miner", 3, 3, 0, Dir.North);
-        sim.Line(new GridPos(3, 2, 0), Dir.North, 2); // ends into the side of (3,0)
+        sim.Line(new GridPos(3, 2, 0), Dir.North, 2); // ends against the side of (3,0)
 
         sim.Step(20 * 60);
-        Assert.InRange(sim.Sold("iron_ore"), 55, 60);   // 1/s
-        Assert.InRange(sim.Sold("copper_ore"), 36, 40); // 1 per 1.5 s
+        Assert.InRange(sim.Sold("iron_ore"), 55, 60); // the main line is untouched
+        Assert.Equal(0, sim.Sold("copper_ore"));      // the side line only backs up: that takes a merger
+        var side = sim.World.EntityAt(new GridPos(3, 1, 0))!;
+        Assert.Null(side.Link(side.Def.OutputPorts[0]).Target);
+        Assert.Null(ConveyorBehavior.CurveSide(sim.World.EntityAt(new GridPos(3, 0, 0))!)); // and it stays straight
+    }
+
+    [Fact]
+    public void A_machine_can_still_load_a_belt_from_the_side()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Place("iron_miner", 0, 0, 0, Dir.East);
+        sim.Line(new GridPos(1, 0, 0), Dir.East, 4);
+        sim.Place("seller", 5, 0, 0, Dir.East);
+        sim.Place("copper_miner", 3, 1, 0, Dir.North); // points straight into the side of (3,0)
+
+        sim.Step(20 * 60);
+        Assert.InRange(sim.Sold("iron_ore"), 55, 60);
+        Assert.InRange(sim.Sold("copper_ore"), 36, 40);
+    }
+
+    [Fact]
+    public void Two_side_belts_into_a_belt_with_nothing_behind_it_are_not_a_merger_either()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Place("iron_miner", 2, 0, 0, Dir.South);
+        sim.Place("conveyor", 2, 1, 0, Dir.South);   // from the north side
+        sim.Place("copper_miner", 2, 4, 0, Dir.North);
+        sim.Place("conveyor", 2, 3, 0, Dir.North);   // from the south side
+        sim.Place("conveyor", 2, 2, 0, Dir.East);    // nothing behind it, so neither side is a curve
+        sim.Place("seller", 3, 2, 0, Dir.East);
+
+        sim.Step(20 * 30);
+        Assert.Equal(0, sim.Sold("iron_ore"));
+        Assert.Equal(0, sim.Sold("copper_ore"));
     }
 
     [Fact]

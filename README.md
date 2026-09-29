@@ -93,7 +93,7 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `1` to `0` | Hotbar building (press again to put it away) |
 | `B` | Build menu. Hover a building and press `1` to `0` to put it on the hotbar |
 | LMB | Place / select. Dropping a polisher, splitter or machine on a belt replaces that belt |
-| Drag (belts) | The belt finds its own way: the shortest path with the fewest turns, around buildings (as many turns as it takes), over other belt lines (it builds the bridge) and past the spots machines drop items on. Drag from a machine to a machine and it connects the one's output to the other's input; drag into the side of a belt and it joins that line |
+| Drag (belts) | The belt finds its own way: the shortest path with the fewest turns, around buildings (as many turns as it takes), over other belt lines (it builds the bridge) and past the spots machines drop items on. Drag from a machine to a machine and it connects the one's output to the other's input; drag into the side of a belt that nothing feeds and it becomes a curve (a belt in a running line does not take belts from its side: use a merger) |
 | `Shift`+drag (belts) | Draw the path yourself: the belt follows the mouse, turn after turn. Move back along it to take cells off again |
 | Drag (other buildings) | A row of them, as an L |
 | Drag (selecting) | Box select. `Shift` adds, `Ctrl` removes |
@@ -177,7 +177,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (194)
+dotnet test                                                     # core and save-file tests (197)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit

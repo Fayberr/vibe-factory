@@ -87,8 +87,8 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - **Conveyor**: each tile holds items at integer positions 0…1000, front first.
   Items advance `speed` units per tick and queue at `spacing`. Overflow past an
   edge carries into the next tile, so speed is exact across tiles (tested). Back
-  inputs enter at the overflow position, and side inputs merge at mid-tile when
-  there is a gap. Ramps and in-line upgraders (`effect`: value multiplier or tag,
+  inputs enter at the overflow position, and side inputs from machines and hubs
+  enter at mid-tile when there is a gap. Ramps and in-line upgraders (`effect`: value multiplier or tag,
   optionally once per item) are the same behavior with different data.
 - Senders pass `TickContext.Waiting` for an item that was already waiting at their
   edge. Belts can then place it as far forward as their speed allows, so machine
@@ -97,6 +97,12 @@ underneath. Lifts and multi-level machines use the same mechanism.
   input is becomes a curve (`ConveyorBehavior.CurveSide`): items from that side
   enter at the start of the tile instead of merging at mid-tile. Players never pick
   a "corner piece".
+- **Belts do not merge.** `Topology.Rebuild` cuts a belt-to-belt link into a side unless that
+  side is the receiving belt's only input (a curve), so a belt beside a running line just backs
+  up against it; joining lines is the merger's job. Machines and hubs may still feed a belt's
+  side. The cut is decided from the links as first resolved (order independent) and `Fed` is
+  recounted afterwards, so the receiving belt stays straight. The planner mirrors it
+  (`ConveyorBehavior.TakesBeltAt`): no route ends at a side a belt would refuse.
 - **Router** (splitter 1→3, merger 3→1): a hub tile that picks outputs round-robin
   at mid-tile and skips blocked ones at the exit. Merging is fair: while the
   preferred input has items waiting, other inputs are refused, then the preference

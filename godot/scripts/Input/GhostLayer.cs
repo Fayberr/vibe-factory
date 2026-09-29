@@ -85,13 +85,17 @@ public partial class GhostLayer : Node3D
 
     public void HideAll() => Show(System.Array.Empty<GhostSpec>(), false);
 
-    /// <summary>Arrows just outside each port: inward blue for inputs, outward orange for outputs.</summary>
+    /// <summary>Arrows just outside each port: inward blue for inputs, outward orange for outputs (belts: back and front only).</summary>
     private static Mesh PortArrows(BuildingDef def)
     {
         if (PortMeshes.TryGetValue(def.Id, out var mesh)) return mesh;
         var mb = new MeshBuilder();
+        bool belt = def.Behavior == "conveyor";
         foreach (var port in def.Ports)
         {
+            // A belt takes items from behind and gives them out in front. Its sides are not inputs you plan
+            // for (belts do not merge; a side only ever turns the belt into a curve), so no arrows there.
+            if (belt && port.Kind == PortKind.In && port.Side is Side.Left or Side.Right) continue;
             var d = port.Side switch
             {
                 Side.Front => new Vector2(0, -1),

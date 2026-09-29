@@ -1,3 +1,4 @@
+using FactorySim.Behaviors;
 using FactorySim.Editing;
 
 namespace FactorySim.Tests;
@@ -95,19 +96,37 @@ public class RoutingTests
     }
 
     [Fact]
-    public void A_line_dragged_into_the_side_of_a_belt_joins_it_instead_of_turning_it()
+    public void A_line_dragged_into_the_side_of_an_unfed_belt_makes_it_a_curve_instead_of_turning_it()
     {
         var sim = TestUtil.NewSim();
-        sim.Line(new GridPos(0, 8, 0), Dir.East, 7);
+        sim.Line(new GridPos(0, 8, 0), Dir.East, 7); // its first belt has nothing behind it
         var planner = new BuildPlanner(sim);
-        var route = planner.Route(new GridPos(3, 2, 0), new GridPos(3, 8, 0), firstLegX: true)!;
-        Assert.Equal(new GridPos(3, 7, 0), route[^2]);
+        var route = planner.Route(new GridPos(0, 2, 0), new GridPos(0, 8, 0), firstLegX: true)!;
+        Assert.Equal(new GridPos(0, 7, 0), route[^2]);
 
         var plan = planner.Drag(sim.Content.Buildings["conveyor"], route, Dir.East);
         Assert.Equal(PlanAction.Keep, plan.Steps[^1].Action);
         BuildPlanner.Apply(plan, sim.Execute);
+        Assert.Equal(Dir.East, sim.World.EntityAt(new GridPos(0, 8, 0))!.Facing);
+        Assert.Equal(Dir.South, sim.World.EntityAt(new GridPos(0, 7, 0))!.Facing);
+        sim.World.EnsureTopology();
+        Assert.Equal(Side.Left, ConveyorBehavior.CurveSide(sim.World.EntityAt(new GridPos(0, 8, 0))!));
+    }
+
+    [Fact]
+    public void A_belt_that_is_already_fed_is_not_a_route_target_from_its_side_and_is_not_turned()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Line(new GridPos(0, 8, 0), Dir.East, 7);
+        var planner = new BuildPlanner(sim);
+        // (3, 8) is fed from behind by (2, 8): a belt on its side would only jam against it, so no route ends there.
+        Assert.Null(planner.Route(new GridPos(3, 2, 0), new GridPos(3, 8, 0), firstLegX: true));
+
+        // A plain drag there still leaves the line alone rather than re-aiming its belt.
+        var plan = planner.Drag(sim.Content.Buildings["conveyor"], BuildPlanner.LPath(new GridPos(3, 2, 0), new GridPos(3, 8, 0), true), Dir.East);
+        Assert.Equal(PlanAction.Keep, plan.Steps[^1].Action);
+        BuildPlanner.Apply(plan, sim.Execute);
         Assert.Equal(Dir.East, sim.World.EntityAt(new GridPos(3, 8, 0))!.Facing);
-        Assert.Equal(Dir.South, sim.World.EntityAt(new GridPos(3, 7, 0))!.Facing);
     }
 
     [Fact]

@@ -165,7 +165,7 @@ public sealed partial class BuildPlanner
         {
             Dir? incoming = i == 0 ? null : Toward(cells[i - 1], cells[i]);
             var action = Classify(def, line, cells[i], dirs[i], interior: i > 0 && i < n - 1, out crossing[i]);
-            // A line dragged into the side or back of a belt joins it; re-aiming that belt would cut its line.
+            // A line dragged into the side or back of a belt is left alone: re-aiming that belt would cut its line. (Whether the belt takes it is up to the topology: a fed belt does not take belts from its side.)
             if (i == n - 1 && n > 1 && action == PlanAction.Rotate && World.EntityAt(cells[i]) is { } joined && AcceptsFrom(joined, cells[i], incoming!.Value))
                 action = PlanAction.Keep;
             plan.Steps.Add(new PlanStep(action, def, cells[i], dirs[i], line ? incoming : null));

@@ -100,7 +100,7 @@
       ],
       "upgrade": { "maxLevel": 9, "speedPerLevel": 0.5, "costFactor": 3, "costGrowth": 2 },
       "params": { "speed": 50, "spacing": 250 },
-      "meta": { "model": "belt", "glyph": "belt", "description": "Moves items. Curves when fed from one side. Drag to lay a line; dragging across another belt bridges over it." }
+      "meta": { "model": "belt", "glyph": "belt", "description": "Moves items in a straight line and curves when fed from one side. It does not take items from a belt beside it: use a merger to join lines. Drag to lay a line; dragging across another belt bridges over it." }
     },
     {
       // Occupies its cell and the one above; enters low at the back, leaves one level up at the front.

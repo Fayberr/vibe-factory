@@ -57,20 +57,23 @@ public class GridAndTopologyTests
     }
 
     [Fact]
-    public void Belts_link_front_to_back_and_side_but_not_head_on()
+    public void Belts_link_front_to_back_and_into_a_curve_but_not_head_on_or_side_merged()
     {
         var sim = TestUtil.NewSim();
         int a = sim.Place("conveyor", 0, 0, 0, Dir.East);
         int b = sim.Place("conveyor", 1, 0, 0, Dir.East);  // a → b (back)
-        int c = sim.Place("conveyor", 1, 1, 0, Dir.North); // c → b (side-load from south)
+        int c = sim.Place("conveyor", 1, 1, 0, Dir.North); // c against b's side, but b is fed from behind: cut
         int d = sim.Place("conveyor", 3, 0, 0, Dir.East);
         sim.Place("conveyor", 4, 0, 0, Dir.West);          // head-on with d
+        int e = sim.Place("conveyor", 6, 0, 0, Dir.East);  // nothing behind it, so a belt on its side makes it a curve
+        int f = sim.Place("conveyor", 6, 1, 0, Dir.North); // f → e (curve)
 
         _ = sim.World.UpdateOrder;
         var w = sim.World;
         Assert.Equal(b, OutTarget(w, a));
-        Assert.Equal(b, OutTarget(w, c));
+        Assert.Null(OutTarget(w, c));
         Assert.Null(OutTarget(w, d));
+        Assert.Equal(e, OutTarget(w, f));
     }
 
     [Fact]

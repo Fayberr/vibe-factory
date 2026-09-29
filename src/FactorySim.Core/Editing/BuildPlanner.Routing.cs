@@ -1,3 +1,5 @@
+using FactorySim.Behaviors;
+
 namespace FactorySim.Editing;
 
 /// <summary>
@@ -45,13 +47,17 @@ public sealed partial class BuildPlanner
         var goals = new Dictionary<GridPos, List<int>>();
         if (to == null) goals[end] = new List<int>();
         else
+        {
+            World.EnsureTopology();
             foreach (int q in to.Def.InputPorts)
             {
                 var cell = to.PortCell(q);
                 if (cell.Z != z) continue;
+                if (!ConveyorBehavior.TakesBeltAt(to, q)) continue; // a belt would not take a belt on that side
                 if (!goals.TryGetValue(cell, out var dirs)) goals[cell] = dirs = new List<int>();
                 dirs.Add((int)to.PortDir(q).Opposite());
             }
+        }
         if (goals.Count == 0) return null;
 
         // Cells something else outputs into: a belt there would pick up its items (or merge its line).

@@ -61,7 +61,8 @@ public record struct BeltItem(ItemStack Item, int Pos);
 /// in-line upgraders are all this behavior with different footprints, ports and params.
 ///
 /// Items enter from the back at the position they overflowed into (exact speed across
-/// tiles), or from the left/right at mid-tile (side-loading). The front item hands off
+/// tiles), or from the left/right at mid-tile (a machine or hub side-loading; a belt only feeds
+/// another belt's side when that makes it a curve, see <c>Topology</c>). The front item hands off
 /// through the single output port; others queue behind it at <c>Spacing</c>.
 /// </summary>
 public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
@@ -142,6 +143,21 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
             }
         }
         return fedSides == 1 ? side : null;
+    }
+
+    /// <summary>
+    /// Whether a belt that hands its items to <paramref name="target"/> at input <paramref name="port"/> is
+    /// taken. Belts do not merge (see <c>Topology</c>): a belt takes another belt at its back, or at a side
+    /// only while nothing else feeds it (which makes it a curve). Anything that is not a belt takes items
+    /// at every input. Reads the last resolved topology.
+    /// </summary>
+    public static bool TakesBeltAt(Entity target, int port)
+    {
+        if (target.Behavior is not ConveyorBehavior) return true;
+        if (target.Def.Ports[port].Side == Side.Back) return true;
+        foreach (int q in target.Def.InputPorts)
+            if (target.IsInputFed(q)) return false;
+        return true;
     }
 
     protected override bool TryAccept(TickContext ctx, Entity e, ConveyorParams p, ConveyorState s, ItemStack item, int port, int overflow)

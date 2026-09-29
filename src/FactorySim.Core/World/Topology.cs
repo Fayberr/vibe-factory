@@ -1,3 +1,5 @@
+using FactorySim.Behaviors;
+
 namespace FactorySim;
 
 /// <summary>
@@ -16,16 +18,52 @@ internal static class Topology
             Array.Clear(e.Fed);
         }
         foreach (var e in entities)
-        {
             foreach (int port in e.Def.OutputPorts)
-            {
-                var link = Resolve(world, e, port);
-                e.Links[port] = link;
-                if (link.Target != null) link.Target.Fed[link.TargetPort] = true;
-            }
+                e.Links[port] = Resolve(world, e, port);
+        foreach (var e in entities)
+            MarkFed(e);
+
+        if (CutBeltMerges(entities))
+        {
+            // Belts that fed a side they may not use are cut loose: recount what still feeds what.
+            foreach (var e in entities) Array.Clear(e.Fed);
+            foreach (var e in entities) MarkFed(e);
         }
 
         return DownstreamFirst(entities);
+    }
+
+    private static void MarkFed(Entity e)
+    {
+        foreach (int port in e.Def.OutputPorts)
+            if (e.Links[port].Target is { } t) t.Fed[e.Links[port].TargetPort] = true;
+    }
+
+    /// <summary>
+    /// A belt does not merge: a belt hands its items to another belt only through that belt's back, or
+    /// through its side when that side is the belt's one and only input (a curve). Any other belt-to-belt
+    /// side link is cut, so the feeding belt just backs up. Merging is what mergers are for. Machines and
+    /// hubs may still feed a belt from the side. Decided from the links as resolved (before any cut) so the
+    /// result does not depend on entity order. Returns true if anything was cut.
+    /// </summary>
+    private static bool CutBeltMerges(List<Entity> entities)
+    {
+        List<(Entity From, int Port)>? cuts = null;
+        foreach (var e in entities)
+        {
+            if (e.Behavior is not ConveyorBehavior) continue;
+            foreach (int port in e.Def.OutputPorts)
+            {
+                var link = e.Links[port];
+                if (link.Target is not { } t || t.Behavior is not ConveyorBehavior) continue;
+                var side = t.Def.Ports[link.TargetPort].Side;
+                if (side == Side.Back || side == ConveyorBehavior.CurveSide(t)) continue;
+                (cuts ??= new()).Add((e, port));
+            }
+        }
+        if (cuts == null) return false;
+        foreach (var (from, port) in cuts) from.Links[port] = default;
+        return true;
     }
 
     private static PortLink Resolve(World world, Entity e, int port)
