@@ -193,14 +193,27 @@ public sealed class SearchablePicker
         var selected = _list.GetSelectedItems();
         if (selected.Length == 0)
         {
-            // Nothing highlighted yet: Enter picks the first real (pinned or matched) row.
-            if (_shown.Count == 0) return;
-            Choose(_shown[0].Key);
+            // Nothing highlighted: Enter takes the first row the search found, or the top row when the
+            // search is empty. Picking _shown[0] outright would make typing "steel" and pressing Enter
+            // set the choice to "Anything", the first pinned entry, which is never what was meant.
+            int first = FirstPickable();
+            if (first < 0) return;
+            Choose(_shown[first].Key);
             return;
         }
         int idx = selected[0];
         if (idx < 0 || idx >= _shown.Count || !_list.IsItemSelectable(idx)) return;
         Choose(_shown[idx].Key);
+    }
+
+    /// <summary>The first row Enter would take: past the pinned entries while a search narrows the
+    /// list, from the top when it does not. Rows the list added as messages are not selectable.</summary>
+    private int FirstPickable()
+    {
+        int from = _search.Text.Trim().Length > 0 ? Math.Min(_pinned.Count, _shown.Count) : 0;
+        for (int i = from; i < _shown.Count; i++)
+            if (_list.IsItemSelectable(i)) return i;
+        return -1;
     }
 
     private void Choose(string? key)
