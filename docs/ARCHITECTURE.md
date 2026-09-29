@@ -104,10 +104,8 @@ underneath. Lifts and multi-level machines use the same mechanism.
   recounted afterwards, so the receiving belt stays straight. The planner mirrors it
   (`ConveyorBehavior.TakesBeltAt`): no route ends at a side a belt would refuse.
 - **Router** (splitter 1→3, merger 3→1): a hub tile that picks outputs round-robin
-  at mid-tile and skips blocked ones at the exit. An item whose own output (or, when
-  sorted, its whole group of outputs) is full is held aside in `RouterState.Held`
-  instead of blocking the belt behind it, up to a bounded capacity; once that is
-  full it blocks as before. Merging is fair: while the preferred input has items
+  at mid-tile and skips blocked ones at the exit; when every output is full the item
+  waits and blocks the belt behind it. Merging is fair: while the preferred input has items
   waiting, other inputs are refused, then the preference rotates. Both are tested
   with saturated inputs. A splitter can also sort, with a filter per output (see
   Byproducts below).
@@ -185,9 +183,18 @@ def's output order: null takes anything, an item id takes only that item, and
 `RouterBehavior.Overflow` takes only what the others will not. An item goes to the connected
 outputs set to its type, else to those that take anything, else to an overflow output; within that
 group the outputs take turns (`LastPicked`) and a blocked one is skipped, and an overflow output
-also takes what a full group refuses. When an item's whole group is full it is held aside
-(`RouterState.Held`) rather than blocking the belt behind it, so a jammed output only stalls the
-items that need it; the hold is bounded, and once it is full the splitter blocks as it always has.
+also takes what a full group refuses. When an item's whole group is full while another output is
+still taking items, the sorting splitter sets it aside (`RouterState.Held`) and the belt behind it
+keeps moving, so a permanently full output never stops items bound elsewhere. Held items are retried
+every tick, first in line first; identical stacks share one entry with a count (`HeldItems.Copies`),
+so the save stays small however long the jam lasts. They are not drawn; the inspector lists them.
+Two limits: `RouterParams.HoldLimit` (1,000,000 stacks, over 13 hours at the fastest a hub moves)
+and 32 distinct kinds; past either the item blocks as before. What gives is back pressure on the
+jammed item: its maker keeps running while the splitter stores the surplus. When every output the
+splitter knows of is full it does not hold anything, so a fully backed up line still stops; an
+output that refused counts as full until it takes an item again, except that once a second one
+item is set aside anyway as a probe, so a line stopped behind a full output restarts when another
+output clears.
 An item that no output takes at all (no connected output is in its group) still waits at the centre
 and holds up the splitter, since holding it aside would never help. With no filter set `Filters` is
 null and the old round-robin code path runs, so a plain splitter routes and saves exactly as before.
