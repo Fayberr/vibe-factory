@@ -134,6 +134,51 @@ Tiers still unlock buildings and raise build limits, but no longer change the si
 `balance land` shows the price rings against income. Saves from before the land are migrated
 without losing a building; see the Land section of the architecture notes.
 
+### 8. Multiplayer (planned, nothing built)
+
+Two concepts Fabian wants: **neighbours** (each player runs their own factory side by side, with a
+leaderboard comparing money, income per second and tier) and a **shared factory** (two players build
+one together).
+
+Requirements (Fabian, 2026-09-29):
+
+- **No Steam app page**, so no $100 and no Steamworks account. Steam is out for now, which also
+  gives up Remote Play Together (it needs a store page) and Steam leaderboards. Steam can be added
+  later if an app id ever exists, so nothing below may depend on its absence.
+- **Seamless for the other player**: both just start the game and play. No VPN mesh, no port
+  forwarding, no addresses to copy. The friend is a few houses away, so it must work over the open
+  internet, behind ordinary home NAT.
+
+Proposed design (not decided):
+
+- **A small relay and rendezvous service on the Oracle VPS** (already paid for, and it has a public
+  address). Both clients connect *outward* to it, so NAT is never a problem, not even under CGNAT,
+  and the service pairs them and forwards messages. A factory game sends a few KB/s at most, so the
+  running cost is effectively zero. A subdomain of fayber.dev gives it a name, so no address ever
+  appears in the UI.
+- **Transport behind an interface** in the C# layer: the relay today, Steam (or anything else) later,
+  without touching the simulation. The headless CLI exercises it in tests, so the netcode is testable
+  with no Steam client, no GPU and no second account.
+- **Host-authoritative first.** The host owns the world and sends changes; guests send commands. It is
+  simpler than lockstep and immune to floating point or platform drift. Lockstep stays cheap to add
+  later, because the sim is deterministic at a fixed 20 ticks/s and already logs `(tick, Command)`.
+- **Friend linking, once.** A short friend code exchanged a single time; after that a session is
+  "Host" and "Join (friend online)" with nothing to type. A shareable invite link covers players who
+  are not linked yet. This is what replaces Steam's friends list and lobbies.
+- **The same service can carry concept 1's leaderboard** (money, income per second, tier), which is
+  the job Steam's leaderboards would have done.
+- **A persistent shared factory is possible**: `FactorySim.Cli` runs the world headlessly, so the Pi
+  or the VPS can host it and it keeps producing while everyone is away. Solo already has the offline
+  catch-up this needs.
+- **Save slots**: one authoritative save, the host's slot. Guests do not autosave (today every client
+  would write its own copy of the same world), a guest may copy the save to continue alone, and
+  offline catch-up is off for a shared world since extrapolating a world others are playing is wrong.
+
+Open items (design, not technology): shared or separate money, tier and land; who may remove or
+upgrade whose buildings; what pause means when one player is mid-build; and whether the service
+lives on fayber.dev.
+
 ## Open questions
 
 - Step 4 (more content): which products and tiers to add on top of the tree.
+- Step 8 (multiplayer): the open items listed above, and when to start it.
