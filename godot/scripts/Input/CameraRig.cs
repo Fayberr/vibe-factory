@@ -8,7 +8,7 @@ namespace FactorySim.Client;
 /// </summary>
 public partial class CameraRig : Node3D
 {
-    /// <summary>The yaw the camera starts at and returns to (also how the ground price tags are turned to read upright).</summary>
+    /// <summary>The yaw the camera starts at and returns to.</summary>
     public const float DefaultYaw = 40f;
 
     private float _yaw = DefaultYaw, _pitch = -52f, _distance = 20f;

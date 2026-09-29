@@ -264,8 +264,9 @@ public partial class WorldView : Node3D
         if (World.Sandbox) return; // everything is yours, nothing to buy
         var grey = new Color("#b4b9c2");
         var outline = new Color(0.05f, 0.08f, 0.12f, 0.9f);
-        // Lie flat, and read upright from the default camera (the map is axis-aligned, the camera is turned).
-        var flat = new Vector3(-90f, CameraRig.DefaultYaw, 0f);
+        // Lie flat, text running parallel to the bottom edge of the map (the start plot's side), top of the
+        // text towards the far edge. Not turned with the camera, so it lines up with the plot grid.
+        var flat = new Vector3(-90f, 0f, 0f);
         foreach (var plot in land.All())
         {
             if (land.Owns(plot)) continue;
@@ -275,7 +276,7 @@ public partial class WorldView : Node3D
             {
                 Text = head + "\n$" + land.PriceOf(plot).Format(),
                 FontSize = 72,
-                PixelSize = 0.036f,
+                PixelSize = 0.028f,
                 OutlineSize = 16,
                 Modulate = grey,
                 OutlineModulate = outline,
