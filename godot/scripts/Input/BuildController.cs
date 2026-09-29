@@ -338,9 +338,26 @@ public partial class BuildController : Node3D
         else if (recipe == null) Notice(machines.Count == 1 ? $"{machines[0].Def.Name}: automatic" : $"{machines.Count} machines: automatic");
         else
         {
-            var item = World.Content.Items[World.Content.Recipes[recipe].Outputs[0].Item].Name;
+            var item = string.Join(" + ", World.Content.Recipes[recipe].Outputs.Select(o => World.Content.Items[o.Item].Name));
             Notice(machines.Count == 1 ? $"{machines[0].Def.Name} now makes {item}" : $"{machines.Count} machines now make {item}");
         }
+        Changed?.Invoke();
+    }
+
+    /// <summary>Sets what output number <paramref name="output"/> of the selected splitters takes (null = anything). One undo step.</summary>
+    public void ChooseFilter(int output, string? filter)
+    {
+        var hubs = SelectedEntities().Where(e => e.Def.Params is RouterParams && e.Def.OutputPorts.Count > output).ToList();
+        if (hubs.Count == 0) return;
+        History.BeginGroup();
+        string? error = null;
+        foreach (var e in hubs)
+            if (History.Execute(new SetFilter(e.Pos, output, filter)) is { Ok: false } r) error ??= r.Error;
+        History.EndGroup();
+        var p0 = (RouterParams)hubs[0].Def.Params!;
+        string side = RouterBehavior.OutputName(hubs[0].Def, output).ToLowerInvariant();
+        if (error != null) Notice(error);
+        else Notice($"{(hubs.Count == 1 ? hubs[0].Def.Name : $"{hubs.Count} {hubs[0].Def.Name}s")}: {side} output takes {RouterBehavior.RuleName(p0, filter)}");
         Changed?.Invoke();
     }
 

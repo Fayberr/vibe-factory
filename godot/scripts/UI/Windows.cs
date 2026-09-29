@@ -197,8 +197,9 @@ public sealed class StatLine
 
 /// <summary>
 /// "Manage" window for the selection: a card with the building (picture, name, description,
-/// level, value, speed, status), a big Upgrade button with Delete beside it, and for machines
-/// a grid to choose what to produce, with the chosen item's parts, value and time.
+/// level, value, speed, status), a big Upgrade button with Delete beside it, for machines
+/// a grid to choose what to produce, with the chosen item's parts, value and time, and for
+/// splitters what each output takes.
 /// Several selected buildings of one kind can be upgraded or set together.
 /// </summary>
 public sealed class ManageWindow
@@ -208,6 +209,7 @@ public sealed class ManageWindow
     private readonly Action _upgrade;
     private readonly Action _delete;
     private readonly Action<string?> _choose;
+    private readonly Action<int, string?> _filter;
 
     private readonly TextureRect _image = new()
     {
@@ -229,7 +231,7 @@ public sealed class ManageWindow
     private readonly Label _produceTitle = Ui.Label("", 15);
     private readonly Control _tilesSection;
     private readonly GridContainer _tiles = new() { Columns = 4 };
-    private readonly List<(string? Recipe, Button Button, TextureRect Image, Label Name)> _tileList = new();
+    private readonly List<(string? Recipe, Button Button, TextureRect Image, TextureRect Extra, Label Name)> _tileList = new();
     private string? _tilesKey;
     private string? _hoverRecipe;
     private bool _hovering;
@@ -248,18 +250,26 @@ public sealed class ManageWindow
     private readonly StatLine _itemTime = new(Icon.Clock, "Time");
     private readonly Button _deselect;
 
+    private readonly VBoxContainer _sort = new();
+    private readonly GridContainer _sortRows = new() { Columns = 2 };
+    private readonly List<OptionButton> _sortPicks = new();
+    private readonly List<string?> _sortChoices = new();
+    private string? _sortKey;
+
     private readonly GridContainer _info = new() { Columns = 2 };
     private readonly Control _infoSection;
     private readonly List<InfoLine> _lines = new();
 
     private static readonly HashSet<string> CoveredLines = new() { "Producing", "Recipe", "Produces", "Rate" };
+    private static readonly HashSet<string> CoveredBySort = new() { "Sorting" };
     private static readonly double RawShare = new SellerParams().RawMultiplier;
 
-    public ManageWindow(Action upgrade, Action delete, Action<string?> choose, Action rotate, Action move, Action copy, Action close)
+    public ManageWindow(Action upgrade, Action delete, Action<string?> choose, Action<int, string?> filter, Action rotate, Action move, Action copy, Action close)
     {
         _upgrade = upgrade;
         _delete = delete;
         _choose = choose;
+        _filter = filter;
         Window = new HudWindow("Manage", Icon.Search, 420) { KeepRight = true };
         Window.AddHeaderButton(Icon.Rotate, "Rotate (R)", rotate);
         Window.AddHeaderButton(Icon.Move, "Move (M)", move);
@@ -349,6 +359,20 @@ public sealed class ManageWindow
         _produce.AddChild(_deselect);
         body.AddChild(_produce);
 
+        // What each splitter output takes: anything, one item, or the overflow.
+        var sortTitle = Ui.Label("Sort by item", 15);
+        sortTitle.AddThemeFontOverride("font", UiTheme.Bold);
+        sortTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        sortTitle.TooltipText = "Each output takes anything, one item, or the overflow: what no other output takes, or what a full output refuses.";
+        sortTitle.MouseFilter = Control.MouseFilterEnum.Pass;
+        _sort.AddThemeConstantOverride("separation", 0);
+        _sort.AddChild(new HSeparator());
+        _sort.AddChild(Ui.Pad(sortTitle, 8, 8));
+        _sortRows.AddThemeConstantOverride("h_separation", 14);
+        _sortRows.AddThemeConstantOverride("v_separation", 6);
+        _sort.AddChild(Ui.Pad(_sortRows, 14, 8));
+        body.AddChild(_sort);
+
         // Anything else worth knowing (buffers, earnings, belt speed).
         var infoBox = new VBoxContainer();
         infoBox.AddThemeConstantOverride("separation", 0);
@@ -395,8 +419,13 @@ public sealed class ManageWindow
         if (processor) ShowRecipes(sim, first, selection, thumbs);
         else if (miner) ShowMined(sim, first, thumbs);
 
+        // Sorting for splitters (several of one kind are set together).
+        bool sorter = sameKind && first.Def.Params is RouterParams && first.Def.OutputPorts.Count >= 2;
+        _sort.Visible = sorter;
+        if (sorter) ShowSorting(sim, first, selection, thumbs);
+
         for (int i = _lines.Count - 1; i >= 0; i--)
-            if (CoveredLines.Contains(_lines[i].Label) && (processor || miner)) _lines.RemoveAt(i);
+            if ((CoveredLines.Contains(_lines[i].Label) && (processor || miner)) || (CoveredBySort.Contains(_lines[i].Label) && sorter)) _lines.RemoveAt(i);
         ShowInfo();
         Window.Fit();
     }
@@ -443,17 +472,22 @@ public sealed class ManageWindow
         var recipes = p.Recipes.Select(id => sim.Content.Recipes[id]).ToList();
         _produceTitle.Text = selection.Count == 1 ? "Choose what to produce" : $"Choose what all {selection.Count} produce";
         _tilesSection.Visible = true;
-        var choices = new List<(string? Recipe, string? Item)> { (null, null) };
-        choices.AddRange(recipes.Select(r => ((string?)r.Id, (string?)r.Outputs[0].Item)));
+        var choices = new List<(string? Recipe, string? Label)> { (null, null) };
+        choices.AddRange(recipes.Select(r => ((string?)r.Id, (string?)OutputNames(r, sim.Content))));
         BuildTiles(e.Def.Id, choices, sim.Content, thumbs);
 
         var chosen = selection.Select(x => x.Behavior.Selection(x)).Distinct().ToList();
         string? common = chosen.Count == 1 ? chosen[0] : "\0"; // "\0": mixed, nothing highlighted
-        foreach (var (tileRecipe, button, image, name) in _tileList)
+        foreach (var (tileRecipe, button, image, extra, name) in _tileList)
         {
             button.SetPressedNoSignal(tileRecipe == common);
             name.AddThemeColorOverride("font_color", tileRecipe == common ? UiTheme.Primary : UiTheme.Text);
-            if (tileRecipe != null) image.Texture = thumbs.GetItem(sim.Content.Recipes[tileRecipe].Outputs[0].Item);
+            if (tileRecipe == null) continue;
+            var outputs = sim.Content.Recipes[tileRecipe].Outputs;
+            image.Texture = thumbs.GetItem(outputs[0].Item);
+            // A second output (a byproduct) shows as a smaller picture in the corner.
+            extra.Visible = outputs.Length > 1;
+            if (outputs.Length > 1) extra.Texture = thumbs.GetItem(outputs[1].Item);
         }
         _deselect.Visible = chosen.Any(x => x != null);
 
@@ -465,10 +499,22 @@ public sealed class ManageWindow
         var item = sim.Content.Items[output.Item];
         bool auto = !_hovering && common == null;
         _itemImage.Texture = thumbs.GetItem(item.Id);
-        _itemName.Text = (output.Count > 1 ? $"{item.Name} ×{output.Count}" : item.Name) + (auto ? "  (automatic)" : "");
+        _itemName.Text = string.Join(" + ", recipe.Outputs.Select(o => o.Count > 1 ? $"{sim.Content.Items[o.Item].Name} ×{o.Count}" : sim.Content.Items[o.Item].Name))
+                         + (auto ? "  (automatic)" : "");
+        _itemName.TooltipText = recipe.Outputs.Length > 1 ? "Makes all of these from one craft; the craft's value is shared evenly between them." : "";
         SetParts(recipe.Inputs.Select(i => (i.Item, i.Count)).ToList(), sim.Content, thumbs);
-        double each = sim.Content.ItemValue.TryGetValue(item.Id, out var v) ? v.Value * e.ValueFactor : 0;
-        _itemValue.Set("Value", "$" + ((BigNum)each).Format(), UiTheme.Money);
+        if (recipe.Outputs.Length == 1)
+        {
+            double each = sim.Content.ItemValue.TryGetValue(item.Id, out var v) ? v.Value * e.ValueFactor : 0;
+            _itemValue.Set("Value", "$" + ((BigNum)each).Format(), UiTheme.Money);
+        }
+        else
+        {
+            // Every unit of every output is worth the same share of the craft.
+            double parts = recipe.Inputs.Sum(i => sim.Content.ItemValue.TryGetValue(i.Item, out var iv) ? iv.Value * i.Count : 0);
+            double share = parts * recipe.ValueMultiplier * e.ValueFactor / recipe.Outputs.Sum(o => o.Count);
+            _itemValue.Set("Value", "$" + ((BigNum)share).Format() + " each", UiTheme.Money);
+        }
         double seconds = recipe.Ticks / (Simulation.TicksPerSecond * e.SpeedFactor * sim.World.Stat(StatIds.MachineSpeed));
         _itemTime.Set("Time", $"{seconds:0.##}s");
     }
@@ -490,14 +536,14 @@ public sealed class ManageWindow
     }
 
     /// <summary>(Re)builds the choice tiles when a different kind of machine is shown.</summary>
-    private void BuildTiles(string key, List<(string? Recipe, string? Item)> choices, ContentRegistry content, Thumbnails thumbs)
+    private void BuildTiles(string key, List<(string? Recipe, string? Label)> choices, ContentRegistry content, Thumbnails thumbs)
     {
         if (_tilesKey == key) return;
         _tilesKey = key;
         _hovering = false;
         foreach (var t in _tileList) t.Button.QueueFree();
         _tileList.Clear();
-        foreach (var (recipe, itemId) in choices)
+        foreach (var (recipe, label) in choices)
         {
             var button = new Button
             {
@@ -507,7 +553,7 @@ public sealed class ManageWindow
                 CustomMinimumSize = new Vector2(96, 104),
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 ClipContents = true,
-                TooltipText = recipe == null ? "Automatic: makes whatever its ingredients allow" : "",
+                TooltipText = recipe == null ? "Automatic: makes whatever its ingredients allow" : label ?? "",
             };
             var image = new TextureRect
             {
@@ -520,6 +566,19 @@ public sealed class ManageWindow
             image.OffsetRight = -10;
             image.OffsetBottom = -28;
             button.AddChild(image);
+            var extra = new TextureRect
+            {
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                Visible = false,
+            };
+            extra.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
+            extra.OffsetLeft = -40;
+            extra.OffsetTop = -64;
+            extra.OffsetRight = -6;
+            extra.OffsetBottom = -30;
+            button.AddChild(extra);
             var icon = new IconView { Icon = Icon.Auto, Visible = recipe == null };
             icon.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             icon.OffsetLeft = 30;
@@ -527,7 +586,7 @@ public sealed class ManageWindow
             icon.OffsetTop = 18;
             icon.OffsetBottom = -36;
             button.AddChild(icon);
-            var name = Ui.Label(itemId == null ? "Automatic" : content.Items[itemId].Name, 12);
+            var name = Ui.Label(label ?? "Automatic", 12);
             name.SetAnchorsPreset(Control.LayoutPreset.BottomWide);
             name.OffsetTop = -26;
             name.OffsetBottom = -6;
@@ -539,9 +598,64 @@ public sealed class ManageWindow
             button.MouseEntered += () => { _hovering = r != null; _hoverRecipe = r; };
             button.MouseExited += () => { if (_hoverRecipe == r) _hovering = false; };
             _tiles.AddChild(button);
-            _tileList.Add((recipe, button, image, name));
+            _tileList.Add((recipe, button, image, extra, name));
         }
         _tiles.Columns = Math.Min(4, Math.Max(1, _tileList.Count));
+    }
+
+    /// <summary>What a recipe makes, by name: "Plastic", or "Plastic + Tar" for a recipe with a byproduct.</summary>
+    private static string OutputNames(RecipeDef recipe, ContentRegistry content) =>
+        string.Join(" + ", recipe.Outputs.Select(o => content.Items[o.Item].Name));
+
+    /// <summary>One row per splitter output: which side it is, and a pick of what it takes.</summary>
+    private void ShowSorting(Simulation sim, Entity e, IReadOnlyList<Entity> selection, Thumbnails thumbs)
+    {
+        var content = sim.Content;
+        var world = sim.World;
+        int outputs = e.Def.OutputPorts.Count;
+        // Anything, overflow, then every item the factory can have by now (and any item already set).
+        var set = selection.SelectMany(x => x.Behavior.Filters(x) ?? Array.Empty<string?>()).OfType<string>().Where(content.Items.ContainsKey);
+        var items = content.ItemValue.Where(kv => world.Sandbox || kv.Value.Tier <= world.UnlockedTier).Select(kv => kv.Key)
+            .Concat(set).Distinct()
+            .OrderBy(id => content.ItemValue.TryGetValue(id, out var v) ? v.Tier : int.MaxValue).ThenBy(id => content.Items[id].Name, StringComparer.Ordinal)
+            .ToList();
+        string key = e.Def.Id + "|" + string.Join(",", items);
+        if (_sortKey != key)
+        {
+            _sortKey = key;
+            foreach (var child in _sortRows.GetChildren()) child.QueueFree();
+            _sortPicks.Clear();
+            _sortChoices.Clear();
+            _sortChoices.Add(null);
+            _sortChoices.Add(RouterBehavior.Overflow);
+            _sortChoices.AddRange(items);
+            for (int i = 0; i < outputs; i++)
+            {
+                _sortRows.AddChild(Ui.Label(RouterBehavior.OutputName(e.Def, i), 14, UiTheme.Muted));
+                var pick = new OptionButton { FocusMode = Control.FocusModeEnum.None, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FitToLongestItem = false };
+                pick.AddThemeConstantOverride("icon_max_width", 22);
+                pick.AddItem("Anything");
+                pick.AddItem("Overflow");
+                pick.SetItemTooltip(1, "Only what the other outputs don't take, or refuse because they are full");
+                foreach (var id in items) pick.AddItem(content.Items[id].Name);
+                for (int k = 0; k < pick.ItemCount; k++) pick.GetPopup().SetItemIconMaxWidth(k, 22);
+                int output = i;
+                pick.ItemSelected += index => _filter(output, _sortChoices[(int)index]);
+                _sortRows.AddChild(pick);
+                _sortPicks.Add(pick);
+            }
+        }
+
+        for (int i = 0; i < _sortPicks.Count; i++)
+        {
+            var pick = _sortPicks[i];
+            var rules = selection.Select(x => x.Behavior.Filters(x) is { } f && i < f.Count ? f[i] : null).Distinct().ToList();
+            int selected = rules.Count == 1 ? _sortChoices.IndexOf(rules[0]) : -1; // -1: mixed
+            if (pick.Selected != selected) pick.Selected = selected;
+            // Icons may arrive after the list was built.
+            for (int k = 2; k < _sortChoices.Count; k++)
+                if (pick.GetItemIcon(k) == null && thumbs.GetItem(_sortChoices[k]!) is { } tex) pick.SetItemIcon(k, tex);
+        }
     }
 
     /// <summary>Ingredient icons with counts ("Parts:").</summary>

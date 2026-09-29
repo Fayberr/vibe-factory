@@ -316,6 +316,7 @@ public partial class Hud : CanvasLayer
             upgrade: () => _tools.UpgradeEntities(_tools.SelectedEntities().ToList()),
             delete: _tools.DeleteSelection,
             choose: recipe => _tools.ChooseRecipe(recipe),
+            filter: (output, item) => _tools.ChooseFilter(output, item),
             rotate: () => _tools.Rotate(1),
             move: () => _tools.BeginMove(),
             copy: () => _tools.CopySelection(enterPaste: true),
