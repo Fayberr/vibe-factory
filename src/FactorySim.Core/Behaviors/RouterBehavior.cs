@@ -166,18 +166,41 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     }
 
     /// <summary>Where an item belongs: outputs set to its type, else open ones, else overflow (connected ones only).</summary>
-    private static Group HomeOf(Entity e, RouterState s, string type)
+    private static Group HomeOf(Entity e, RouterState s, string type) => HomeGroup(e, s, type, connectedOnly: true);
+
+    /// <summary>
+    /// The group an item belongs to. With <paramref name="connectedOnly"/> false the belts are ignored,
+    /// which answers "where would this item go if the belt were attached" and is how a missing belt is
+    /// told apart from a full one.
+    /// </summary>
+    private static Group HomeGroup(Entity e, RouterState s, string type, bool connectedOnly)
     {
         if (s.Filters == null) return Group.Open;
         var home = Group.None;
         var outs = e.Def.OutputPorts;
         for (int i = 0; i < outs.Count; i++)
         {
-            if (!e.Link(outs[i]).IsConnected) continue;
+            if (connectedOnly && !e.Link(outs[i]).IsConnected) continue;
             var g = GroupOf(s, i, type);
             if (g != Group.None && (home == Group.None || g < home)) home = g;
         }
         return home;
+    }
+
+    /// <summary>
+    /// The output this item needs that has no belt on it, when the hub cannot pass the item because nothing
+    /// connected will take it. The player built the right output and the belt is not attached to it (never
+    /// placed, or facing the wrong way), which otherwise looks exactly like a hub that is simply full.
+    /// </summary>
+    private static int MissingOutput(Entity e, RouterState s, string type)
+    {
+        if (HomeGroup(e, s, type, connectedOnly: true) != Group.None) return -1; // something connected takes it
+        var group = HomeGroup(e, s, type, connectedOnly: false);
+        if (group == Group.None) return -1; // no output is even set for it: that is a filter problem, not a belt
+        var outs = e.Def.OutputPorts;
+        for (int i = 0; i < outs.Count; i++)
+            if (!e.Link(outs[i]).IsConnected && GroupOf(s, i, type) == group) return i;
+        return -1;
     }
 
     private static int PickOutput(TickContext ctx, Entity e, RouterState s, string type)
@@ -369,11 +392,17 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     /// </summary>
     protected override EntityStatus GetStatus(Entity e, RouterParams p, RouterState s)
     {
-        if (JammedOutput(e, s) is var jam && jam >= 0)
-            return new(false, 0, $"{OutputName(e.Def, jam)} blocked");
-        if (s.NoOutputTicks >= JamTicks && s.NoOutputItem is { } stuck)
+        int jam = JammedOutput(e, s);
+        bool nothingTakes = s.NoOutputTicks >= JamTicks && s.NoOutputItem != null;
+        string? type = nothingTakes ? s.NoOutputItem : s.Items.Count > 0 ? s.Items[0].Item.Type : null;
+        if (type != null && (jam >= 0 || nothingTakes))
         {
-            string name = p.Items.TryGetValue(stuck, out var item) ? item.Name : stuck;
+            // A belt that is not attached is the most useful thing to say first: it is the one cause the
+            // player cannot see, and a full belt looks the same from the outside.
+            if (MissingOutput(e, s, type) is var missing && missing >= 0)
+                return new(false, 0, $"{OutputName(e.Def, missing)} has no belt");
+            if (jam >= 0) return new(false, 0, $"{OutputName(e.Def, jam)} blocked");
+            string name = p.Items.TryGetValue(type, out var item) ? item.Name : type;
             return new(false, 0, $"nothing takes {name}");
         }
         return new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");

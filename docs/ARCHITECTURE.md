@@ -113,7 +113,11 @@ underneath. Lifts and multi-level machines use the same mechanism.
   A hub that cannot pass something says so instead of looking busy: once an output has
   refused items for a full second (`RouterState.RefusedTicks`, `JamTicks`) the status
   names it ("Left blocked", red lamp) and the panel adds "(belt full)" to its row, or
-  "(no belt)" when a filter sits on an output with nothing attached to it. "5 item(s)"
+  "(no belt)" when a filter sits on an output with nothing attached to it. An output
+  the item needs that has no belt at all is reported as such ("Front has no belt")
+  before any full-belt message, because a belt that is missing or facing the wrong
+  way is the one cause a player cannot see; a filter mistake where no output is set
+  for an item reports "nothing takes <item>". "5 item(s)"
   on a frozen hub was indistinguishable from a working one, which cost the owner a
   session on 2026-09-29: the answer to "why is my plastic not moving" was that the
   tar belt at the end of the right output had been full for hours.

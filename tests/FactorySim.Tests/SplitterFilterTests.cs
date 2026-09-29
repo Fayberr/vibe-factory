@@ -422,6 +422,30 @@ public class SplitterFilterTests
         Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: Iron Plate · Left: Iron Rod · Right: anything");
     }
 
+    /// <summary>
+    /// The one cause a player cannot see: the output is set right and the belt is not on it. It looks
+    /// exactly like a hub that is simply full, so the hub has to say which of the two it is.
+    /// </summary>
+    [Fact]
+    public void A_missing_belt_is_reported_as_missing_rather_than_as_full()
+    {
+        var sim = Sorter(front: null); // nothing attached at the front at all
+        Filter(sim, Front, "iron_plate");
+        Filter(sim, Left, "iron_rod");
+        Filter(sim, Right, "iron_rod");
+        sim.Step(600);
+
+        var hub = sim.World.EntityAt(Hub)!;
+        Assert.Equal(0, sim.Sold("iron_plate")); // nothing takes the plates, and the front has no belt
+        var status = hub.Behavior.GetStatus(hub);
+        Assert.False(status.Working);
+        Assert.Equal("Front has no belt", status.Detail);
+
+        var lines = new List<View.InfoLine>();
+        hub.Behavior.Describe(hub, lines);
+        Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: Iron Plate (no belt) · Left: Iron Rod · Right: Iron Rod");
+    }
+
     [Fact]
     public void A_filter_on_an_output_with_no_belt_is_marked_as_such_and_takes_nothing()
     {
@@ -440,8 +464,11 @@ public class SplitterFilterTests
     [Fact]
     public void A_hub_that_nothing_can_leave_says_which_item_it_is_holding()
     {
-        var sim = Sorter(left: null, right: null); // only the front output, filtered to plates
+        var sim = Sorter(left: null, right: null);
+        // Every output is set to plates, so no output at all is for a rod, belt or no belt.
         Filter(sim, Front, "iron_plate");
+        Filter(sim, Left, "iron_plate");
+        Filter(sim, Right, "iron_plate");
         sim.Step(600);
 
         var hub = sim.World.EntityAt(Hub)!;
