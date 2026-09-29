@@ -148,6 +148,9 @@ Requirements (Fabian, 2026-09-29):
 - **Seamless for the other player**: both just start the game and play. No VPN mesh, no port
   forwarding, no addresses to copy. The friend is a few houses away, so it must work over the open
   internet, behind ordinary home NAT.
+- **Offline-first, no single point of failure**: the game must never depend on any service to be
+  playable. Dual host: the Oracle VPS first, the Raspberry Pi as fallback when the VPS is down, and
+  if both are down the game still plays normally, with only the online features unavailable.
 
 Proposed design (not decided):
 
@@ -156,6 +159,19 @@ Proposed design (not decided):
   and the service pairs them and forwards messages. A factory game sends a few KB/s at most, so the
   running cost is effectively zero. A subdomain of fayber.dev gives it a name, so no address ever
   appears in the UI.
+- **The relay is stateless**: no world state lives on it, it only forwards messages. So the host's
+  factory keeps running when the relay dies, the save never depends on it, and a guest rejoins when
+  it comes back. That is what makes "the game does not rely on it" true rather than a promise.
+- **Two hosts, tried in order.** The client ships with an endpoint list, dials them in order with a
+  short timeout, caches whichever answered, retries on failure and shows which one is in use
+  ("Connected via: Pi"). A DNS record under fayber.dev could carry the list, so the fallback order
+  can change without shipping a build. Online is always best-effort: starting the game must never
+  wait on the network, and the UI says plainly when features are unavailable and the game is solo.
+- **Reaching the Pi from outside the house is the one piece that needs a one-time decision by Fabian**,
+  because the Pi sits behind his home NAT: either a router port forward (no third party, but needs a
+  public IPv4 and no CGNAT) or a tunnel that dials outward (for example Cloudflare Tunnel, free and
+  no router changes). Same-house and same-LAN play needs neither. Speaking WebSocket over TLS keeps
+  both hosts, and any future one, interchangeable.
 - **Transport behind an interface** in the C# layer: the relay today, Steam (or anything else) later,
   without touching the simulation. The headless CLI exercises it in tests, so the netcode is testable
   with no Steam client, no GPU and no second account.
