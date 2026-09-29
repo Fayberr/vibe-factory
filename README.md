@@ -213,6 +213,23 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).
 ```
 
+## Versioning
+
+The version is one line in [`VERSION`](VERSION) at the repository root, in `major.minor.patch` form,
+and that file is the only place it is written. The build reads it into every assembly, so the number
+the game shows is the number it was compiled with. The client stamps it in a small dim label in the
+bottom right corner of the screen, reading `Build 0.1.0`; hovering that label adds the commit the
+build came from, which is what a bug report needs to name the exact build.
+
+Bump it by hand when a build is worth telling apart:
+
+- **major**: a change that breaks existing saves or the shape of the game.
+- **minor**: new content or a new system.
+- **patch**: fixes and balance only.
+
+CI checks the shape of the file before compiling and names each release after the version, so any
+download can be traced back to the commit that made it.
+
 ## Continuous integration and downloads
 
 `.github/workflows/build.yml` runs on every push to `main`:
@@ -221,8 +238,8 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 2. Exports the Windows build headlessly with Godot 4.7.2 .NET on Linux, using preset
    **Windows Desktop** in `godot/export_presets.cfg`, into `build/`.
 3. Uploads `VibeFactory-Windows.zip` as a workflow artifact and publishes it as the
-   repository's **Latest** release (tag `latest-build`, named after the run number and
-   commit). The previous one is deleted first, so the repo page always shows exactly one
+   repository's **Latest** release (tag `latest-build`, named after the version, the run number
+   and the commit). The previous one is deleted first, so the repo page always shows exactly one
    current build. The latest push from any of those branches wins.
 
 The export is self-contained (it bundles the .NET runtime). Unzip and run `VibeFactory.exe`,

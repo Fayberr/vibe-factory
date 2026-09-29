@@ -52,6 +52,11 @@ public partial class UiScenario : Node
         Hud.Tutorial.Window.Close();
         Check(!Hud.Tutorial.Active && w.EntityCount == 0, "closing ends the tutorial");
 
+        // The build stamp is always in the corner, and it names the build it was compiled from.
+        Check(Hud.Version.Visible && Hud.Version.Text == BuildInfo.Label,
+            $"the corner shows the version (showed '{Hud.Version.Text}', expected '{BuildInfo.Label}')");
+        Check(BuildInfo.Version.Split('.').Length == 3, $"the version has three numbers (got '{BuildInfo.Version}')");
+
         // 1. Hotbar + L-shaped belt drag.
         await Key(Godot.Key.Key1);
         Check(Tools.Mode == ToolMode.Build && Tools.Tool?.Id == "conveyor", "key 1 selects the conveyor");

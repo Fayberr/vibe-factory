@@ -12,4 +12,11 @@
          which the SDK doesn't treat as optimized by default. -->
     <Optimize Condition="'$(Configuration)' == 'ExportRelease'">true</Optimize>
   </PropertyGroup>
+
+  <!-- The version comes from the VERSION file at the repository root: one place to bump it, and
+       the value compiled into the assemblies is the value in that file. The client stamps it into
+       its assembly and shows it in the corner of the screen; CI names the release after it. -->
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+  </PropertyGroup>
 </Project>

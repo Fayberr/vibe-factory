@@ -1,4 +1,8 @@
 <Project>
-  <!-- Intentionally empty: stops the repository-root Directory.Build.props
-       (warnings-as-errors, implicit usings) from applying to the Godot project. -->
+  <!-- Intentionally free of the repository-root Directory.Build.props settings
+       (warnings-as-errors, implicit usings): this file stops that import. The version is not one
+       of those settings, so it is read here from the same VERSION file at the repository root. -->
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
+  </PropertyGroup>
 </Project>

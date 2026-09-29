@@ -43,6 +43,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The version lives in VERSION and is stamped into the client at build time, so a typo there
+      # would ship a build whose corner reads something odd. Check the shape before compiling.
+      - name: Check the version file
+        run: |
+          set -euo pipefail
+          version="$(cat VERSION)"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION must be three numbers like 0.1.0, got '$version'"
+            exit 1
+          fi
+          echo "Version: $version"
+
       - name: Set up .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -153,7 +166,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest-build
-          name: 'Vibe Factory build #${{ github.run_number }} (${{ env.SHORT_SHA }})'
+          name: 'Vibe Factory ${{ env.VERSION }} build #${{ github.run_number }} (${{ env.SHORT_SHA }})'
           prerelease: false
           make_latest: true
           files: VibeFactory-Windows.zip
@@ -165,6 +178,7 @@ jobs:
             **Download:** `VibeFactory-Windows.zip` below. Unzip it and run `VibeFactory.exe`.
             Keep the `.pck` and the `data_*` folder next to the executable.
 
+            - Version: ${{ env.VERSION }}
             - Branch: `${{ github.ref_name }}`
             - Commit: ${{ github.sha }}
             - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

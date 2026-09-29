@@ -34,7 +34,7 @@ public partial class Hud : CanvasLayer
     private RichTextLabel _hints = null!;
     private Control _hintPanel = null!;
     private GridContainer _helpGrid = null!;
-    private Label _pausedText = null!, _fps = null!;
+    private Label _pausedText = null!, _fps = null!, _version = null!;
     private readonly List<(Control Control, Func<string> Tip)> _keyTips = new();
     private Control _card = null!, _bottomRow = null!;
     private PanelContainer _cursorTip = null!;
@@ -65,6 +65,9 @@ public partial class Hud : CanvasLayer
     public ManageWindow Manage => _manage;
     public TutorialPanel Tutorial => _tutorial;
     public Control? BuildMenu => _menu?.Root;
+
+    /// <summary>The build stamp in the corner of the screen. For scripted checks.</summary>
+    public Label Version => _version;
 
     /// <summary>Remember finishing the tutorial (off for scripted runs, which must not touch settings).</summary>
     public bool AutoStartTutorial { get; set; } = true;
@@ -135,6 +138,14 @@ public partial class Hud : CanvasLayer
         _fps = Ui.Label("", 12, UiTheme.Muted);
         _fps.MouseFilter = Control.MouseFilterEnum.Ignore;
         _root.AddChild(Ui.Anchor(_fps, 1, 0, -12, 8, Control.GrowDirection.Begin, Control.GrowDirection.End));
+
+        // The version, always on screen but out of the way: bottom right, small and dim. Hovering it
+        // names the commit the build came from, which is what a bug report needs. Pass rather than
+        // Ignore so the tooltip fires; the label is over empty corner, so nothing is behind it.
+        _version = Ui.Label(BuildInfo.Label, 12, UiTheme.Muted);
+        _version.MouseFilter = Control.MouseFilterEnum.Pass;
+        _version.TooltipText = BuildInfo.Tooltip;
+        _root.AddChild(Ui.Anchor(_version, 1, 1, -12, -10, Control.GrowDirection.Begin, Control.GrowDirection.Begin));
 
         _toasts = new Toasts();
         _root.AddChild(Ui.Anchor(_toasts.Root, 0.5f, 0, 0, 72, Control.GrowDirection.Both, Control.GrowDirection.End));
