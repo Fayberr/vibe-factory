@@ -46,8 +46,9 @@ static void RunDemo(ContentRegistry content)
     PrintStats("After 2 minutes", sim);
 
     // Level up individual buildings with the earnings, through commands like any player would.
-    foreach (var (cell, level) in new[] { (new GridPos(0, 4, 0), 3), (new GridPos(4, 4, 0), 2), (new GridPos(11, 4, 0), 3), (new GridPos(0, 13, 0), 2) })
+    foreach (var ((x, y), level) in new[] { ((0, 4), 3), ((4, 4), 2), ((11, 4), 3), ((0, 13), 2) })
     {
+        var cell = DemoLayout.CellOf(sim, x, y);
         var e = sim.World.EntityAt(cell)!;
         var r = sim.Execute(new SetBuildingLevels(new[] { new LevelChange(cell, level) }));
         Console.WriteLine($"  {e.Def.Name,-14} {cell} → level {level}: {(r.Ok ? "ok" : r.Error)}");

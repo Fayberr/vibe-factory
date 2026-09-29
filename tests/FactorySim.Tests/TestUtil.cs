@@ -33,12 +33,18 @@ internal static class TestUtil
         },
     });
 
-    /// <summary>A fresh world. Contracts and milestones are off unless <paramref name="goals"/>, so money stays exact.</summary>
-    public static Simulation NewSim(ContentRegistry? content = null, bool sandbox = true, BigNum? money = null, bool goals = false)
+    /// <summary>
+    /// A fresh world. Contracts and milestones are off unless <paramref name="goals"/>, so money stays exact.
+    /// Every plot is owned unless <paramref name="allLand"/> is off, so tests about money, tiers or machines
+    /// can build anywhere on the map; the land tests ask for the real thing (only the starting plot).
+    /// </summary>
+    public static Simulation NewSim(ContentRegistry? content = null, bool sandbox = true, BigNum? money = null, bool goals = false, bool allLand = true)
     {
         var sim = Simulation.CreateNew(content ?? Content, money ?? BigNum.Zero);
         sim.World.Sandbox = sandbox;
         sim.World.Goals = goals;
+        if (allLand)
+            foreach (var plot in sim.World.Land.All().ToList()) sim.World.Land.Add(plot);
         return sim;
     }
 

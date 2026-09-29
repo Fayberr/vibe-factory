@@ -33,8 +33,8 @@ public sealed partial class BuildPlanner
         int z = start.Z;
         end = end with { Z = z };
         if (start == end) return null;
-        var bounds = World.Bounds;
-        bool InPlot(GridPos p) => p.X >= bounds.Min.X && p.X <= bounds.Max.X && p.Y >= bounds.Min.Y && p.Y <= bounds.Max.Y;
+        // Belts may only run over land the player owns.
+        bool InPlot(GridPos p) => World.OwnsCell(p);
         if (!InPlot(start) || !InPlot(end)) return null;
 
         var from = World.EntityAt(start);
@@ -72,7 +72,7 @@ public sealed partial class BuildPlanner
 
         var rampUp = World.Content.Buildings.GetValueOrDefault(RampUpId);
         var rampDown = World.Content.Buildings.GetValueOrDefault(RampDownId);
-        bool canBridge = rampUp != null && rampDown != null && _sim.LockReason(rampUp) == null && z + 1 <= bounds.Max.Z;
+        bool canBridge = rampUp != null && rampDown != null && _sim.LockReason(rampUp) == null && z + 1 <= World.Bounds.Max.Z;
 
         var open = new PriorityQueue<RouteNode, double>();
         var best = new Dictionary<RouteNode, double>();

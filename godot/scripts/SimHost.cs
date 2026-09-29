@@ -150,7 +150,7 @@ public partial class SimHost : Node
     {
         Content ??= ContentRegistry.LoadDefault();
         var sim = Simulation.CreateNew(Content, Content.StartingMoney, seed: (uint)Random.Shared.Next());
-        if (withDemo) DemoLayout.Build(sim, new GridPos(8, 8, 0));
+        if (withDemo) DemoLayout.Build(sim);
         Slot = slot;
         FactoryName = name ?? (slot > 0 ? $"Factory {slot}" : "");
         PlaySeconds = 0;

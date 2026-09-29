@@ -81,16 +81,18 @@ public class GridAndTopologyTests
         _ = sim.World.UpdateOrder;
         var w = sim.World;
 
-        var rampUp = w.EntityAt(new GridPos(1, 4, 0))!;
-        var bridge = w.EntityAt(new GridPos(2, 4, 1))!;
-        var rampDown = w.EntityAt(new GridPos(3, 4, 0))!;
-        var smelter = w.EntityAt(new GridPos(4, 4, 0))!;
-        var tunnel = w.EntityAt(new GridPos(2, 4, 0))!; // line B under the bridge
+        // Cells are named in the layout's own frame; CellOf says where the starting plot turned them.
+        Entity At(int x, int y, int z = 0) => w.EntityAt(Samples.DemoLayout.CellOf(sim, x, y, z))!;
+        var rampUp = At(1, 4);
+        var bridge = At(2, 4, 1);
+        var rampDown = At(3, 4);
+        var smelter = At(4, 4);
+        var tunnel = At(2, 4); // line B under the bridge
 
         Assert.Equal(bridge.Id, OutTarget(w, rampUp.Id));
         Assert.Equal(rampDown.Id, OutTarget(w, bridge.Id));
         Assert.Equal(smelter.Id, OutTarget(w, rampDown.Id));
-        Assert.Equal(w.EntityAt(new GridPos(2, 5, 0))!.Id, OutTarget(w, tunnel.Id));
+        Assert.Equal(At(2, 5).Id, OutTarget(w, tunnel.Id));
     }
 
     [Fact]

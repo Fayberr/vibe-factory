@@ -8,9 +8,9 @@ public class GoalsTests
     private static Simulation IngotLine(bool sandbox = true)
     {
         var sim = TestUtil.NewSim(sandbox: sandbox, money: 10_000, goals: true);
-        sim.Place("iron_miner", 21, 0, 0, Dir.East);
-        sim.Place("smelter", 22, 0, 0, Dir.East);
-        sim.Place("seller", 23, 0, 0, Dir.East); // depots stand on the edge of the plot
+        sim.Place("iron_miner", 72, 0, 0, Dir.East);
+        sim.Place("smelter", 73, 0, 0, Dir.East);
+        sim.Place("seller", 74, 0, 0, Dir.East); // depots stand on the edge of the map
         return sim;
     }
 
@@ -36,7 +36,7 @@ public class GoalsTests
     {
         var sim = IngotLine(sandbox: false);
         sim.Step(20 * 3); // first sale, then the first order
-        sim.Execute(new RemoveBuildings(new[] { new GridPos(23, 0, 0) })); // nothing is sold any more
+        sim.Execute(new RemoveBuildings(new[] { new GridPos(74, 0, 0) })); // nothing is sold any more
         var order = Assert.Single(sim.World.Contracts.Open);
 
         var money = sim.World.Money;

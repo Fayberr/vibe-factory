@@ -44,6 +44,9 @@ public sealed class ContentRegistry
     /// <summary>Money a new game starts with.</summary>
     public BigNum StartingMoney { get; }
 
+    /// <summary>The land: plot size, grid, starting plot and prices.</summary>
+    public MapDef Map { get; }
+
     private ContentRegistry(
         BehaviorRegistry behaviors,
         List<ItemDef> items,
@@ -52,9 +55,11 @@ public sealed class ContentRegistry
         List<UpgradeDef> upgrades,
         List<TierDef> tiers,
         List<MilestoneDef> milestones,
-        BigNum startingMoney)
+        BigNum startingMoney,
+        MapDef map)
     {
         Milestones = milestones;
+        Map = map;
         StartingMoney = startingMoney;
         Behaviors = behaviors;
         Items = items.ToDictionary(x => x.Id);
@@ -63,7 +68,7 @@ public sealed class ContentRegistry
         Upgrades = upgrades.ToDictionary(x => x.Id);
         BuildingList = buildings;
         UpgradeList = upgrades;
-        Tiers = tiers.Count > 0 ? tiers : new List<TierDef> { new() { Name = "Start", PlotSize = 32 } };
+        Tiers = tiers.Count > 0 ? tiers : new List<TierDef> { new() { Name = "Start" } };
     }
 
     /// <summary>The built-in base pack, optionally with extra packs layered on top.</summary>
@@ -96,9 +101,11 @@ public sealed class ContentRegistry
         var tiers = new List<TierDef>();
         var milestones = new OrderedById<MilestoneDef>(x => x.Id);
         BigNum startingMoney = 0;
+        var map = new MapDef();
         foreach (var pack in packs)
         {
             if (pack.StartingMoney is BigNum money) startingMoney = money;
+            if (pack.Map != null) map = pack.Map;
             if (pack.Tiers.Count > 0)
             {
                 tiers.Clear();
@@ -111,7 +118,7 @@ public sealed class ContentRegistry
             pack.Milestones.ForEach(milestones.Put);
         }
 
-        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List, startingMoney);
+        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List, startingMoney, map);
         registry.Validate();
         return registry;
     }
@@ -160,8 +167,8 @@ public sealed class ContentRegistry
 
             if (b.Tier < 0 || b.Tier >= Tiers.Count)
                 throw new ContentException($"Building '{b.Id}': tier {b.Tier} does not exist (tiers 0..{Tiers.Count - 1}).");
-            if (b.Placement is not ("" or "plotEdge"))
-                throw new ContentException($"Building '{b.Id}': unknown placement rule '{b.Placement}'. Known: plotEdge.");
+            if (b.Placement is not ("" or "mapEdge"))
+                throw new ContentException($"Building '{b.Id}': unknown placement rule '{b.Placement}'. Known: mapEdge.");
 
             b.Params = BindParams(b, behavior);
             behavior.Bind(b, this);
@@ -170,9 +177,18 @@ public sealed class ContentRegistry
                 throw new ContentException($"Building '{b.Id}': invalid upgrade track.");
         }
 
-        for (int i = 1; i < Tiers.Count; i++)
-            if (Tiers[i].PlotSize < Tiers[i - 1].PlotSize)
-                throw new ContentException($"Tier '{Tiers[i].Name}': plot size must not shrink.");
+        ValidateMap();
+    }
+
+    private void ValidateMap()
+    {
+        var m = Map;
+        if (m.PlotSize < 4) throw new ContentException($"Map: plots must be at least 4 cells wide (got {m.PlotSize}).");
+        if (m.Columns < 1 || m.Rows < 1) throw new ContentException("Map: needs at least one column and one row of plots.");
+        if (m.StartColumn < 0 || m.StartColumn >= m.Columns || m.StartRow < 0 || m.StartRow >= m.Rows)
+            throw new ContentException($"Map: the starting plot ({m.StartColumn}, {m.StartRow}) is not on the {m.Columns} x {m.Rows} grid.");
+        if (m.PlotPrice.Sign < 0) throw new ContentException("Map: plotPrice must not be negative.");
+        if (m.PriceGrowth < 1) throw new ContentException("Map: priceGrowth must be at least 1, so farther plots never cost less.");
     }
 
     private static object BindParams(BuildingDef def, IBehavior behavior)

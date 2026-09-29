@@ -9,6 +9,7 @@ namespace FactorySim.Cli;
 /// The balance tool: reports over the content file, so balance changes are checked instead of guessed.
 ///   balance                     tier pacing, then every item
 ///   balance tiers               how long each tier takes and what its best factory sells
+///   balance land                what each ring of plots costs against what a factory earns
 ///   balance items               value, use and ore share of every item
 ///   balance item &lt;item&gt; [rate]  the full production line for one item (default 1/s)
 /// Options: --level N (every building at level N), --polish none|products|all,
@@ -21,7 +22,7 @@ public static class BalanceCommand
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     public const string Usage =
-        "usage: FactorySim.Cli balance [tiers | items | item <item> [rate]]\n" +
+        "usage: FactorySim.Cli balance [tiers | land | items | item <item> [rate]]\n" +
         "         [--level N] [--polish none|products|all] [--tier N] [--pack extra.json]";
 
     public static int Run(string[] args)
@@ -71,11 +72,17 @@ public static class BalanceCommand
                     Console.WriteLine(Header(book, "Balance report"));
                     Console.Write(TierReport(content, assumptions));
                     Console.WriteLine();
+                    Console.Write(LandReport(content, assumptions));
+                    Console.WriteLine();
                     Console.Write(ItemReport(book));
                     break;
                 case "tiers":
                     Console.WriteLine(Header(book, "Tier pacing"));
                     Console.Write(TierReport(content, assumptions));
+                    break;
+                case "land":
+                    Console.WriteLine(Header(book, "Land prices"));
+                    Console.Write(LandReport(content, assumptions));
                     break;
                 case "items":
                     Console.WriteLine(Header(book, "Items"));
@@ -139,6 +146,29 @@ public static class BalanceCommand
     }
 
     /// <summary>Every obtainable item: value, sale price, where it is made, what uses it, and which ores its value comes from.</summary>
+    /// <summary>What each ring of plots costs, and how long that is at the best factory's income.</summary>
+    public static string LandReport(ContentRegistry content, BalanceAssumptions assumptions)
+    {
+        var map = content.Map;
+        var rings = LandPacing.Estimate(content, assumptions);
+        var table = new Table("Ring", ">Plots", ">Each", ">Ring total", ">All so far", "Affordable at", ">Then takes", ">At last tier");
+        foreach (var r in rings)
+        {
+            string tier = r.Tier is int t ? $"tier {t} ({content.Tiers[t].Name})" : "no tier";
+            table.Add(r.Distance.ToString(Inv), r.Plots.ToString(Inv), Money(r.PriceEach), Money(r.RingTotal), Money(r.Cumulative),
+                tier, double.IsNaN(r.SecondsThere) ? "-" : Duration(r.SecondsThere), Duration(r.SecondsAtLastTier));
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Map: {map.Columns} x {map.Rows} plots of {map.PlotSize} x {map.PlotSize} cells, start at column {map.StartColumn + 1}, row {map.StartRow + 1}.");
+        sb.AppendLine($"A plot costs {Money(map.PlotPrice.ToDouble())} next to the start and x{Num(map.PriceGrowth)} for every ring further out.");
+        sb.AppendLine();
+        sb.Append(table);
+        sb.AppendLine($"Ring = plots away from the start, all one price. Affordable at = first tier whose best factory earns one plot in {Duration(LandPacing.TargetSeconds)}.");
+        sb.AppendLine("Then takes = how long one plot is at that tier's income; At last tier = the same at the last tier's income.");
+        return sb.ToString();
+    }
+
     public static string ItemReport(RecipeBook book)
     {
         var table = new Table("Item", ">Tier", ">Value", ">Sells for", "Made in", ">Steps", "Used in", "Value from");

@@ -85,9 +85,9 @@ public class ProgressionTests
     public void Upgrading_a_drill_costs_money_and_speeds_it_up()
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 10_000);
-        sim.Place("iron_miner", 22, 0, 0, Dir.East);
-        sim.Place("seller", 23, 0, 0, Dir.East); // depots stand on the edge of the plot
-        var drill = sim.World.EntityAt(new GridPos(22, 0, 0))!;
+        sim.Place("iron_miner", 73, 0, 0, Dir.East);
+        sim.Place("seller", 74, 0, 0, Dir.East); // depots stand on the edge of the map
+        var drill = sim.World.EntityAt(new GridPos(73, 0, 0))!;
         var track = drill.Def.Upgrade!;
 
         var before = sim.World.Money;
@@ -131,7 +131,7 @@ public class ProgressionTests
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 10_000);
         var history = new EditHistory(sim);
-        var at = new GridPos(23, 0, 0); // on the edge of the plot, where depots belong
+        var at = new GridPos(74, 0, 0); // on the edge of the map, where depots belong
         sim.Place("seller", at.X, at.Y, at.Z, Dir.East);
         var start = sim.World.Money;
 
@@ -175,10 +175,12 @@ public class ProgressionTests
 
         Assert.False(sim.Execute(new UnlockTier()).Ok); // needs lifetime earnings first
         sim.World.Stats.TotalEarned = 1000;
-        int sizeBefore = sim.World.Bounds.Max.X + 1;
+        var mapBefore = sim.World.Bounds;
+        int plotsBefore = sim.World.Land.OwnedCount;
         Assert.True(sim.Execute(new UnlockTier()).Ok);
         Assert.Equal(1, sim.World.UnlockedTier);
-        Assert.True(sim.World.Bounds.Max.X + 1 > sizeBefore); // the plot grew
+        Assert.Equal(mapBefore, sim.World.Bounds);            // land is bought, not handed out by tiers
+        Assert.Equal(plotsBefore, sim.World.Land.OwnedCount);
         Assert.True(sim.Execute(new PlaceBuilding("copper_miner", new GridPos(0, 0, 0), Dir.East)).Ok);
     }
 

@@ -17,6 +17,7 @@ public sealed record UpgradePurchased(long Tick, string UpgradeId, int Level, Bi
 public sealed record EntityLevelChanged(long Tick, int EntityId, int Level) : SimEvent(Tick);
 public sealed record EntitySelectionChanged(long Tick, int EntityId, string? Selection) : SimEvent(Tick);
 public sealed record TierUnlocked(long Tick, int Tier, string Name) : SimEvent(Tick);
+public sealed record PlotBought(long Tick, int Column, int Row, BigNum Price) : SimEvent(Tick);
 public sealed record ContractOffered(long Tick, Contract Contract) : SimEvent(Tick);
 public sealed record ContractCompleted(long Tick, Contract Contract) : SimEvent(Tick);
 public sealed record ContractExpired(long Tick, Contract Contract) : SimEvent(Tick);

@@ -11,23 +11,23 @@ public class TutorialTests
         var steps = Tutorial.Steps.ToDictionary(s => s.Id);
         bool Done(string id) => steps[id].Done!(sim.World);
 
-        // The line sits at the east end of the starting plot (24 wide), because a depot has to
+        // The line sits at the east end of the map (75 wide), because a depot has to
         // stand on the map edge with its input facing the factory.
-        var drillAt = new GridPos(19, 0, 0);
+        var drillAt = new GridPos(70, 0, 0);
         Assert.False(Done("drill"));
         sim.Place("iron_miner", drillAt.X, drillAt.Y, drillAt.Z, Dir.East);
         Assert.True(Done("drill"));
 
         Assert.False(Done("belt"));
-        sim.Line(new GridPos(20, 0, 0), Dir.East, 2);
+        sim.Line(new GridPos(71, 0, 0), Dir.East, 2);
         Assert.True(Done("belt"));
 
         Assert.False(Done("smelter"));
-        sim.Place("smelter", 22, 0, 0, Dir.East);
+        sim.Place("smelter", 73, 0, 0, Dir.East);
         Assert.True(Done("smelter"));
 
         Assert.False(Done("depot"));
-        sim.Place("seller", 23, 0, 0, Dir.East);
+        sim.Place("seller", 74, 0, 0, Dir.East);
         Assert.True(Done("depot"));
 
         Assert.False(Done("earn"));

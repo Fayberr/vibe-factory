@@ -37,7 +37,6 @@ public sealed partial class Simulation
     public static Simulation CreateNew(ContentRegistry content, BigNum startingMoney, uint seed = 1)
     {
         var world = new World(content, seed) { Money = startingMoney };
-        world.Bounds = world.BoundsForTier(0);
         return new Simulation(world);
     }
 
@@ -99,6 +98,7 @@ public sealed partial class Simulation
             SelectRecipe c => Choose(c),
             RerollContract c => Reroll(c),
             UnlockTier => Unlock(),
+            BuyPlot c => BuyLand(c),
             _ => CommandResult.Fail($"Unknown command {command.GetType().Name}"),
         };
         if (result.Ok) CommandLog?.Add(new LoggedCommand(World.Tick, command));
@@ -248,7 +248,7 @@ public sealed partial class Simulation
                 return CommandResult.Fail(rule.Reason!);
             foreach (var cell in Entity.CellsFor(e.Def, pos, facing))
             {
-                if (!World.Bounds.Contains(cell)) return CommandResult.Fail($"{cell} is outside the plot");
+                if (World.CellProblem(cell) is { } problem) return CommandResult.Fail($"{cell}: {problem}");
                 var occupant = World.EntityAt(cell);
                 if (occupant != null && !moving.Contains(occupant)) return CommandResult.Fail($"{cell} is occupied by {occupant.Def.Name}");
                 if (!claimed.Add(cell)) return CommandResult.Fail($"Moved buildings overlap at {cell}");
@@ -315,19 +315,27 @@ public sealed partial class Simulation
             World.Money -= tier.Cost;
         }
         World.UnlockedTier = next;
-        GrowPlot(next);
         if (Events.Enabled) Events.Add(new TierUnlocked(World.Tick, next, tier.Name));
         return CommandResult.Success();
     }
 
-    /// <summary>Grows the plot to a tier's size (never shrinks it).</summary>
-    internal void GrowPlot(int tier)
+    /// <summary>
+    /// Buys a plot of land: it must share an edge with land already owned, and costs
+    /// <see cref="Land.PriceOf"/> (nothing in sandbox).
+    /// </summary>
+    private CommandResult BuyLand(BuyPlot c)
     {
-        var target = World.BoundsForTier(tier);
-        var b = World.Bounds;
-        World.Bounds = new GridBounds(
-            new GridPos(Math.Min(b.Min.X, target.Min.X), Math.Min(b.Min.Y, target.Min.Y), b.Min.Z),
-            new GridPos(Math.Max(b.Max.X, target.Max.X), Math.Max(b.Max.Y, target.Max.Y), b.Max.Z));
+        var plot = new PlotId(c.Column, c.Row);
+        if (World.Land.WhyNot(plot) is { } why) return CommandResult.Fail(why);
+        var price = World.Land.PriceOf(plot);
+        if (!World.Sandbox)
+        {
+            if (World.Money < price) return CommandResult.Fail($"Need {price.Format()} (have {World.Money.Format()})");
+            World.Money -= price;
+        }
+        World.Land.Add(plot);
+        if (Events.Enabled) Events.Add(new PlotBought(World.Tick, plot.Column, plot.Row, price));
+        return CommandResult.Success();
     }
 
     private CommandResult Buy(BuyUpgrade c)

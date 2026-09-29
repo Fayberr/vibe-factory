@@ -53,6 +53,12 @@ public sealed record RerollContract(int ContractId) : Command;
 /// <summary>Unlocks the next progression tier (needs lifetime earnings and money).</summary>
 public sealed record UnlockTier : Command;
 
+/// <summary>
+/// Buys the plot at (<paramref name="Column"/>, <paramref name="Row"/>). It has to share an edge with
+/// land already owned; the price depends on its distance from the starting plot.
+/// </summary>
+public sealed record BuyPlot(int Column, int Row) : Command;
+
 public readonly record struct CommandResult(bool Ok, string? Error = null, int EntityId = 0, IReadOnlyList<int>? EntityIds = null)
 {
     public static CommandResult Success(int entityId = 0) => new(true, null, entityId);

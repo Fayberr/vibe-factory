@@ -16,15 +16,21 @@
   // Money a new game starts with: a first drill, belt, smelter and depot line, with a little to spare.
   "startingMoney": 250,
 
+  // The land: a grid of square plots. You start with one (column 2, row 4: the middle of the south
+  // edge) and buy the rest, always one that shares an edge with your land. A plot next to the start
+  // costs plotPrice, and every further step away from the start multiplies that by priceGrowth, so
+  // plots the same distance out cost the same. Depots stand on the outer border of the whole map.
+  "map": { "plotSize": 15, "columns": 5, "rows": 5, "startColumn": 2, "startRow": 4, "plotPrice": 2500, "priceGrowth": 8 },
+
   "tiers": [
-    { "name": "Basics",         "description": "Drill, smelt, sell.",                          "cost": 0,     "requiredEarnings": 0,     "plotSize": 24 },
-    { "name": "Workshop",       "description": "Copper, wood, presses and polishers.",         "cost": 500,   "requiredEarnings": 750,   "plotSize": 30 },
-    { "name": "Industry",       "description": "Coal, steel, sand, glass and crates.",         "cost": 6000,  "requiredEarnings": 1e4,   "plotSize": 36 },
-    { "name": "Petrochemicals", "description": "Oil, plastic, toys and export terminals.",     "cost": 8e4,   "requiredEarnings": 1.5e5, "plotSize": 44 },
-    { "name": "Electronics",    "description": "Gold, circuits, motors and jewelry.",          "cost": 1e6,   "requiredEarnings": 2e6,   "plotSize": 52 },
-    { "name": "Robotics",       "description": "Robots from motors, circuits and glass.",      "cost": 1.5e7, "requiredEarnings": 3e7,   "plotSize": 64 },
-    { "name": "Aerospace",      "description": "Bauxite, aluminium and drones.",               "cost": 1.2e8, "requiredEarnings": 2.5e8, "plotSize": 72 },
-    { "name": "Space",          "description": "Rocket fuel and satellites.",                  "cost": 2e9,   "requiredEarnings": 4e9,   "plotSize": 80 }
+    { "name": "Basics",         "description": "Drill, smelt, sell.",                          "cost": 0,     "requiredEarnings": 0 },
+    { "name": "Workshop",       "description": "Copper, wood, presses and polishers.",         "cost": 500,   "requiredEarnings": 750 },
+    { "name": "Industry",       "description": "Coal, steel, sand, glass and crates.",         "cost": 6000,  "requiredEarnings": 1e4 },
+    { "name": "Petrochemicals", "description": "Oil, plastic, toys and export terminals.",     "cost": 8e4,   "requiredEarnings": 1.5e5 },
+    { "name": "Electronics",    "description": "Gold, circuits, motors and jewelry.",          "cost": 1e6,   "requiredEarnings": 2e6 },
+    { "name": "Robotics",       "description": "Robots from motors, circuits and glass.",      "cost": 1.5e7, "requiredEarnings": 3e7 },
+    { "name": "Aerospace",      "description": "Bauxite, aluminium and drones.",               "cost": 1.2e8, "requiredEarnings": 2.5e8 },
+    { "name": "Space",          "description": "Rocket fuel and satellites.",                  "cost": 2e9,   "requiredEarnings": 4e9 }
   ],
 
   "items": [
@@ -333,7 +339,7 @@
       "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 50, "category": "economy", "tier": 0,
       "group": "seller", "replaces": [ "seller", "belt" ],
       "limit": { "base": 2, "perTier": 1, "every": 2 },
-      "placement": "plotEdge",
+      "placement": "mapEdge",
       "ports": [ { "kind": "in", "side": "back" } ],
       "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered into its one input (the blue side). It stands on the edge of the map with that input facing your factory: goods leave at the rim, belts bring them there. Depots are few, so merge lines into them. Raw resources fetch only 25%. Upgrade it for better prices." }
     },
@@ -341,7 +347,7 @@
       "id": "export_terminal", "name": "Export Terminal", "behavior": "seller", "cost": 2.5e4, "category": "economy", "tier": 3,
       "group": "seller", "replaces": [ "seller", "belt" ],
       "limit": { "base": 1, "perTier": 1 },
-      "placement": "plotEdge",
+      "placement": "mapEdge",
       "ports": [ { "kind": "in", "side": "back" } ],
       "params": { "multiplier": 2 },
       "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price, through one input (the blue side), from the edge of the map like a market depot." }

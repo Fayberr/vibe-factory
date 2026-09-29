@@ -73,10 +73,11 @@ public sealed class BuildingDef
     public string Group { get; init; } = "";
 
     /// <summary>
-    /// Extra placement rule, "" (anywhere) or "plotEdge": the building must sit against the
-    /// boundary of the buildable plot with its inputs facing inward, so the side opposite every
-    /// input looks off the plot. Depots use it, which puts them around the rim of the map and
-    /// turns the belts that feed them into the map's arteries. Skipped in sandbox.
+    /// Extra placement rule, "" (anywhere) or "mapEdge": the building must sit against the outer
+    /// border of the whole map with its inputs facing inward, so the side opposite every input
+    /// looks off the map. Depots use it, which puts them around the rim of the map and turns the
+    /// belts that feed them into the map's arteries. It is the border of the map, not of the plot
+    /// you own, so only plots on the rim have room for depots. Skipped in sandbox.
     /// </summary>
     public string Placement { get; init; } = "";
 
@@ -159,16 +160,39 @@ public sealed class BuildLimit
         Base + PerTier * (Math.Max(0, unlockedTier - def.Tier) / Math.Max(1, Every));
 }
 
-/// <summary>A progression tier: unlocking it costs money, needs lifetime earnings, and grows the plot.</summary>
+/// <summary>A progression tier: unlocking it costs money, needs lifetime earnings, and unlocks buildings and limits.</summary>
 public sealed class TierDef
 {
     public string Name { get; init; } = "";
     public string Description { get; init; } = "";
     public BigNum Cost { get; init; }
     public BigNum RequiredEarnings { get; init; }
+}
 
-    /// <summary>Side length of the square buildable plot once this tier is unlocked.</summary>
-    public int PlotSize { get; init; } = 32;
+/// <summary>
+/// The shape of the world's land: a fixed grid of square plots, of which the player owns one to
+/// start with and buys the rest. Plots are bought edge to edge, and a plot's price grows with its
+/// distance (in plots, steps along the grid) from the starting plot, so every plot at the same
+/// distance costs the same. The outer border of the whole grid is where depots must stand.
+/// </summary>
+public sealed class MapDef
+{
+    /// <summary>Side length of one plot, in cells.</summary>
+    public int PlotSize { get; init; } = 15;
+
+    /// <summary>Plots across (west to east) and down (north to south).</summary>
+    public int Columns { get; init; } = 5;
+    public int Rows { get; init; } = 5;
+
+    /// <summary>The plot the player starts with (0-based). The default is the middle of the south edge.</summary>
+    public int StartColumn { get; init; } = 2;
+    public int StartRow { get; init; } = 4;
+
+    /// <summary>Price of a plot next to the start (distance 1).</summary>
+    public BigNum PlotPrice { get; init; } = 2500;
+
+    /// <summary>Every further step away from the start multiplies the price by this.</summary>
+    public double PriceGrowth { get; init; } = 8;
 }
 
 public sealed record ItemAmount(string Item, int Count);
@@ -260,6 +284,9 @@ public sealed class ContentPack
 
     /// <summary>Progression tiers in order; a pack that defines tiers replaces the whole list.</summary>
     public List<TierDef> Tiers { get; init; } = new();
+
+    /// <summary>The land layout; the last pack that sets it wins.</summary>
+    public MapDef? Map { get; init; }
 
     public List<MilestoneDef> Milestones { get; init; } = new();
 }

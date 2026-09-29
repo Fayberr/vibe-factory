@@ -259,6 +259,47 @@ public class BalanceTests
     }
 
     [Fact]
+    public void The_land_report_has_a_ring_for_every_distance_and_adds_up()
+    {
+        var content = TestUtil.Content;
+        var land = new Land(content.Map);
+        var rings = LandPacing.Estimate(content);
+
+        // Every plot but the start is in exactly one ring, numbered by distance from the start.
+        Assert.Equal(land.Count - 1, rings.Sum(r => r.Plots));
+        Assert.Equal(Enumerable.Range(1, rings.Count), rings.Select(r => r.Distance));
+        Assert.Equal(land.All().Max(land.Distance), rings[^1].Distance);
+
+        double running = 0;
+        foreach (var r in rings)
+        {
+            var some = land.All().First(p => land.Distance(p) == r.Distance);
+            Assert.Equal(land.PriceOf(some).ToDouble(), r.PriceEach, 6);
+            Assert.Equal(r.PriceEach * r.Plots, r.RingTotal, 6);
+            running += r.RingTotal;
+            Assert.Equal(running, r.Cumulative, 6);
+        }
+        Assert.True(rings.Zip(rings.Skip(1), (a, b) => a.PriceEach < b.PriceEach).All(x => x));
+    }
+
+    [Fact]
+    public void Plots_are_a_few_minutes_of_income_at_the_tier_that_buys_them()
+    {
+        // The land prices are chosen against what the best factory of each tier earns: a plot the
+        // tier can afford at all should not be free money, and should not be out of reach either.
+        var rings = LandPacing.Estimate(TestUtil.Content);
+        Assert.All(rings.Where(r => r.Tier != null), r => Assert.InRange(r.SecondsThere, 30, LandPacing.TargetSeconds));
+
+        // Later rings become affordable at later tiers, never earlier.
+        var tiers = rings.Where(r => r.Tier != null).Select(r => r.Tier!.Value).ToList();
+        Assert.Equal(tiers.OrderBy(t => t), tiers);
+
+        // The first plot is within reach early, and the last one is still a goal at the top tier.
+        Assert.Equal(0, rings[0].Tier);
+        Assert.True(rings[^1].SecondsAtLastTier > 60, "the furthest plots should stay a goal at the last tier");
+    }
+
+    [Fact]
     public void Reports_print_without_throwing()
     {
         var content = TestUtil.Content;
@@ -266,6 +307,7 @@ public class BalanceTests
         var book = RecipeBook.Create(content, assumptions);
 
         Assert.False(string.IsNullOrWhiteSpace(BalanceCommand.TierReport(content, assumptions)));
+        Assert.Contains("Ring", BalanceCommand.LandReport(content, assumptions));
         Assert.False(string.IsNullOrWhiteSpace(BalanceCommand.ItemReport(book)));
         Assert.False(string.IsNullOrWhiteSpace(BalanceCommand.ChainReport(book, "robot", 2.5)));
         Assert.Contains("Robot", BalanceCommand.ChainReport(book, "robot", 2.5));

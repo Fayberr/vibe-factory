@@ -11,10 +11,10 @@ public class PersistenceAndOfflineTests
         DemoLayout.Build(sim);
         var levels = sim.Execute(new SetBuildingLevels(new[]
         {
-            new LevelChange(new GridPos(0, 4, 0), 5),  // drill
-            new LevelChange(new GridPos(4, 4, 0), 3),  // smelter
-            new LevelChange(new GridPos(1, 4, 1), 2),  // ramp (upper cell)
-            new LevelChange(new GridPos(11, 4, 0), 4), // depot
+            new LevelChange(DemoLayout.CellOf(sim, 0, 4), 5),     // drill
+            new LevelChange(DemoLayout.CellOf(sim, 4, 4), 3),     // smelter
+            new LevelChange(DemoLayout.CellOf(sim, 1, 4, 1), 2),  // ramp (upper cell)
+            new LevelChange(DemoLayout.CellOf(sim, 11, 4), 4),    // belt out to the depot
         }));
         Assert.True(levels.Ok, levels.Error);
         return sim;

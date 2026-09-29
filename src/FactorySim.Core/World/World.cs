@@ -2,14 +2,14 @@ using FactorySim.Content;
 
 namespace FactorySim;
 
-/// <summary>Inclusive cell bounds of the buildable plot. Expanding it is a progression hook.</summary>
+/// <summary>
+/// Inclusive cell bounds of the whole map. Height 0 is the base plate: nothing is built below it,
+/// and there are 4 levels above. Which part of the map may be built on is the <see cref="Land"/>.
+/// </summary>
 public readonly record struct GridBounds(GridPos Min, GridPos Max)
 {
     public bool Contains(GridPos p) =>
         p.X >= Min.X && p.X <= Max.X && p.Y >= Min.Y && p.Y <= Max.Y && p.Z >= Min.Z && p.Z <= Max.Z;
-
-    /// <summary>Height 0 is the base plate: nothing is built below it. Up to 4 levels above.</summary>
-    public static GridBounds Default => new(new GridPos(0, 0, 0), new GridPos(31, 31, 4));
 }
 
 public readonly record struct PlacementCheck(bool Ok, string? Reason = null)
@@ -38,7 +38,12 @@ public sealed class World
     public long Tick { get; internal set; }
 
     public BigNum Money { get; internal set; }
-    public GridBounds Bounds { get; set; } = GridBounds.Default;
+
+    /// <summary>The whole map. What may be built on is <see cref="Land"/>: the plots the player owns.</summary>
+    public GridBounds Bounds { get; set; }
+
+    /// <summary>The plots of the map and which of them are owned.</summary>
+    public Land Land { get; internal set; }
 
     /// <summary>Free building and upgrades, for prototyping and level design.</summary>
     public bool Sandbox { get; set; }
@@ -65,6 +70,8 @@ public sealed class World
     {
         Content = content;
         Rng = new Rng(seed);
+        Land = new Land(content.Map);
+        Bounds = Land.Bounds();
     }
 
     public IReadOnlyCollection<Entity> Entities => _entities.Values;
@@ -130,7 +137,7 @@ public sealed class World
         replaced.Clear();
         foreach (var cell in Entity.CellsFor(def, pos, facing))
         {
-            if (!Bounds.Contains(cell)) return PlacementCheck.Fail(OutsideReason(cell));
+            if (CellProblem(cell) is { } problem) return PlacementCheck.Fail(problem);
             var occupant = EntityAt(cell);
             if (occupant == null || replaced.Contains(occupant)) continue;
             if (Array.IndexOf(def.Replaces, occupant.Def.Group) < 0 || occupant.Def.Group.Length == 0)
@@ -157,22 +164,35 @@ public sealed class World
         if (rules && CheckPlacement(def, pos, facing) is { Ok: false } rule) return rule;
         foreach (var cell in Entity.CellsFor(def, pos, facing))
         {
-            if (!Bounds.Contains(cell)) return PlacementCheck.Fail(OutsideReason(cell));
+            if (CellProblem(cell) is { } problem) return PlacementCheck.Fail(problem);
             var occupant = EntityAt(cell);
             if (occupant != null && occupant != ignore) return PlacementCheck.Fail($"{cell} is occupied by {occupant.Def.Name}");
         }
         return PlacementCheck.Success;
     }
 
-    /// <summary>True when a cell lies off the plot sideways. Height is ground and sky, not an edge.</summary>
-    public bool OffPlot(GridPos cell) =>
+    /// <summary>True when a cell lies off the map sideways. Height is ground and sky, not an edge.</summary>
+    public bool OffMap(GridPos cell) =>
         cell.X < Bounds.Min.X || cell.X > Bounds.Max.X || cell.Y < Bounds.Min.Y || cell.Y > Bounds.Max.Y;
 
     /// <summary>
-    /// The extra placement rule of a definition (<see cref="BuildingDef.Placement"/>). "plotEdge"
-    /// wants the building against the boundary of the plot with every input facing inward, so what
-    /// it does looks off the plot. Depots use it: goods leave at the edge of the map, and the belts
-    /// that feed them come from inside. Free building in sandbox ignores it.
+    /// Whether the player may build at a cell's column: it is on the map and its plot is owned.
+    /// Sandbox is free building, so all of the map counts. Height is not looked at here.
+    /// </summary>
+    public bool OwnsCell(GridPos cell) =>
+        !OffMap(cell) && (Sandbox || Land.Owns(cell.X, cell.Y));
+
+    /// <summary>Why a building may not stand on a cell (off the map, too high or low, or land not bought), or null.</summary>
+    public string? CellProblem(GridPos cell) =>
+        !Bounds.Contains(cell) ? OutsideReason(cell)
+        : !OwnsCell(cell) ? "This land is not yours yet: buy the plot first"
+        : null;
+
+    /// <summary>
+    /// The extra placement rule of a definition (<see cref="BuildingDef.Placement"/>). "mapEdge"
+    /// wants the building against the outer border of the whole map with every input facing inward,
+    /// so what it does looks off the map. Depots use it: goods leave at the edge of the map, and the
+    /// belts that feed them come from inside. Free building in sandbox ignores it.
     /// </summary>
     public PlacementCheck CheckPlacement(BuildingDef def, GridPos pos, Dir facing)
     {
@@ -182,7 +202,7 @@ public sealed class World
         {
             var p = def.Ports[port];
             var outward = p.Side.ToWorld(facing).Opposite();
-            if (!OffPlot(pos + p.Cell.Rotate(facing) + outward.Offset()))
+            if (!OffMap(pos + p.Cell.Rotate(facing) + outward.Offset()))
                 return PlacementCheck.Fail($"{def.Name} belongs on the edge of the map, taking items from the inside");
         }
         return PlacementCheck.Success;
@@ -195,7 +215,7 @@ public sealed class World
     private string OutsideReason(GridPos cell) =>
         cell.Z < Bounds.Min.Z ? "Can't build below the ground"
         : cell.Z > Bounds.Max.Z ? $"Too high (max height {Bounds.Max.Z})"
-        : "Outside the plot. Unlock a tier to expand it";
+        : "Outside the map";
 
     /// <summary>Number of buildings of a def currently placed.</summary>
     public int CountOf(string defId) => _counts.GetValueOrDefault(defId);
@@ -277,10 +297,4 @@ public sealed class World
     /// <summary>Money a building returns when removed (price plus upgrades).</summary>
     public BigNum InvestedIn(Entity e) => e.Def.Upgrade?.Invested(e.Def, e.Level) ?? e.Def.Cost;
 
-    /// <summary>Plot bounds for a tier (square from the origin, same vertical range).</summary>
-    public GridBounds BoundsForTier(int tier)
-    {
-        int size = Content.Tiers[Math.Clamp(tier, 0, Content.Tiers.Count - 1)].PlotSize;
-        return new GridBounds(new GridPos(0, 0, Bounds.Min.Z), new GridPos(size - 1, size - 1, Bounds.Max.Z));
-    }
 }
