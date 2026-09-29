@@ -115,9 +115,9 @@ public static class TransportPath
     /// crosses it, 0.24 of a cell against a normal step of 0.05, and it compresses the whole path:
     /// "the items move very weird ... each one jumps a bit", "we need a little bit more spacing between
     /// items" (Fabian, after 3.8.8). The one case the offset covered, two items waiting on either side of
-    /// a shared edge, is a still picture in a jammed line and is not worth motion that lies. A hub needs
-    /// no offset at all: an item it cannot send waits in the middle of the hub, not on the edge
-    /// (<c>RouterBehavior.Middle</c>).
+    /// a shared edge, is a still picture in a jammed line, and it is not worth a hop on every item that
+    /// moves. A hub needs no offset at all: an item it cannot send waits in the middle of the hub, not on
+    /// the edge (<c>RouterBehavior.Middle</c>).
     /// </summary>
     public static GridPoint ItemPoint(Entity e, PathShape shape, in ItemView v)
     {
