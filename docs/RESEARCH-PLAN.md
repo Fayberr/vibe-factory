@@ -286,6 +286,9 @@ All commands were run in this worktree at commit `94e8527`, with the CLI built o
 they live in a throwaway overlay loaded through the pack option, so the numbers are exactly what the
 shipping tool computes for that content.
 
+Each block below shows only the arguments. The full command is `dotnet run --no-build -c Release
+--project src/FactorySim.Cli` plus the line shown, separated by `--`.
+
 ### The overlay: three plausible packs
 
 `/tmp/s87/research-packs.json`, abridged (items have `baseValue: 0`, like every non-ore item):
@@ -311,7 +314,7 @@ shipping tool computes for that content.
 ### Baseline, and packs do not disturb it
 
 ```
-$ dotnet run --no-build -c Release --project src/FactorySim.Cli -- balance tiers
+$ balance tiers
 Tier  Name            Income/s     Setup  Next in    Total  Next tier asks for                     Sells
 0     Basics                $8      $810   2m 12s   2m 12s  -                                      Iron Ingot 100%
 1     Workshop             $42    $3.27K   3m 33s   5m 45s  150 Iron Plate, 150 Copper Wire (38s)  Iron Plate 86%, Copper Ingot 14%
@@ -329,7 +332,7 @@ table row for row: the packs are never worth selling, so adding them changes no 
 ### What a tier 3 pack costs to make
 
 ```
-$ dotnet run --no-build -c Release --project src/FactorySim.Cli -- balance item science_3 --pack /tmp/s87/research-packs.json --tier 3
+$ balance item science_3 --pack /tmp/s87/research-packs.json --tier 3
 Petrochemical Science Pack        1  Science Bench      4        4   25%
 Glass                             1  Glassworks       1.2        2   25%
 Sand                              2  Sand Quarry      1.6   2 of 5   50%
@@ -349,7 +352,7 @@ Value from ores: Iron Ore 46%, Copper Ore 30%, Sand 17%, Crude Oil 7.4%.
 ```
 
 ```
-$ dotnet run --no-build -c Release --project src/FactorySim.Cli -- balance item science_3 0.25 --pack /tmp/s87/research-packs.json --tier 3
+$ balance item science_3 0.25 --pack /tmp/s87/research-packs.json --tier 3
 Petrochemical Science Pack     0.25  Science Bench      1        1  6.3%
 ...
 Crude Oil                      0.13  Oil Pump        0.25   1 of 2  3.1%
@@ -383,9 +386,9 @@ intervals are whole ticks, so the drains are rounded:
 | 1/s = 60/min | 40 → 80 (−50%) | 20 → 25 (−20%) | 30 → 38 (−21%) | 16 → 24 (−33%) |
 
 ```
-$ dotnet run --no-build -c Release --project src/FactorySim.Cli -- balance tiers --pack /tmp/s87/drain-light-0.25.json
+$ balance tiers --pack /tmp/s87/drain-light-0.25.json
 3     Petrochemicals    $812.1   $76.97K  37m 58s  56m 38s  80 Toy, 60 Frame (1m 32s)   Toy 71%, Crate 20%, Glass 5.2%, +2
-$ dotnet run --no-build -c Release --project src/FactorySim.Cli -- balance tiers --pack /tmp/s87/drain-light-1.json
+$ balance tiers --pack /tmp/s87/drain-light-1.json
 3     Petrochemicals      $421  $104.86K   1h 13m   1h 34m  80 Toy, 60 Frame (2m 40s)   Frame 84%, Glass 8.9%, Copper Wire 5.4%, +1
 ```
 
@@ -409,7 +412,7 @@ same way, every extractor's interval divided by 1.1 and rounded (iron 20 → 18,
 24 → 22, coal 24 → 22, sand 16 → 15, oil, gold and bauxite 40 → 36):
 
 ```
-$ dotnet run --no-build -c Release --project src/FactorySim.Cli -- balance tiers --pack /tmp/s87/miner-rate-plus10.json
+$ balance tiers --pack /tmp/s87/miner-rate-plus10.json
 3     Petrochemicals    $972.6   $87.90K  31m 42s  48m 52s  80 Toy, 60 Frame (1m 13s)   Toy 76%, Crate 17%, Glass 4.3%, +1
 7     Space           $104.25K    $7.81B        -    1d 8h  -                           Satellite 93%, Robot 7.1%, Jewelry 0.1%, +5
 ```
