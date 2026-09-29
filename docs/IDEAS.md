@@ -172,6 +172,12 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   It answers the question every factory owner asks: what do I expand, and what do I stop making.
   Nearly free, because `StatsTracker` already keeps lifetime `Sold` and `Produced` per item and a
   rolling 60 s income window, so only a per-item window is new.
+- **F9. A chain and ratio helper (M).** Ask "what feeds this" or "how much do I need for one circuit
+  per second", and the game answers with the input rates and the machine counts, from the recipe
+  tree. The balance tool already computes exactly this in the CLI (`balance item <name> [rate]`), so a
+  player facing version is mostly UI over math that exists. This is the feature that lets a casual
+  player skip the arithmetic the deep end normally demands, which is what makes depth optional
+  (roadmap principle 6).
 
 ## G. Ownership and expression
 

@@ -33,6 +33,46 @@ Why it happened (steps 2 and 3 fixed the first two):
 - Reference for the feel: a Roblox factory game where a go-kart needs motors, wheels and a frame,
   the frame needs steel and another metal, motors need batteries, batteries need electronics.
 
+## Design principles: deep but optional (Fabian, 2026-09-29)
+
+The goal, in his words: a player should be able to go really deep into the game and really have to
+think, but should never *have* to. You can also just play it for fun, on the side. The deep end is
+crazy interconnected factories; the shallow end is a relaxing game you can leave running. Next to
+that: more content, more versatility, more things to do.
+
+So every system has to work on two levels, and the following rules follow from that:
+
+1. **Shallow floor, deep ceiling.** Every mechanic needs a lazy default that just works. Barrels
+   instead of a pipe network, one machine instead of a balanced sub-factory, a single input instead
+   of a perfect ratio. The advanced version is available, never mandatory.
+2. **Depth pays off, it never gates.** Playing deep means earning more per minute and getting there
+   faster, not being the only way to progress. A casual factory still reaches the last tier, just
+   later.
+3. **Additive, not invalidating.** A new mechanic must not make simple play wrong. Fluids should be
+   optional for most of a run, and a byproduct must be removable with something as dumb as a vent.
+4. **Soft costs, few hard fail states.** Prefer slower, cheaper, uglier over stopped, dead or
+   punished. Anything that can halt a factory (a brownout, a meltdown, waste fines) is either gentle
+   or opt in behind a mode.
+5. **Teach in layers.** The route into the deep end is discoverable: tutorial, hints, and the tools
+   below. Nothing important should only be learnable from a wiki.
+6. **Tools instead of math.** The analysis features (income by product, bottleneck ranking, history
+   graphs, chain ratios) are what make depth optional: a casual player sees what to fix without
+   calculating anything, and an expert uses the same numbers to optimise. This makes the feedback
+   ideas structural, not polish.
+7. **Complexity is opt in.** Side branches, optional products, optional logistics and optional
+   challenges. The default path stays clean.
+
+Judged against this:
+
+- **Serve it:** byproducts with a simple vent, fluids as barrels first, research paid in goods with
+  simple early packs, income by product, the away report, bottleneck ranking, diagnostics overlay,
+  history graphs, side branches on top of the linear tiers, new game modifiers, the codex.
+- **Neutral:** megaprojects, cross-run unlocks, terraforming, machine families, operating modes.
+- **Cut against it, so soften or gate:** a power grid with hard brownouts (make it a slowdown), waste
+  fines, nuclear meltdowns, rate contracts with deadlines (these add pressure), retooling costs
+  (they punish experimenting, which is exactly what a casual player does most), and a full tech graph
+  (make it side branches instead).
+
 ## Steps
 
 ### 0. Balance tool (done)
