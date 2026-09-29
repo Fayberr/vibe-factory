@@ -157,7 +157,7 @@ public class LogisticsTests
     }
 
     [Fact]
-    public void Hub_items_come_in_at_the_entry_edge_and_stop_at_the_middle()
+    public void Hub_items_ride_in_to_the_middle_and_then_out()
     {
         var sim = TestUtil.NewSim();
         sim.Place("iron_miner", 0, 0, 0, Dir.East);
@@ -174,23 +174,19 @@ public class LogisticsTests
             points.AddRange(seen.Where(s => s.EntityId == hub.Id).Select(s => s.Point));
         }
         Assert.Contains(points, p => p.X < 1.5f && Math.Abs(p.Y - 0.5f) < 0.01f); // entered from the west edge
-        Assert.Contains(points, p => p.X >= 1.45f && Math.Abs(p.Y - 0.5f) < 0.01f); // rides right up to the middle
-        // A hub item goes no further than the middle. The hub hands an item over from there, and that is
-        // where an item it cannot send waits; a lane that ran on to the cell edge parked such an item on the
-        // edge, over the belt's own first item, so the picture said "it has already left" while the hub held
-        // it. See An_item_the_hub_still_holds_is_drawn_inside_the_hub_not_on_the_belt.
-        Assert.All(points, p => Assert.True(p.X <= 1.5f && p.Y <= 0.51f, $"a hub item was drawn at {p}"));
-        // and the line still delivers: the hand-over from the middle works.
+        Assert.Contains(points, p => Math.Abs(p.X - 1.5f) < 0.01f && Math.Abs(p.Y - 0.5f) < 0.01f); // reached the middle
+        // and it still delivers: the hand-over works from the middle, out at the edge.
         sim.Step(60);
         Assert.True(sim.Sold("iron_ore") > 0, "nothing came out of the splitter at all");
     }
 
     [Fact]
-    public void An_item_the_hub_still_holds_is_drawn_inside_the_hub_not_on_the_belt()
+    public void An_item_left_past_the_middle_by_an_old_save_comes_back_into_the_middle()
     {
-        // His report: the tar belt is full, the splitter holds a tar bound for it, and the picture showed
-        // that tar on the belt's edge, on top of the belt's own item, so it looked as if the tar had left
-        // and the plastic behind it was first. Both were drawn on the cell edge they share.
+        // Before 3.8.9 a hub lane ran on to the cell edge, so a save can hold an item parked out there. It is
+        // drawn on the belt's own first item there, which is exactly the picture that read as "it has already
+        // left". Once the hub has been held up for a second it lays its lane out again, from the middle back
+        // to the entry: the item comes back in, and nothing is dropped.
         var sim = TestUtil.NewSim();
         sim.Place("splitter", 2, 2, 0, Dir.East);
         sim.Place("conveyor", 2, 3, 0, Dir.South); // the right output, packed solid
@@ -198,26 +194,62 @@ public class LogisticsTests
         Assert.True(sim.Execute(new SetFilter(hub.Pos, 0, "plastic")).Ok);
         Assert.True(sim.Execute(new SetFilter(hub.Pos, 2, "tar")).Ok);
         var right = sim.Belt(2, 3, 0);
-        var rightEntity = sim.World.EntityAt(new GridPos(2, 3, 0))!;
         for (int pos = 1000; pos >= 0; pos -= 250)
             right.Items.Add(new BeltItem(sim.World.CreateItem("tar", 1, 1), pos));
-        // A tar at the end of the hub's lane, bound for the right output, which cannot take it.
-        ((RouterState)hub.State).Items.Add(
-            new RouterItem(sim.World.CreateItem("tar", 1, 1), 1000, 0, hub.Def.OutputPorts[2]));
-        sim.Step(20);
+        var lane = (RouterState)hub.State;
+        lane.Items.Add(new RouterItem(sim.World.CreateItem("tar", 1, 1), 1000, 0, hub.Def.OutputPorts[2]));
+        lane.Items.Add(new RouterItem(sim.World.CreateItem("plastic", 1, 1), 750, 0, -1));
+
+        sim.Step(2);
+        Assert.Equal(1000, lane.Items[0].Pos); // still where the old lane parked it
+
+        sim.Step(40);
+        Assert.Equal(2, lane.Items.Count); // nothing dropped
+        Assert.Equal(500, lane.Items[0].Pos); // the tar waits in the middle now
+        Assert.Equal(250, lane.Items[1].Pos);
 
         var seen = new List<PositionedItem>();
         TransportPath.CollectAll(sim.World, seen);
-        var held = seen.Single(s => s.EntityId == hub.Id).Point;
-        var nearest = seen.Where(s => s.EntityId == rightEntity.Id).MinBy(s => s.Point.Y).Point;
+        var held = seen.Single(s => s.EntityId == hub.Id && s.Item.Type == "tar").Point;
+        Assert.Equal(2.5f, held.X, 3); // drawn in the middle of the splitter, not out on the belt
+        Assert.Equal(2.5f, held.Y, 3);
+    }
 
-        // The hub's cell ends at y = 3 and the belt's begins there. The tar the hub still holds has to be
-        // drawn inside the hub, the belt's own item inside the belt, and the two must not coincide.
-        Assert.Equal(2.5f, held.X, 3);
-        Assert.True(held.Y <= 2.9f, $"the tar the hub holds is drawn at y={held.Y}, out on the belt's edge");
-        Assert.True(nearest.Y >= 3.1f, $"the belt's own tar is drawn at y={nearest.Y}, up on the hub's edge");
-        Assert.True(Math.Abs(held.Y - nearest.Y) >= 0.2f,
-            $"the held tar (y={held.Y}) and the belt's tar (y={nearest.Y}) are drawn on top of each other");
+    [Fact]
+    public void Items_move_in_one_even_step_all_the_way_through_a_line()
+    {
+        // Fabian: "the items move very weird ... there are three plastics in a row, and then each one jumps a
+        // bit", "not like it was before". A path's end and the next path's start are the *same* point, so
+        // nothing may offset one against the other: 3.8.7/3.8.8 shifted both ends inwards, which made every
+        // hand-over a hop (half a cell out of a hub, a quarter of a cell between two belt tiles) against a
+        // normal step of 0.05 of a cell. This walks items through a whole line and fails on any step that is
+        // bigger than the exit roll out of the middle.
+        var sim = TestUtil.NewSim();
+        sim.Place("iron_miner", 0, 2, 0, Dir.East);
+        sim.Place("conveyor", 1, 2, 0, Dir.East);
+        sim.Place("conveyor", 2, 2, 0, Dir.East);
+        sim.Place("splitter", 3, 2, 0, Dir.East);
+        sim.Place("conveyor", 4, 2, 0, Dir.East);
+        sim.Place("conveyor", 5, 2, 0, Dir.East);
+        sim.Place("seller", 6, 2, 0, Dir.East);
+
+        var seen = new List<PositionedItem>();
+        var last = new Dictionary<long, GridPoint>();
+        double worst = 0;
+        for (int t = 0; t < 900; t++)
+        {
+            sim.Step();
+            TransportPath.CollectAll(sim.World, seen);
+            foreach (var s in seen)
+            {
+                if (last.TryGetValue(s.Item.Uid, out var was))
+                    worst = Math.Max(worst, Math.Sqrt(Math.Pow(s.Point.X - was.X, 2) + Math.Pow(s.Point.Y - was.Y, 2)));
+                last[s.Item.Uid] = s.Point;
+            }
+        }
+        // Twice the belt's 50/1000 is the fastest a step can be, the roll out of a hub's middle. A hop is 5
+        // to 11 times that, so 0.15 of a cell separates them cleanly.
+        Assert.True(worst <= 0.15, $"an item moved {worst:0.###} of a cell in one tick");
     }
 
     [Fact]

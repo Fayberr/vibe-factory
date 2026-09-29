@@ -38,6 +38,9 @@ public sealed class SellerBehavior : Behavior<SellerParams, SellerState>
         return true;
     }
 
+    /// <summary>A depot sells whatever arrives, so it can always say yes.</summary>
+    protected override bool? WouldAccept(TickContext ctx, Entity e, SellerParams p, SellerState s, ItemStack item, int port, int inTicks) => true;
+
     protected override EntityStatus GetStatus(Entity e, SellerParams p, SellerState s) => new(true, 0, "selling");
 
     /// <summary>Uncapped: depots are the main long-term money sink.</summary>

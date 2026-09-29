@@ -33,6 +33,15 @@ public interface IBehavior
     /// </summary>
     bool TryAccept(TickContext ctx, Entity entity, ItemStack item, int port, int overflow);
 
+    /// <summary>
+    /// Whether <see cref="TryAccept"/> would take this item if it arrived <paramref name="inTicks"/>
+    /// ticks from now, assuming nothing else changes. A pure query: nothing is changed, nothing is
+    /// reserved. A sender that has to commit to a way out before it reaches it (a hub letting an item
+    /// leave its middle, see <c>RouterBehavior</c>) asks this first, so an item only leaves when its way
+    /// out will really be clear. Null means "cannot say", and the sender falls back to trying.
+    /// </summary>
+    bool? WouldAccept(TickContext ctx, Entity entity, ItemStack item, int port, int inTicks);
+
     /// <summary>Items visible on this entity for rendering (progress 0..1 along its path).</summary>
     void CollectItems(Entity entity, List<ItemView> into);
 
@@ -84,6 +93,9 @@ public abstract class Behavior<TParams, TState> : IBehavior
     public bool TryAccept(TickContext ctx, Entity entity, ItemStack item, int port, int overflow) =>
         TryAccept(ctx, entity, P(entity), S(entity), item, port, overflow);
 
+    public bool? WouldAccept(TickContext ctx, Entity entity, ItemStack item, int port, int inTicks) =>
+        WouldAccept(ctx, entity, P(entity), S(entity), item, port, inTicks);
+
     public void CollectItems(Entity entity, List<ItemView> into) => CollectItems(entity, P(entity), S(entity), into);
 
     public EntityStatus GetStatus(Entity entity) => GetStatus(entity, P(entity), S(entity));
@@ -119,6 +131,9 @@ public abstract class Behavior<TParams, TState> : IBehavior
     protected virtual void Tick(TickContext ctx, Entity e, TParams p, TState s) { }
 
     protected virtual bool TryAccept(TickContext ctx, Entity e, TParams p, TState s, ItemStack item, int port, int overflow) => false;
+
+    /// <summary>A receiver that cannot answer faster than trying says nothing, and the sender tries it.</summary>
+    protected virtual bool? WouldAccept(TickContext ctx, Entity e, TParams p, TState s, ItemStack item, int port, int inTicks) => null;
 
     protected virtual void CollectItems(Entity e, TParams p, TState s, List<ItemView> into) { }
 

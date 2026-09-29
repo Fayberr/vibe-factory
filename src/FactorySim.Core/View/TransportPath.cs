@@ -107,30 +107,22 @@ public static class TransportPath
     public static GridPoint Center(GridPos cell) => new(cell.X + 0.5f, cell.Y + 0.5f, cell.Z);
 
     /// <summary>
-    /// How much of a cell an item never rides, at either end of its path. A path ends on the cell edge,
-    /// and the edge is shared: the next building draws its own first item on the same line, so an item
-    /// drawn there sat on top of it. That is what made a full belt look as if it had swallowed the item
-    /// the splitter was still holding: the waiting item was drawn on the belt's edge, on the belt's own
-    /// item, and the picture read as "the tar has left, the plastic is first" while the tar was in fact
-    /// still the first item in the hub. Keeping the item's centre clear of the edge also keeps its mesh
-    /// (up to 0.19 wide) inside the cell it is really in.
+    /// World position of an item reported by <see cref="IBehavior.CollectItems"/>.
+    ///
+    /// The progress is used as reported, with no inset anywhere. 3.8.7 and 3.8.8 shifted the ends of
+    /// every path inwards so that a building would never draw an item on the cell edge it shares with
+    /// its neighbour, but a path's end and the next path's start are the *same* point: a shifted end and
+    /// a shifted start are 2 × the margin apart, so every item visibly hopped (0.24 of a cell against a
+    /// normal step of 0.05) each time it crossed a cell edge, and the whole belt was compressed to 0.76
+    /// of its length ("pairs of two that are closer together", "the spacings ... are messed up", "we need
+    /// a little bit more spacing between items" - 3.8.9 put it back). The one case the inset covered, two
+    /// items waiting on either side of a shared edge, is a static picture in a jammed line and is worth
+    /// less than smooth motion everywhere. A hub no longer needs it at all: an item a hub cannot send
+    /// waits in the middle of the hub, not on the edge. See <c>RouterBehavior.Middle</c>.
     /// </summary>
-    private const float EdgeMargin = 0.12f;
-
-    /// <summary>
-    /// Progress a drawn item reports: the whole path is inset by <see cref="EdgeMargin"/> at both ends, by
-    /// the same amount everywhere, rather than clipped at the ends. Clipping moved only the items within a
-    /// margin of an end and left every other item where it was, so a belt's items stopped being evenly
-    /// spaced near its ends: "pairs of two that are closer together" (3.8.8).
-    /// </summary>
-    private static float DrawnProgress(float progress) =>
-        EdgeMargin + Math.Clamp(progress, 0f, 1f) * (1f - 2f * EdgeMargin);
-
-    /// <summary>World position of an item reported by <see cref="IBehavior.CollectItems"/>.</summary>
     public static GridPoint ItemPoint(Entity e, PathShape shape, in ItemView v)
     {
-        // Never on the shared edge: see <see cref="EdgeMargin"/>.
-        float t = DrawnProgress(v.Progress);
+        float t = v.Progress;
         switch (shape.Kind)
         {
             case PathKind.None:

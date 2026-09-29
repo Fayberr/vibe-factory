@@ -190,6 +190,17 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         return true;
     }
 
+    /// <summary>
+    /// A machine takes only what its recipe uses, and only while its buffer for that item has room. Its
+    /// buffer only frees up as it crafts, so a sender asking ahead gets the same answer as asking now:
+    /// this is exact, and a hub feeding a machine can wait in its middle instead of on its edge.
+    /// </summary>
+    protected override bool? WouldAccept(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s, ItemStack item, int port, int inTicks)
+    {
+        if (!(s.Chosen != null && p.IngredientsOf.TryGetValue(s.Chosen, out var wanted) ? wanted : p.Ingredients).Contains(item.Type)) return false;
+        return !s.Inputs.TryGetValue(item.Type, out var buf) || buf.Count < p.InputCapacity;
+    }
+
     protected override string? Selection(Entity e, ProcessorParams p, ProcessorState s) => s.Chosen;
 
     protected override string? Select(Entity e, ProcessorParams p, ProcessorState s, string? option)

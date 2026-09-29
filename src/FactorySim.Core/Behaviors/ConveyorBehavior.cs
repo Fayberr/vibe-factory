@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using FactorySim.Content;
 using FactorySim.View;
 
@@ -51,6 +52,13 @@ public sealed class ConveyorState
 {
     /// <summary>Items on this tile, front-most first (descending <see cref="BeltItem.Pos"/>).</summary>
     public List<BeltItem> Items { get; set; } = new();
+
+    /// <summary>
+    /// True when the front item could not leave on the last tick, so nothing on this belt moved. A hint for
+    /// <see cref="ConveyorBehavior.WouldAccept"/>: a sender asking whether this belt will have room must not
+    /// count on it draining while its own way out is blocked.
+    /// </summary>
+    [JsonIgnore] public bool Blocked { get; set; }
 }
 
 /// <summary>An item's position along one conveyor tile, 0 (entry edge) … Length (exit edge).</summary>
@@ -91,6 +99,7 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
     protected override void Tick(TickContext ctx, Entity e, ConveyorParams p, ConveyorState s)
     {
         var items = s.Items;
+        s.Blocked = false;
         if (items.Count == 0) return;
 
         int speed = EffectiveSpeed(ctx, e, p);
@@ -108,6 +117,7 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
                 {
                     if (ctx.Push(e, outPort, it.Item, target - Length)) continue;
                     target = Length;
+                    s.Blocked = true;
                 }
             }
             else
@@ -178,15 +188,41 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
         {
             // Side-load at mid-tile: needs a Spacing-wide gap on both sides.
             entry = Length / 2;
-            index = 0;
-            while (index < items.Count && items[index].Pos >= entry) index++;
-            if (index > 0 && items[index - 1].Pos - entry < p.Spacing) return false;
-            if (index < items.Count && entry - items[index].Pos < p.Spacing) return false;
+            index = SideEntryIndex(s, entry, p.Spacing);
+            if (index < 0) return false;
         }
 
         p.Effect?.Apply(item, e.ValueFactor);
         items.Insert(index, new BeltItem(item, entry));
         return true;
+    }
+
+    /// <summary>Index where a mid-tile side entry fits, or -1 when there is no Spacing-wide gap for it.</summary>
+    private static int SideEntryIndex(ConveyorState s, int entry, int spacing)
+    {
+        int index = 0;
+        while (index < s.Items.Count && s.Items[index].Pos >= entry) index++;
+        if (index > 0 && s.Items[index - 1].Pos - entry < spacing) return -1;
+        if (index < s.Items.Count && entry - s.Items[index].Pos < spacing) return -1;
+        return index;
+    }
+
+    /// <summary>
+    /// Whether this belt will have a place for an item arriving in <paramref name="inTicks"/> ticks. A back
+    /// entry needs as much room behind the tail as the belt will have freed by then, which is exactly what a
+    /// hub needs to know before it lets an item out of its middle: a hub that waits for a place to exist
+    /// *now* would arrive late and leave the belt idle. Null is never returned: a belt can always answer.
+    /// </summary>
+    protected override bool? WouldAccept(TickContext ctx, Entity e, ConveyorParams p, ConveyorState s, ItemStack item, int port, int inTicks)
+    {
+        var side = e.Def.Ports[port].Side;
+        if (side != Side.Back && side != CurveSide(e))
+            return SideEntryIndex(s, Length / 2, p.Spacing) >= 0; // a side entry needs its gap now
+
+        if (s.Items.Count == 0) return true;
+        int tail = s.Items[^1].Pos;
+        if (s.Blocked) return tail >= p.Spacing; // it does not drain while its own way out is blocked
+        return tail + inTicks * EffectiveSpeed(ctx, e, p) >= p.Spacing;
     }
 
     protected override void CollectItems(Entity e, ConveyorParams p, ConveyorState s, List<ItemView> into)

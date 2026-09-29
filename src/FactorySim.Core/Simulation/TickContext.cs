@@ -42,6 +42,16 @@ public sealed class TickContext
         return link.Target != null && link.Target.Behavior.TryAccept(this, link.Target, item, link.TargetPort, overflow);
     }
 
+    /// <summary>
+    /// Whether <see cref="Push"/> would take the item if it arrived <paramref name="inTicks"/> ticks from
+    /// now. A pure query: nothing is sent, nothing is changed. Null when the receiver cannot say.
+    /// </summary>
+    public bool? WouldPush(Entity from, int outPort, ItemStack item, int inTicks)
+    {
+        var link = from.Links[outPort];
+        return link.Target == null ? false : link.Target.Behavior.WouldAccept(this, link.Target, item, link.TargetPort, inTicks);
+    }
+
     public void Sell(Entity seller, ItemStack item, BigNum payout)
     {
         _sim.World.AddMoney(payout);

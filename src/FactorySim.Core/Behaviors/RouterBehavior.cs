@@ -84,12 +84,15 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     private const int Length = ConveyorBehavior.Length;
 
     /// <summary>
-    /// Middle of a hub's lane: where an item chooses its output, where it leaves from, and where it waits
-    /// when the way out is blocked. The hub hands an item over from its own middle, so it never draws or
-    /// parks an item on the cell edge it shares with its neighbour: an item parked there sat on the
-    /// neighbour's own first item, and the picture read as "it has already gone" while the hub still held
-    /// it. Waiting where it leaves from also keeps a congested hub at full rate: it can send the moment the
-    /// belt has room, without having to travel to the edge first.
+    /// Middle of a hub's lane: where an item chooses its way out, and where it waits when that way is not
+    /// clear. An item rides in from its entry edge to here and may not pass it until the hub knows the
+    /// receiver will have room by the time the item reaches the edge (<see cref="CanLeave"/>), and then it
+    /// rolls the rest of the way out at once (<see cref="RollSpeed"/>). Two things follow, and both are the
+    /// point: an item the hub cannot send stands in the middle of the building instead of on the cell edge
+    /// it shares with the belt that is refusing it (drawn there it sat on the belt's own first item, and
+    /// the picture read as "it has already left" while the hub still held it), and the item it does send
+    /// leaves the middle as one continuous move rather than hopping the last half tile in a single step.
+    /// The lane behind the middle still holds the rest of the queue, up to the entry edge.
     /// </summary>
     private const int Middle = Length / 2;
 
@@ -136,12 +139,22 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         var items = s.Items;
         if (items.Count == 0) return;
         int speed = Speed(ctx, e, p);
+        int roll = RollSpeed(speed);
         int w = 0;
+
+        // A hub held up for a second with its front item still past the middle is in a state the lane cannot
+        // reach any more: a save written before the lane stopped at the middle (see Middle), or a receiver
+        // that closed up halfway through an exit roll. Lay the lane out again so the item comes back in.
+        // Nothing is dropped, and an output that cannot answer ahead (see CanLeave) is left alone, so an item
+        // waiting on a machine keeps the place in the lane it always had.
+        if (JammedOutput(e, s) >= 0 && items[0].Pos > Middle
+            && CanLeave(ctx, e, s, items[0], TicksToExit(items[0].Pos, roll)) == false)
+            Relane(items);
 
         for (int i = 0; i < items.Count; i++)
         {
             var it = items[i];
-            int target = it.Pos + speed;
+            int target = it.Pos + (it.Pos > Middle ? roll : speed);
             if (w > 0) target = Math.Min(target, items[w - 1].Pos - p.Spacing);
 
             if (it.To < 0 && target >= Middle)
@@ -156,10 +169,24 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
             }
             if (it.To < 0) target = Math.Min(target, Middle); // nowhere to go yet: wait at the middle
 
-            if (w == 0 && target >= Middle)
+            if (w == 0 && it.To >= 0 && it.Pos >= Middle)
             {
-                if (TryExit(ctx, e, s, ref it, target - Middle)) continue;
-                target = Middle; // its output refused it: it waits in the middle, not out on the edge
+                // The head decides at the middle whether it may go: if the way out will be clear by the time
+                // the item would reach the edge, it rolls out to the edge and hands over there, where the
+                // belt's first place is, so the hand-over is one continuous move. If not, it waits in the
+                // middle, which is what the player asked for: "when an item reaches the middle ... it checks
+                // if the target direction is already full or blocked; if yes it stays in the middle".
+                bool? clear = CanLeave(ctx, e, s, it, TicksToExit(it.Pos, roll));
+                if (clear == false)
+                {
+                    if (it.To < s.RefusedNow.Length) s.RefusedNow[it.To] = true; // the output holding the hub up
+                    target = Math.Min(target, Middle);
+                }
+                else
+                {
+                    target = it.Pos + roll; // committed: leave the middle at the exit roll
+                    if (target >= Length && TryExit(ctx, e, s, ref it, target - Length)) continue;
+                }
             }
 
             if (target < it.Pos) target = it.Pos;
@@ -167,6 +194,65 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         }
         if (w < items.Count) items.RemoveRange(w, items.Count - w);
     }
+
+    /// <summary>Speed of an item that has committed to leaving: out of the middle to the edge.</summary>
+    private static int RollSpeed(int speed) => speed * 2;
+
+    /// <summary>
+    /// Ticks until an item moving at <paramref name="roll"/> from <paramref name="pos"/> would reach the
+    /// exit, which is when a receiver has to be ready for it.
+    /// </summary>
+    private static int TicksToExit(int pos, int roll) => Math.Max(1, (Length - pos + roll - 1) / roll);
+
+    /// <summary>
+    /// Lays the lane out again from the middle back to the entry, evenly, keeping the items in order and
+    /// dropping none. Used on a lane holding an item past the middle while its output answers that it cannot
+    /// take it.
+    /// </summary>
+    private static void Relane(List<RouterItem> items)
+    {
+        int n = items.Count;
+        for (int i = 0; i < n; i++)
+            items[i] = items[i] with { Pos = n == 1 ? Middle : Middle - i * (Middle / (n - 1)) };
+    }
+
+    /// <summary>
+    /// Whether the item would get out now, asking each output in the order <see cref="TryExit"/> would try
+    /// them, without sending anything. False means "wait in the middle". Null means no candidate could say
+    /// (a receiver that cannot answer ahead), and then the item commits and tries out at the edge as it
+    /// always did.
+    /// </summary>
+    private static bool? CanLeave(TickContext ctx, Entity e, RouterState s, in RouterItem it, int inTicks)
+    {
+        var outs = e.Def.OutputPorts;
+        string type = it.Item.Type;
+        var home = HomeOf(e, s, type);
+        if (home == Group.None) return false; // no connected output may take it: wait in the middle
+        int start = 0;
+        while (start < outs.Count - 1 && outs[start] != it.To) start++;
+
+        bool unknown = false;
+        for (int k = 0; k < outs.Count; k++)
+        {
+            int idx = (start + k) % outs.Count;
+            var group = GroupOf(s, idx, type);
+            // The same candidates TryExit tries, in the same order: the chosen output (or an overflow one),
+            // then the rest of its group, then any overflow output.
+            bool candidate = k == 0
+                ? group == home || group == Group.Overflow
+                : group == home || (home != Group.Overflow && s.Filters != null && group == Group.Overflow);
+            if (!candidate) continue;
+            var answer = Ask(ctx, e, outs[idx], it.Item, inTicks);
+            if (answer == true) return true;
+            if (answer == null) unknown = true;
+        }
+        // Nobody can say whether it would get out: commit and let it try at the edge, as it always did.
+        return unknown ? null : false;
+    }
+
+    /// <summary>What one output says about an item arriving in <paramref name="inTicks"/> ticks.</summary>
+    private static bool? Ask(TickContext ctx, Entity e, int port, ItemStack item, int inTicks) =>
+        e.Link(port).IsConnected ? ctx.WouldPush(e, port, item, inTicks) : false;
 
     /// <summary>Filter value for an output that takes only what the other outputs refuse.</summary>
     public const string Overflow = "@overflow";
