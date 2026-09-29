@@ -116,7 +116,7 @@ public class LogisticsTests
         var byProducer = sim.DrainEvents().OfType<ItemProduced>().GroupBy(p => p.EntityId).Select(g => g.Sum(p => p.Count)).ToList();
         Assert.Equal(2, byProducer.Count);
         Assert.True(Math.Abs(byProducer[0] - byProducer[1]) <= 4, string.Join(",", byProducer));
-        Assert.InRange(byProducer.Sum(), 395, 405); // output belt saturated: 0.2 items/tick
+        Assert.InRange(byProducer.Sum(), 328, 340); // the merger caps the line: 0.167 items/tick (3.33/s)
     }
 
     [Fact]
@@ -145,13 +145,14 @@ public class LogisticsTests
             return sim.Sold("iron_ore") - before;
         }
 
-        // Level 1: speed 50 / spacing 250 = 0.2 items/tick (4/s), the same as a level-1 belt,
+        // Level 1: speed 50 / spacing 300 = 0.167 items/tick (3.33/s), slower than a level-1 belt,
         // even though the three maxed input belts could bring 60/s.
-        Assert.InRange(Throughput(1), 395, 405);
-        // Level 3: speed × 2.33, so a bit over 9/s.
-        Assert.InRange(Throughput(3), 920, 940);
-        // Level 7 (the max) reaches the physical cap, speed = spacing: one item per tick (20/s).
-        Assert.InRange(Throughput(7), 1995, 2001);
+        Assert.InRange(Throughput(1), 328, 338);
+        // Level 3: speed × 2.67, so just under 9/s.
+        Assert.InRange(Throughput(3), 870, 900);
+        // Level 7 (the max) reaches the physical cap, speed = spacing: one item per tick (20/s),
+        // less the small overhead of a hub picking outputs.
+        Assert.InRange(Throughput(7), 1985, 2001);
         Assert.Equal(7, TestUtil.Content.Building("merger").Upgrade!.MaxLevel);
     }
 

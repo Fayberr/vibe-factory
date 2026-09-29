@@ -119,8 +119,9 @@
     // ---- Logistics -----------------------------------------------------------------
     // Throughput = speed × 20 / spacing items per second. Speed is capped at spacing, so nothing
     // moves more than one item per tick (20/s). Belts: 4/s at level 1, 20/s at level 9.
-    // Splitters match belts. A merger runs at belt speed (4/s at level 1) but grows faster, so it
-    // reaches the 20/s cap at level 7: joining lines is a real gate until it is levelled up.
+    // Splitters match belts. A merger runs slower than a belt (3.33/s at level 1) and leaves a wider gap
+    // between items (spacing 300), but grows faster and reaches the 20/s cap at level 7: joining lines is
+    // a real gate until it is levelled up.
     {
       "id": "conveyor", "name": "Conveyor", "behavior": "conveyor", "cost": 10, "category": "logistics", "tier": 0,
       "group": "belt", "replaces": [ "belt" ],
@@ -175,9 +176,9 @@
         { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" },
         { "kind": "out", "side": "front" }
       ],
-      "upgrade": { "maxLevel": 7, "speedPerLevel": 0.667, "costFactor": 1.5, "costGrowth": 2.2 },
-      "params": { "speed": 50, "spacing": 250 },
-      "meta": { "model": "merger", "glyph": "X", "accent": "#ffb347", "description": "Joins up to three lines fairly into one. It moves no faster than the belt it feeds, so it caps how much gets through: upgrade it when lines back up. Drop it onto a belt." }
+      "upgrade": { "maxLevel": 7, "speedPerLevel": 0.833, "costFactor": 1.5, "costGrowth": 2.2 },
+      "params": { "speed": 50, "spacing": 300 },
+      "meta": { "model": "merger", "glyph": "X", "accent": "#ffb347", "description": "Joins up to three lines fairly into one. It runs slower than a belt and spaces items wider, so it caps how much gets through: upgrade it when lines back up. Drop it onto a belt." }
     },
 
     // ---- Production ----------------------------------------------------------------
