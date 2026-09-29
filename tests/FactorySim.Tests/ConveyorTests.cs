@@ -130,7 +130,7 @@ public class ConveyorTests
         // so the first sale is ~15 tiles in (level 1 belts move 1 tile/s).
         Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 35, sold);  // line A went over the bridge
         Assert.True(stats.Sold.GetValueOrDefault("copper_wire") > 35, sold); // line B went under it
-        Assert.True(stats.Sold.GetValueOrDefault("crate") > 10, sold);       // line C merged planks and plates
+        Assert.True(stats.Sold.GetValueOrDefault("steel") > 10, sold);       // line C merged iron and coal
         Assert.Equal(0, stats.Sold.GetValueOrDefault("iron_ore"));      // nothing leaked across lines
         Assert.Equal(0, stats.Sold.GetValueOrDefault("copper_ore"));
     }

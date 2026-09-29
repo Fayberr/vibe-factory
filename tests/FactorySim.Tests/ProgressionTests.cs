@@ -381,8 +381,10 @@ public class RecipeChoiceTests
     {
         var v = TestUtil.Content.ItemValue;
         Assert.Equal(2, v["iron_ingot"].Value, 9);                // ore 1 × smelt 2
-        Assert.Equal(3.2, v["copper_wire"].Value, 9);             // ore 2 × 2 × 1.6 / 2 wires
-        Assert.Equal(11.4, v["crate"].Value, 9);                  // (2 planks × 1.35 + plate 3) × 2
+        Assert.Equal(2, v["copper_wire"].Value, 9);               // ore 1 × 2 × 2 / 2 wires
+        Assert.Equal(4, v["iron_plate"].Value, 9);                // ingot 2 × 2
+        // crate = (4 planks × 0.9 + 2 plates × 4 + 4 screws × 0.9) × 2.6
+        Assert.Equal((4 * 0.9 + 2 * 4 + 4 * 0.9) * 2.6, v["crate"].Value, 9);
         Assert.Equal(0, v["iron_ore"].Tier);
         Assert.Equal(5, v["robot"].Tier);
     }

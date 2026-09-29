@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-eight tiers, customer orders and 26 goals, and settings in four tabs:
+eight tiers, customer orders and 29 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -133,15 +133,17 @@ their choice.
 ## Progression and balance
 
 - **Tiers.** Eight tiers (Basics, Workshop, Industry, Petrochemicals, Electronics,
-  Robotics, Aerospace, Space). Each needs lifetime earnings plus a price, unlocks new
-  extractors and machines and raises build limits. The factory card
-  always shows the next goal; `P` opens the details. The late game adds bauxite,
-  aluminium, drones, rocket fuel and satellites, and ends at a launch complex.
+  Robotics, Aerospace, Space). Each needs lifetime earnings, a delivery of goods the tier
+  before makes (from Industry on) and a price, unlocks new extractors and machines and
+  raises build limits. The factory card always shows the next goal; `P` opens the details,
+  including what the next tier still wants sold. The late game adds bauxite, aluminium,
+  drones, rocket fuel and satellites, and ends at a launch complex.
 - **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
   before the deadline for about twice its value on top of the normal sale. Orders ask
   for things you can already make, sized to your current income, and newer products are
-  asked for more often. Don't like one? Swap it for a small fee.
-- **Goals.** 26 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+  asked for more often. Small parts (screws, rods) are only offered while income is small
+  enough that an order stays a sane number of units. Don't like one? Swap it for a small fee.
+- **Goals.** 29 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   first robot, first satellite, a trillion earned…), each with a cash reward. The Progress
   window shows the next four with progress bars.
 - **Per-building upgrades.** There are no global upgrades. Every building has its own
@@ -149,8 +151,12 @@ their choice.
   splitters go from 4 to 20 items/s over 9 levels, mergers from 5 to 20 over 7, market
   depots pay more. Ten drills means ten upgrades. Levels show as coloured trims (bronze,
   silver, gold, cyan, violet) and are kept by copy/paste.
-- **Raw resources sell for 25%.** Processing is what pays: an ingot sells for 8× what its
-  ore fetches raw, and a robot is worth about 1600 iron ore.
+- **Raw resources sell for 25%, and every ore is worth the same $1.** An item is worth the
+  work in it: what went in times the recipe's multiplier, so processing is what pays, and a
+  newer tier builds on the old chains instead of replacing them. Parts feed many recipes
+  (plates, rods, screws and gears go into crates, frames, toys, motors and robots), and the
+  old dead ends are ingredients now: crates pack toys, toys are robot bodies, jewelry goes
+  into satellites. A robot is worth thousands of iron ore.
 - **The Polisher pays at the depot.** An in-line machine that multiplies the value of what
   passes it by 1.5, once per item, paid only when the item is sold. Machines value their
   inputs at the plain rate, so polishing an ingredient is wasted: put it right before the
@@ -177,7 +183,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (197)
+dotnet test                                                     # core and save-file tests (223)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit

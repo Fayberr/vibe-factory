@@ -20,8 +20,13 @@ public static class ItemMeshes
         "rock" => 0.1f,
         "plank" or "plate" or "pane" or "chip" => 0.025f,
         "log" or "coil" => 0.075f,
+        "rod" => 0.075f,
+        "screw" => 0.06f,
+        "gear" => 0.06f,
+        "frame" => 0.045f,
         "pile" => 0.01f,
         "barrel" => 0.01f,
+        "battery" => 0.09f,
         "motor" => 0.08f,
         "gem" => 0.1f,
         "toy" or "robot" or "satellite" => 0.01f,
@@ -29,7 +34,8 @@ public static class ItemMeshes
         _ => 0.11f,
     };
 
-    private static bool Shiny(string shape) => shape is "ingot" or "coil" or "motor" or "gem" or "pane";
+    /// <summary>Whether a shape reads as bare metal (shiny and reflective) rather than dull goods.</summary>
+    public static bool Shiny(string shape) => shape is "ingot" or "coil" or "rod" or "screw" or "gear" or "frame" or "motor" or "gem" or "pane";
 
     public static Mesh Get(string shape)
     {
@@ -67,6 +73,40 @@ public static class ItemMeshes
                 break;
             case "coil":
                 Coil(mb, mat);
+                break;
+            case "rod":
+                LyingCylinder(mb, mat, Vector3.Zero, 0.035f, 0.16f, 8);
+                break;
+            case "screw":
+                // Threaded shaft with a hex head: a little longer than a rod, head to the back.
+                LyingCylinder(mb, mat, new Vector3(0.02f, 0, 0), 0.017f, 0.13f, 6);
+                mb.With(new Transform3D(new Basis(Vector3.Forward, Mathf.Pi / 2), new Vector3(-0.055f, 0, 0)),
+                    b => b.Cylinder(mat, new Vector3(0, -0.011f, 0), 0.033f, 0.022f, 6, capBottom: true));
+                break;
+            case "gear":
+                // Toothed wheel: a hub with eight teeth around its rim.
+                mb.Cylinder(mat, new Vector3(0, -0.025f, 0), 0.07f, 0.05f, 12);
+                mb.Cylinder(mat, new Vector3(0, 0.025f, 0), 0.028f, 0.022f, 8);
+                for (int i = 0; i < 8; i++)
+                {
+                    float a = i * Mathf.Tau / 8;
+                    var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                    mb.With(new Transform3D(new Basis(Vector3.Up, -a), dir * 0.078f),
+                        b => b.Box(mat, Vector3.Zero, new Vector3(0.03f, 0.05f, 0.024f), 0.004f));
+                }
+                break;
+            case "frame":
+                // Welded rectangle: four beams round an open middle.
+                mb.Box(mat, new Vector3(0, 0, 0.07f), new Vector3(0.18f, 0.03f, 0.024f), 0.005f);
+                mb.Box(mat, new Vector3(0, 0, -0.07f), new Vector3(0.18f, 0.03f, 0.024f), 0.005f);
+                mb.Box(mat, new Vector3(0.078f, 0, 0), new Vector3(0.024f, 0.03f, 0.118f), 0.005f);
+                mb.Box(mat, new Vector3(-0.078f, 0, 0), new Vector3(0.024f, 0.03f, 0.118f), 0.005f);
+                break;
+            case "battery":
+                // Cell with a terminal on top and a band across it.
+                mb.Box(mat, Vector3.Zero, new Vector3(0.13f, 0.16f, 0.09f), 0.012f);
+                mb.Cylinder(mat, new Vector3(0, 0.08f, 0), 0.022f, 0.022f, 8);
+                mb.Box(mat, new Vector3(0, 0.02f, 0), new Vector3(0.135f, 0.026f, 0.095f), 0.004f);
                 break;
             case "box":
                 Crate(mb, mat);

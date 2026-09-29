@@ -177,7 +177,25 @@ public sealed class ContentRegistry
                 throw new ContentException($"Building '{b.Id}': invalid upgrade track.");
         }
 
+        ValidateTiers();
         ValidateMap();
+    }
+
+    /// <summary>
+    /// Deliveries must be possible: the item exists, and the tiers before this one can already make it,
+    /// or the tier could never be unlocked.
+    /// </summary>
+    private void ValidateTiers()
+    {
+        for (int t = 0; t < Tiers.Count; t++)
+            foreach (var need in Tiers[t].Deliver)
+            {
+                string tier = $"Tier {t} ({Tiers[t].Name})";
+                if (!Items.ContainsKey(need.Item)) throw new ContentException($"{tier}: deliver asks for unknown item '{need.Item}'.");
+                if (need.Count <= 0) throw new ContentException($"{tier}: deliver counts must be > 0.");
+                if (!ItemValue.TryGetValue(need.Item, out var info) || info.Tier >= t)
+                    throw new ContentException($"{tier}: deliver asks for '{need.Item}', which cannot be made before this tier is unlocked.");
+            }
     }
 
     private void ValidateMap()

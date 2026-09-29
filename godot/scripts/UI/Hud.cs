@@ -808,9 +808,17 @@ public partial class Hud : CanvasLayer
         var next = tiers[world.UnlockedTier + 1];
         double need = next.RequiredEarnings.ToDouble(), have = world.Stats.TotalEarned.ToDouble();
         _goalBar.Value = need <= 0 ? 1 : Math.Min(1, have / need);
-        _goal.Text = have < need
-            ? $"Next: {next.Name}. Earn ${next.RequiredEarnings.Format()} in total ({K("progress")})"
-            : $"{next.Name} is ready to unlock for ${next.Cost.Format()}. Press P";
+
+        // A tier also asks for goods: say how many are still missing, one at a time.
+        var missing = next.Deliver.Where(d => TierDef.SoldOf(world.Stats, d) < d.Count).ToList();
+        string delivery = string.Join(", ", missing.Select(d =>
+            $"{d.Count - TierDef.SoldOf(world.Stats, d)} {world.Content.Item(d.Item).Name}"));
+        if (have < need)
+            _goal.Text = $"Next: {next.Name}. Earn ${next.RequiredEarnings.Format()} in total ({K("progress")})";
+        else if (missing.Count > 0)
+            _goal.Text = $"Next: {next.Name}. Still to sell: {delivery} ({K("progress")})";
+        else
+            _goal.Text = $"{next.Name} is ready to unlock for ${next.Cost.Format()}. Press P";
     }
 
     private void UpdateCursorTip()

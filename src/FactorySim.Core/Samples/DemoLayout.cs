@@ -8,8 +8,8 @@ namespace FactorySim.Samples;
 ///    three parallel polishers (curved branches) → merger → out to a depot on the rim
 ///  • Line B (local x=2):  copper drill running *under* line A's bridge → smelter → press (wire)
 ///    → onward, then out to its own depot
-///  • Line C (local y=13): iron → smelter → press (plates) → workshop ← planks (lumber camp → sawmill)
-///    → onward, then out to the third depot
+///  • Line C (local y=13): iron → smelter → blast furnace ← coal (a coal drill feeding its side)
+///    → steel onward, then out to the third depot
 /// Depots take items in on one side and must stand on the edge of the map, so every line ends
 /// with a belt run to the rim. The starting plot touches the south edge of the map, so the layout
 /// is drawn flowing east with its depots to the north and then turned half way round: in the world
@@ -91,19 +91,18 @@ public static class DemoLayout
             for (int x = 6; x <= 11; x++) Place("conveyor", x, 8, 0, Dir.East);
             Tail(12, 8);
 
-            // Line C: iron plates and planks merge in the workshop into crates.
+            // Line C: iron ingots and coal meet in the blast furnace and come out as steel.
             Place("iron_miner", 0, 13, 0, Dir.East);
             Place("conveyor", 1, 13, 0, Dir.East);
             Place("smelter", 2, 13, 0, Dir.East);
             Place("conveyor", 3, 13, 0, Dir.East);
-            Place("press", 4, 13, 0, Dir.East);
+            Place("conveyor", 4, 13, 0, Dir.East);
             Place("conveyor", 5, 13, 0, Dir.East);
-            Place("workshop", 6, 13, 0, Dir.East);
+            Place("blast_furnace", 6, 13, 0, Dir.East);
             for (int x = 7; x <= 12; x++) Place("conveyor", x, 13, 0, Dir.East);
             Tail(13, 13);
-            Place("lumber_camp", 6, 10, 0, Dir.South);
-            Place("sawmill", 6, 11, 0, Dir.South);
-            Place("conveyor", 6, 12, 0, Dir.South);   // into the workshop's side
+            Place("coal_miner", 6, 11, 0, Dir.South);
+            Place("conveyor", 6, 12, 0, Dir.South);   // into the blast furnace's side
         }
         finally
         {

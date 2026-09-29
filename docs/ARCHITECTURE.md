@@ -132,8 +132,11 @@ underneath. Lifts and multi-level machines use the same mechanism.
   JSON `upgrade` field or the behavior's `DefaultUpgrade`. `SetBuildingLevels` changes
   several levels atomically and is undoable; removing a building refunds everything
   invested in it; blueprints keep levels and charge for them.
-- **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings plus
-  a price (`UnlockTier`). `limit` (base, plus `perTier` for every
+- **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings, a
+  delivery of goods (`deliver`: lifetime sales of items, so `DeliveriesMet` reads
+  `StatsTracker.Sold`, which is saved and never spent) plus a price (`UnlockTier`).
+  `ContentRegistry.ValidateTiers` refuses a delivery of an item that cannot be made
+  before that tier, which would make the tier impossible. `limit` (base, plus `perTier` for every
   `every` tiers after the building's own) caps extractors and depots; placement, paste
   and undo all check it. Depots have a single input, which makes them the bottleneck.
 - **Choices.** `SelectRecipe` sets what a machine makes (null = automatic): it then only
@@ -142,7 +145,12 @@ underneath. Lifts and multi-level machines use the same mechanism.
 - **Reference values.** `ItemValues` (`ContentRegistry.ItemValue`) follows the recipes from
   raw resources to give every item's level-1 value and the tier it becomes available. The
   Manage window shows it, and a test checks that each tier's best product is worth at
-  least double the last.
+  least double the last. Every ore is worth $1, so an item's value is the work in it.
+- **Recipe tree.** `base.json` holds one connected tree: shared parts feed many recipes and
+  only the final product (the satellite) is sold and used in nothing. Tests walk the tree to
+  check that: no recipe cycle, no dead end, one late product pulls every raw resource
+  through the factory, and every machine's `inputCapacity` can hold the inputs of all its
+  recipes (`ProcessorBehavior.Bind` refuses one that cannot, which would idle the machine).
 - **Replacing.** A def's `group` and `replaces` say what it may be dropped onto
   (`PlaceBuilding(Replace: true)`); the old building is refunded, and items on a belt
   survive a swap between belt pieces.
@@ -159,7 +167,9 @@ for the title-screen backdrop and in most unit tests, which count money exactly)
 - **Orders** (`ContractBoard`, three slots). Every 30 s, once the factory has sold
   something, a free slot gets a new `Contract`: a non-raw item from an unlocked tier
   (newer tiers weighted 3/2/1), a quantity worth 45 to 90 s of current income rounded to a
-  nice number, a 6 to 12 minute deadline, and a reward of 2 to 2.5 times its value.
+  nice number, a 6 to 12 minute deadline, and a reward of 2 to 2.5 times its value. An item
+  is only offered while an order for it stays under the largest nice number (1000), so cheap
+  parts are asked for while income is small and expensive goods take over later.
   `TickContext.Sell` calls `Deliver`, so items still sell normally and also count
   toward the oldest open order for that item. `RerollContract` swaps one for 10% of its
   reward. Everything is drawn from the seeded `Rng`, so orders are deterministic.

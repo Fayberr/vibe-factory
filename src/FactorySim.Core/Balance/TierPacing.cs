@@ -20,7 +20,8 @@ public sealed record TierEstimate(
     double SetupCost,
     double Seconds,
     double CumulativeSeconds,
-    IReadOnlyDictionary<string, double> IdleRaw);
+    IReadOnlyDictionary<string, double> IdleRaw,
+    double DeliverySeconds = 0);
 
 /// <summary>
 /// How fast progression goes. For every tier it builds the best factory the tier's build limits
@@ -43,30 +44,64 @@ public static class TierPacing
             var (products, setup, idle) = BestFactory(book);
             double income = products.Sum(p => p.IncomePerSecond);
 
-            double seconds = double.NaN;
+            double seconds = double.NaN, delivery = 0;
             if (t + 1 < content.Tiers.Count)
             {
                 var next = content.Tiers[t + 1];
                 double spend = setup - previousSetup + next.Cost.ToDouble(); // rebuilding is refunded in full
                 double needed = Math.Max(next.RequiredEarnings.ToDouble() - earned, spend - money);
                 seconds = needed <= 0 ? 0 : income > 0 ? needed / income : double.PositiveInfinity;
+                delivery = DeliverySeconds(book, next);
+                seconds = Math.Max(seconds, delivery);
                 earned += income * seconds;
                 money += income * seconds - spend;
                 total += seconds;
             }
             previousSetup = setup;
-            result.Add(new TierEstimate(t, content.Tiers[t].Name, products, income, setup, seconds, total, idle));
+            result.Add(new TierEstimate(t, content.Tiers[t].Name, products, income, setup, seconds, total, idle, delivery));
         }
         return result;
     }
 
-    private static (List<ProductShare> Products, double Setup, Dictionary<string, double> Idle) BestFactory(RecipeBook book)
+    /// <summary>Raw supply per second: every extractor the tier allows, running flat out.</summary>
+    private static Dictionary<string, double> RawSupply(RecipeBook book)
     {
-        // Raw supply: every extractor the tier allows.
         var supply = new Dictionary<string, double>();
         foreach (var b in book.Content.BuildingList)
             if (book.Available(b) && b.Params is MinerParams m && book.Sources.TryGetValue(m.Item, out var src) && src.Building == b)
                 supply[m.Item] = supply.GetValueOrDefault(m.Item) + book.AllowedCount(b) * book.RatePerBuilding(src);
+        return supply;
+    }
+
+    /// <summary>
+    /// The shortest time in which the factory of this tier can make and sell everything <paramref name="tier"/>
+    /// asks to have delivered, all of it at once: bound by each raw resource (the ore all the goods together
+    /// need, over its supply) and by how many units the depots take. Infinite when a good cannot be made.
+    /// </summary>
+    private static double DeliverySeconds(RecipeBook book, TierDef tier)
+    {
+        if (tier.Deliver.Length == 0) return 0;
+        var supply = RawSupply(book);
+        var rawNeeded = new Dictionary<string, double>();
+        double units = 0;
+        foreach (var need in tier.Deliver)
+        {
+            if (!book.Sources.ContainsKey(need.Item)) return double.PositiveInfinity;
+            foreach (var (raw, perOne) in ProductionChain.For(book, need.Item).RawPerSecond)
+                rawNeeded[raw] = rawNeeded.GetValueOrDefault(raw) + need.Count * perOne;
+            units += need.Count;
+        }
+        double seconds = 0;
+        foreach (var (raw, amount) in rawNeeded)
+            seconds = Math.Max(seconds, supply.GetValueOrDefault(raw) > 0 ? amount / supply[raw] : double.PositiveInfinity);
+        double depots = book.Content.BuildingList.Where(b => book.Available(b) && b.Params is SellerParams)
+            .Sum(b => book.AllowedCount(b) * book.BeltItemsPerSecond);
+        return Math.Max(seconds, depots > 0 ? units / depots : double.PositiveInfinity);
+    }
+
+    private static (List<ProductShare> Products, double Setup, Dictionary<string, double> Idle) BestFactory(RecipeBook book)
+    {
+        var supply = RawSupply(book);
         var left = new Dictionary<string, double>(supply);
 
         // Selling: each depot takes one belt, so depots cap how many units the factory can sell.

@@ -5,12 +5,12 @@ balance tool (step 0 below) checks before they ship.
 
 ## The problem
 
-The game is too easy and too short: a full run fits in one night, and every new tier replaces
+The game was too easy and too short: a full run fitted in one night, and every new tier replaced
 the one before it instead of building on it. The goal is the opposite: big, interconnected
 factories where old production lines stay needed, parts feed many recipes, and later products
 pull material through the whole factory.
 
-Why it happens today:
+Why it happened (steps 2 and 3 fixed the first two):
 
 - **Value follows the ore, not the work.** An item is worth its ingredients times a multiplier,
   and each tier's ore is worth far more than the last (iron 1, crude oil 25, gold 80, bauxite
@@ -58,21 +58,36 @@ numbers are tested against the simulation, not just the content file.
   faster (5/s at level 1) and reach the 20/s cap at level 7.
 - Everything is in `base.json`, including `startingMoney`.
 
-### 2. Value from processing
+### 2. Value from processing (done)
 
-Give all ores roughly the same low value, so an item is worth more the more work went into it.
-New tiers then add new products on top of the old chains instead of replacing them.
+Every ore is worth $1 and nothing else has a base value, so an item is worth exactly the work
+in it: a recipe's output is worth what went in times its valueMultiplier. A gear is worth more
+than the ingot it came from whatever the ingot cost, and the newest ore no longer wins by
+default. Tiers now add products on top of the old chains instead of replacing them.
 
-### 3. Connected recipe tree
+### 3. Connected recipe tree (done)
 
-- Shared intermediate parts that feed many recipes (gears, screws, rods, frames, cables,
-  batteries, circuit boards and so on).
-- Later products need several different parts in larger amounts, so one of them pulls iron
-  plates and copper wire through the whole factory.
-- Today's dead ends become ingredients (crates as packaging, toys and jewelry as parts).
-- Tiers unlock by delivering specific items, not only by lifetime earnings.
+- New parts that feed many recipes: iron rods, screws and gears (Machine Shop), cables and
+  frames (Fabricator), batteries (Battery Plant), next to plates, wire, steel, glass, plastic
+  and circuits. One product pulls iron plates and copper wire through the whole factory.
+- Recipes got bigger: a crate takes 4 planks, 2 plates and 4 screws; a gear takes 2 plates; a
+  frame takes 2 steel, 4 rods and 4 screws; a robot takes a toy body, 2 motors and 2 circuits;
+  a drone takes a frame, 2 aluminium and a robot; a satellite takes a drone, 2 jewelry and 2
+  rocket fuel. Batteries need circuits, motors need batteries, so one chain feeds the next.
+- The old dead ends are ingredients now: crates pack toys, toys are robot bodies, jewelry is a
+  satellite part. Only the satellite is sold and used in nothing.
+- A tier opens by delivering goods as well as by earning: lifetime sales at depots of specific
+  items (`deliver` in the tier), so a tier means running the chain before it, not only earning.
+  Deliveries are lifetime totals, so old saves' history counts toward them.
+- Small parts are worth so little that a contract for them would be thousands of units, so the
+  contract board only offers an item while an order for it stays a sane size.
 
-Steps 2 and 3 break existing saves.
+Numbers, as the balance tool checks them: tier incomes $8, 42, 190, 884, 4.5K, 18.4K, 34.7K and
+93.8K per second, against $8, 39, 199, 721, 4.97K, 16.2K, 24.3K and 77.5K before. A full run is
+about 1 day 11 hours (was 2 days 1 hour). Deliveries cost at most a minute beyond earning.
+
+Steps 2 and 3 break existing saves. Loading one never drops a building: only unknown recipes and
+buildings are dropped, and a machine whose chosen recipe is gone runs automatically.
 
 ### 4. More content
 
@@ -121,4 +136,4 @@ without losing a building; see the Land section of the architecture notes.
 
 ## Open questions
 
-- Which of steps 2 to 4 to start.
+- Step 4 (more content): which products and tiers to add on top of the tree.

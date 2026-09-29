@@ -83,17 +83,24 @@ public sealed partial class Simulation
     /// <summary>
     /// A fresh order: a processed item the player can make at their tier (recent tiers are
     /// likelier), sized to roughly a minute of current income, due in 6 to 12 minutes, paying
-    /// about twice its market value on top of the sales.
+    /// about twice its market value on top of the sales. Small parts (screws, rods) are worth so
+    /// little that a minute of income would be thousands of them, so an item is only offered while
+    /// an order for it stays a sane size; the parts come back as orders while income is small.
     /// </summary>
     private Contract? NewContract()
     {
         var board = World.Contracts;
+        double income = Math.Max(0.5, World.Stats.IncomePerSecond().ToDouble());
         var candidates = Content.ItemValue
             .Where(kv => kv.Value.Tier <= World.UnlockedTier && !Content.Items[kv.Key].Raw && kv.Value.Value > 0)
             .Where(kv => board.Open.TrueForAll(c => c.Item != kv.Key))
             .OrderBy(kv => kv.Key, StringComparer.Ordinal)
             .ToList();
         if (candidates.Count == 0) return null;
+
+        // A minute and a half of income is the biggest an order gets; keep the items it would not overshoot.
+        var sane = candidates.Where(c => income * 90 / c.Value.Value <= NiceSteps[^1]).ToList();
+        candidates = sane.Count > 0 ? sane : new() { candidates.OrderByDescending(c => c.Value.Value).First() };
 
         double Weight(int tier) => tier == World.UnlockedTier ? 3 : tier == World.UnlockedTier - 1 ? 2 : 1;
         double pick = World.Rng.NextDouble() * candidates.Sum(c => Weight(c.Value.Tier));
@@ -108,10 +115,8 @@ public sealed partial class Simulation
             }
         }
 
-        double income = Math.Max(0.5, World.Stats.IncomePerSecond().ToDouble());
         double wanted = income * (45 + 45 * World.Rng.NextDouble()) / info.Value;
         long quantity = NiceSteps.LastOrDefault(n => n <= wanted, 5);
-        if (wanted > NiceSteps[^1]) quantity = (long)(Math.Round(wanted / 500) * 500);
         int minutes = 6 + World.Rng.NextInt(7);
         double bonus = 2 + 0.5 * World.Rng.NextDouble();
         return new Contract

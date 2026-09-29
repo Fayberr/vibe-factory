@@ -160,13 +160,30 @@ public sealed class BuildLimit
         Base + PerTier * (Math.Max(0, unlockedTier - def.Tier) / Math.Max(1, Every));
 }
 
-/// <summary>A progression tier: unlocking it costs money, needs lifetime earnings, and unlocks buildings and limits.</summary>
+/// <summary>
+/// A progression tier: unlocking it costs money, needs lifetime earnings and a delivery of
+/// specific items, and unlocks buildings and limits.
+/// </summary>
 public sealed class TierDef
 {
     public string Name { get; init; } = "";
     public string Description { get; init; } = "";
     public BigNum Cost { get; init; }
     public BigNum RequiredEarnings { get; init; }
+
+    /// <summary>
+    /// Items that must have been sold at depots over the whole game (not spent: lifetime totals
+    /// from the sales statistics) before the tier can be unlocked. They ask for goods the previous
+    /// tiers make, so a tier opens once the factory before it really runs, not only once it has
+    /// earned enough. Empty = no delivery needed.
+    /// </summary>
+    public ItemAmount[] Deliver { get; init; } = Array.Empty<ItemAmount>();
+
+    /// <summary>How many units of <paramref name="need"/> the player has sold so far.</summary>
+    public static long SoldOf(StatsTracker stats, ItemAmount need) => stats.Sold.GetValueOrDefault(need.Item);
+
+    /// <summary>Whether every delivery this tier asks for has been made.</summary>
+    public bool DeliveriesMet(StatsTracker stats) => Deliver.All(need => SoldOf(stats, need) >= need.Count);
 }
 
 /// <summary>

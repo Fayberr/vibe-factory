@@ -311,6 +311,12 @@ public sealed partial class Simulation
         {
             if (World.Stats.TotalEarned < tier.RequiredEarnings)
                 return CommandResult.Fail($"Earn {tier.RequiredEarnings.Format()} in total first ({World.Stats.TotalEarned.Format()} so far)");
+            foreach (var need in tier.Deliver)
+            {
+                long sold = TierDef.SoldOf(World.Stats, need);
+                if (sold < need.Count)
+                    return CommandResult.Fail($"Sell {need.Count} {Content.Items[need.Item].Name} first ({sold} so far)");
+            }
             if (World.Money < tier.Cost) return CommandResult.Fail($"Need {tier.Cost.Format()} (have {World.Money.Format()})");
             World.Money -= tier.Cost;
         }

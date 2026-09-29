@@ -24,16 +24,16 @@ public class MachineAndEconomyTests
     }
 
     [Fact]
-    public void Workshop_merges_ingredients_and_combines_value()
+    public void Blast_furnace_merges_ingredients_and_combines_value()
     {
         var sim = TestUtil.NewSim();
         Samples.DemoLayout.Build(sim);
         sim.Step(20 * 60);
 
-        var crates = sim.DrainEvents().OfType<ItemSold>().Where(s => s.Item == "crate").ToList();
-        Assert.NotEmpty(crates);
-        // plank = log 1.5 × 1.8 / 2 = 1.35, plate = ore 1 × 2 × 1.5 = 3 → crate = (2 × 1.35 + 3) × 2.
-        Assert.All(crates, s => Assert.Equal(11.4, s.Payout.ToDouble() / s.Count, 9));
+        var beams = sim.DrainEvents().OfType<ItemSold>().Where(s => s.Item == "steel").ToList();
+        Assert.NotEmpty(beams);
+        // ingot = ore 1 × 2 = 2, coal = 1 → steel = (2 + 1) × 2.5.
+        Assert.All(beams, s => Assert.Equal(7.5, s.Payout.ToDouble() / s.Count, 9));
     }
 
     [Fact]

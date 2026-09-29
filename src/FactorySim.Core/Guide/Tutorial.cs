@@ -41,7 +41,7 @@ public static class Tutorial
             "Drag a belt across another belt line and it bridges over it by itself. {height_up} and {height_down} change the build height by hand; the ladder next to the hotbar shows it.",
             Focus: "height"),
         new("progress", "Grow your factory",
-            "Earn $750 in total to unlock the Workshop tier: copper, wood, presses and polishers, and more drills. Press {progress} to see your progress. Your factory will also need room: while you build, every plot you do not own shows its price on the ground; click one next to yours to buy it.",
+            "Earn $750 in total to unlock the Workshop tier: copper, wood, presses and polishers, and more drills. Later tiers also ask you to sell the goods the tier before makes, so an early tier means running a full chain, not only earning. Press {progress} to see what the next tier wants. Your factory will also need room: while you build, every plot you do not own shows its price on the ground; click one next to yours to buy it.",
             Focus: "progress"),
         new("done", "You're ready",
             "Tip: machines that can make several things let you choose in their Manage window. You can reopen this tutorial from the Game menu ({game_menu})."),

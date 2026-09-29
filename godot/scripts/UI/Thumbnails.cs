@@ -97,8 +97,8 @@ public partial class Thumbnails : Node
                 MaterialOverride = new StandardMaterial3D
                 {
                     AlbedoColor = Palette.Parse(item.Meta.GetValueOrDefault("color"), Colors.Magenta),
-                    Roughness = shape is "ingot" or "coil" or "motor" or "gem" ? 0.35f : 0.75f,
-                    Metallic = shape is "ingot" or "coil" or "motor" ? 0.45f : 0f,
+                    Roughness = ItemMeshes.Shiny(shape) ? 0.35f : 0.75f,
+                    Metallic = ItemMeshes.Shiny(shape) ? 0.45f : 0f,
                 },
                 Rotation = new Vector3(0, 0.5f, 0),
             };

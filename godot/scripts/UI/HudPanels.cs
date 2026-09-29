@@ -250,6 +250,8 @@ public sealed class ProgressPanel
     private readonly Label _nextInfo = Ui.Label("", 13, UiTheme.Muted);
     private readonly ProgressBar _earned = new() { CustomMinimumSize = new Vector2(0, 8), ShowPercentage = false, MaxValue = 1 };
     private readonly Label _earnedText = Ui.Label("", 12, UiTheme.Muted);
+    private readonly Label _deliver = Ui.Label("", 12);
+    private readonly Label _deliverTitle = Ui.Label("TO DELIVER", 11, UiTheme.Muted);
     private readonly Button _unlock;
     private readonly Label _limits = Ui.Label("", 13);
     private readonly Label _land = Ui.Label("", 13);
@@ -270,6 +272,9 @@ public sealed class ProgressPanel
         _nextBox.AddChild(_nextInfo);
         _nextBox.AddChild(_earned);
         _nextBox.AddChild(_earnedText);
+        _deliverTitle.Visible = false;
+        _nextBox.AddChild(_deliverTitle);
+        _nextBox.AddChild(_deliver);
         _unlock = Ui.TextButton("", unlock);
         _unlock.CustomMinimumSize = new Vector2(0, 40);
         _nextBox.AddChild(_unlock);
@@ -312,8 +317,26 @@ public sealed class ProgressPanel
             _earnedText.Text = $"Lifetime earnings ${world.Stats.TotalEarned.Format()} / ${next.RequiredEarnings.Format()}";
             bool earned = world.Sandbox || have >= need;
             bool afford = world.Sandbox || world.Money >= next.Cost;
-            _unlock.Text = !earned ? $"Earn ${(next.RequiredEarnings - world.Stats.TotalEarned).Format()} more" : $"Unlock for ${next.Cost.Format()}";
-            _unlock.Disabled = !earned || !afford;
+
+            // Goods the tier asks for: sold at depots over the whole game, so past sales count.
+            _deliverTitle.Visible = _deliver.Visible = next.Deliver.Length > 0;
+            var missing = next.Deliver.Where(d => TierDef.SoldOf(world.Stats, d) < d.Count).ToList();
+            if (next.Deliver.Length > 0)
+            {
+                _deliver.Text = string.Join("\n", next.Deliver.Select(d =>
+                {
+                    long sold = TierDef.SoldOf(world.Stats, d);
+                    string name = world.Content.Item(d.Item).Name;
+                    return $"{name}  {Math.Min(sold, d.Count)} / {d.Count}{(sold >= d.Count ? "  done" : "")}";
+                }));
+                _deliver.Modulate = missing.Count == 0 ? UiTheme.Money : Colors.White;
+            }
+
+            bool delivered = world.Sandbox || missing.Count == 0;
+            _unlock.Text = !earned ? $"Earn ${(next.RequiredEarnings - world.Stats.TotalEarned).Format()} more"
+                : !delivered ? $"Deliver {string.Join(" and ", missing.Select(d => $"{d.Count - TierDef.SoldOf(world.Stats, d)} more {world.Content.Item(d.Item).Name}"))}"
+                : $"Unlock for ${next.Cost.Format()}";
+            _unlock.Disabled = !earned || !delivered || !afford;
         }
 
         var lines = world.Content.BuildingList

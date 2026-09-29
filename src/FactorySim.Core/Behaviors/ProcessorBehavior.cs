@@ -65,7 +65,11 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         foreach (var id in p.Recipes)
         {
             Require(content.Recipes.TryGetValue(id, out var r), def, $"unknown recipe '{id}'.");
-            resolved.Add(r!);
+            // A machine buffers at most InputCapacity of each ingredient, so a recipe that asks for more
+            // could never start and the machine would sit full and idle forever.
+            foreach (var input in r!.Inputs)
+                Require(input.Count <= p.InputCapacity, def, $"recipe '{id}' needs {input.Count} {input.Item}, more than its input capacity {p.InputCapacity}.");
+            resolved.Add(r);
         }
         p.ResolvedRecipes = resolved.ToArray();
         p.Ingredients = resolved.SelectMany(r => r.Inputs).Select(i => i.Item).ToHashSet();
@@ -106,11 +110,9 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
 
     private static RecipeDef? PickRecipe(ProcessorParams p, ProcessorState s)
     {
-        if (s.Chosen != null)
-        {
-            var chosen = Array.Find(p.ResolvedRecipes, r => r.Id == s.Chosen);
-            return chosen != null && MaxCrafts(chosen, s) > 0 ? chosen : null;
-        }
+        // A choice that no longer exists (a save from before a recipe was renamed or removed) counts as automatic.
+        if (s.Chosen != null && Array.Find(p.ResolvedRecipes, r => r.Id == s.Chosen) is { } chosen)
+            return MaxCrafts(chosen, s) > 0 ? chosen : null;
         // Stick with the current recipe while it is still possible (avoids thrashing).
         foreach (var r in p.ResolvedRecipes)
             if (r.Id == s.Recipe && MaxCrafts(r, s) > 0) return r;
@@ -197,12 +199,13 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
 
     protected override void Describe(Entity e, ProcessorParams p, ProcessorState s, List<InfoLine> into)
     {
-        into.Add(new InfoLine("Producing", s.Chosen is { } chosen
-            ? string.Join(" + ", Array.Find(p.ResolvedRecipes, r => r.Id == chosen)!.Outputs.Select(o => p.ItemNames[o.Item])) + " (chosen)"
+        var picked = s.Chosen == null ? null : Array.Find(p.ResolvedRecipes, r => r.Id == s.Chosen);
+        into.Add(new InfoLine("Producing", picked != null
+            ? string.Join(" + ", picked.Outputs.Select(o => p.ItemNames[o.Item])) + " (chosen)"
             : "Automatic"));
         foreach (var r in p.ResolvedRecipes)
         {
-            if (s.Chosen != null && r.Id != s.Chosen) continue;
+            if (picked != null && r != picked) continue;
             string ins = string.Join(" + ", r.Inputs.Select(i => $"{i.Count} {p.ItemNames[i.Item]}"));
             string outs = string.Join(" + ", r.Outputs.Select(o => $"{o.Count} {p.ItemNames[o.Item]}"));
             into.Add(new InfoLine("Recipe", $"{ins} → {outs} ({r.Ticks / (Simulation.TicksPerSecond * e.SpeedFactor):0.##}s, ×{r.ValueMultiplier * e.ValueFactor:0.##} value)"));

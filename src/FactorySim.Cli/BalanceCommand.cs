@@ -125,7 +125,7 @@ public static class BalanceCommand
     {
         var estimates = TierPacing.Estimate(content, assumptions);
         var book = RecipeBook.Create(content, assumptions);
-        var table = new Table("Tier", "Name", ">Income/s", ">Setup", ">Next in", ">Total", "Sells", "Idle raw");
+        var table = new Table("Tier", "Name", ">Income/s", ">Setup", ">Next in", ">Total", "Next tier asks for", "Sells", "Idle raw");
         foreach (var e in estimates)
         {
             string sells = string.Join(", ", e.Products.Take(3).Select(p =>
@@ -133,8 +133,12 @@ public static class BalanceCommand
             if (e.Products.Count > 3) sells += $", +{e.Products.Count - 3}";
             string idle = string.Join(", ", e.IdleRaw.Where(kv => kv.Value > 0.005).OrderByDescending(kv => kv.Value)
                 .Select(kv => $"{book.NameOf(kv.Key)} {Percent(kv.Value)}"));
+            string asks = "-";
+            if (e.Tier + 1 < content.Tiers.Count && content.Tiers[e.Tier + 1].Deliver.Length > 0)
+                asks = string.Join(", ", content.Tiers[e.Tier + 1].Deliver.Select(d => $"{d.Count} {book.NameOf(d.Item)}")) +
+                       $" ({Duration(e.DeliverySeconds)})";
             table.Add(e.Tier.ToString(Inv), e.Name, Money(e.IncomePerSecond), Money(e.SetupCost),
-                double.IsNaN(e.Seconds) ? "-" : Duration(e.Seconds), Duration(e.CumulativeSeconds),
+                double.IsNaN(e.Seconds) ? "-" : Duration(e.Seconds), Duration(e.CumulativeSeconds), asks,
                 sells.Length > 0 ? sells : "-", idle.Length > 0 ? idle : "-");
         }
 
@@ -142,6 +146,7 @@ public static class BalanceCommand
         sb.AppendLine("Best factory per tier: every extractor and depot its limits allow, products picked by income.");
         sb.AppendLine("A lower bound: no ramp-up, belt travel, orders, milestone rewards or build time.");
         sb.AppendLine("Belts and mergers are not modelled either, so a flow that needs several belts counts as one.");
+        sb.AppendLine("Next tier asks for = goods to sell before it unlocks, with the fastest they can all be made; it runs alongside earning.");
         return sb.ToString();
     }
 

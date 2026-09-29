@@ -56,12 +56,14 @@ public class BalanceTests
     {
         var chain = ProductionChain.For(Book(tier: 2), "crate");
 
-        Assert.Equal(3, chain.Depth); // ore -> ingot -> plate -> crate, and log -> plank -> crate
-        Assert.Equal(1, chain.RawPerSecond["log"], 9);        // 2 planks per crate, 2 planks per log
-        Assert.Equal(1, chain.RawPerSecond["iron_ore"], 9);   // one plate per crate, one ingot per plate
+        Assert.Equal(4, chain.Depth); // ore -> ingot -> rod -> screw -> crate, and log -> plank -> crate
+        Assert.Equal(2, chain.RawPerSecond["log"], 9);        // 4 planks per crate, 2 planks per log
+        // 2 plates per crate (an ingot each), plus 4 screws: 3 per rod, 2 rods per ingot.
+        Assert.Equal(2 + 4.0 / 3 / 2, chain.RawPerSecond["iron_ore"], 9);
         Assert.Equal(2, chain.RawPerSecond.Count);
         Assert.Equal(1, chain.Steps.Single(s => s.Item == "crate").Rate);
-        Assert.Equal(2, chain.Steps.Single(s => s.Item == "plank").Rate, 9);
+        Assert.Equal(4, chain.Steps.Single(s => s.Item == "plank").Rate, 9);
+        Assert.Equal(4, chain.Steps.Single(s => s.Item == "screw").Rate, 9);
     }
 
     [Fact]
@@ -154,11 +156,11 @@ public class BalanceTests
         var plain = Book(1, PolishMode.None);
         var all = Book(1, PolishMode.EveryStep);
 
-        // Ore, then the ingot, then the plate: 1.5 × 2 × 1.5, then × 1.5 again.
+        // Ore, then the ingot, then the plate: 1.5 × 2 × 1.5, then × 2 × 1.5 again.
         Assert.Equal(2, plain.Sources["iron_ingot"].Value, 9);
         Assert.Equal(4.5, all.Sources["iron_ingot"].Value, 9);
-        Assert.Equal(3, plain.Sources["iron_plate"].Value, 9);
-        Assert.Equal(10.125, all.Sources["iron_plate"].Value, 9);
+        Assert.Equal(4, plain.Sources["iron_plate"].Value, 9);
+        Assert.Equal(13.5, all.Sources["iron_plate"].Value, 9);
 
         // Chains stay proportional: same machines, same belts, more money.
         var a = ProductionChain.For(plain, "iron_plate");
