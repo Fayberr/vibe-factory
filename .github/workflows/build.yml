@@ -133,6 +133,9 @@ jobs:
       - name: Package VibeFactory-Windows.zip
         run: |
           set -euo pipefail
+          # The updater rides along inside the zip, so every download and every update
+          # leaves it in the play folder (it skips itself when it wipes the rest).
+          cp tools/Update-VibeFactory.cmd build/Update-VibeFactory.cmd
           cd build
           zip -qr ../VibeFactory-Windows.zip .
           cd ..
@@ -169,14 +172,19 @@ jobs:
           name: 'Vibe Factory ${{ env.VERSION }} build #${{ github.run_number }} (${{ env.SHORT_SHA }})'
           prerelease: false
           make_latest: true
-          files: VibeFactory-Windows.zip
+          files: |
+            VibeFactory-Windows.zip
+            tools/Update-VibeFactory.cmd
           fail_on_unmatched_files: true
           body: |
             Automated Windows build of Vibe Factory (Godot ${{ env.GODOT_VERSION }} .NET),
             rebuilt on every push.
 
             **Download:** `VibeFactory-Windows.zip` below. Unzip it and run `VibeFactory.exe`.
-            Keep the `.pck` and the `data_*` folder next to the executable.
+            Keep the `.pck` and the `data_*` folder next to the executable. The zip also
+            contains `Update-VibeFactory.cmd`: keep that in the same folder and run it to fetch
+            the newest build, which replaces everything there except the script itself.
+            It is attached below on its own too.
 
             - Version: ${{ env.VERSION }}
             - Branch: `${{ github.ref_name }}`

@@ -82,11 +82,17 @@ A push to `main` rebuilds that release. A push that only touches documentation (
 Actions tab to build one of those commits anyway.
 
 **Updating.** [`tools/Update-VibeFactory.cmd`](tools/Update-VibeFactory.cmd) keeps a folder on the
-newest build. Put it in the folder you play from and double-click it: it downloads the current
-release, replaces everything in that folder except the script itself, and deletes the zip. It does
-not start the game, it refuses to run while the game is open (its files cannot be replaced then),
-and it downloads before it deletes anything, so a failed download leaves the build you have alone.
-Saves are not in that folder (Godot keeps them in its own user folder), so they are never touched.
+newest build, and it ships inside `VibeFactory-Windows.zip`, so unzipping once is enough to have it.
+Keep it in the folder you play from and double-click it: it downloads the current release, replaces
+everything in that folder except the script itself, and deletes the zip. It does not start the game,
+it refuses to run while the game is open (its files cannot be replaced then), and it downloads
+before it deletes anything, so a failed download leaves the build you have alone. Saves are not in
+that folder (Godot keeps them in its own user folder), so they are never touched.
+
+It is also attached to the release on its own as `Update-VibeFactory.cmd`, which downloads as a file.
+Do not fetch it from the repository page: GitHub serves it as plain text there, so a browser shows
+the script instead of saving it, and saving the page that way leaves an empty file that Windows
+cannot run.
 
 **New to it?** A short tutorial walks you through your first factory (drill, belt, smelter,
 depot, first upgrade) the first time you play. Reopen it any time from the Game menu (`G`).
