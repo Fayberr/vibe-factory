@@ -28,7 +28,7 @@ eight tiers, customer orders and 29 goals, and settings in four tabs:
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
 - **Controls:** pan speed, edge panning, inverted zoom, and every key rebindable (click it, press the new one).
-- **Gameplay:** autosave interval, money pop-ups over depots, key hints, order and goal pop-ups, replay the tutorial.
+- **Gameplay:** autosave interval, money pop-ups over depots, key hints, order and goal pop-ups, the away report, replay the tutorial.
 
 ## Repository layout
 
@@ -181,6 +181,11 @@ their choice.
   The Research window (`L`) spends the bank on three bonuses for the whole factory, five levels
   each: drills +5%, market prices +5% and machines +10% a level, each level twice the packs of the
   last. It never gates a tier, and packs sell for exactly their parts and are never ordered.
+- **While you were away.** The factory keeps running while the game is closed (the first ten
+  minutes simulated in full, the rest worked out from them). After a break of two minutes or more,
+  a window shows what it earned, each product's rate and share, and the buildings that sat waiting
+  most of the time and why, each with a Show button that flies there. Status lamps say the same:
+  green working, yellow waiting for input, red with nowhere to put the output.
 - **Raw resources sell for 25%, and every ore is worth the same $1.** An item is worth the
   work in it: what went in times the recipe's multiplier, so processing is what pays, and a
   newer tier builds on the old chains instead of replacing them. Parts feed many recipes
@@ -230,7 +235,8 @@ godot --path godot -- --ui-test
 godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # Screenshot options: --wait=seconds, --view=yaw,pitch,distance,x,z, --select=x,y (opens
 # the Manage window for that cell), --windows (opens Progress and Statistics),
-# --orders (opens Progress and Orders), --research (unlocks Workshop and opens Research), --tutorial (an empty factory at the tutorial's
+# --orders (opens Progress and Orders), --research (unlocks Workshop and opens Research),
+# --away=seconds (simulates that long offline and shows the away report), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).

@@ -300,8 +300,8 @@ of a choice, and the player spends the bank whenever they like in the Research w
   (`PacksForLevel`: `count × costGrowth^level`, rounded up). `Tier` keeps it closed until that tier is
   unlocked, and `Description` is the line the window shows. `BuyUpgrade` checks the tier, the money
   and the packs, then pays both; an upgrade may cost money, packs or both. `ContentRegistry` refuses
-  an upgrade whose tier or pack item does not exist, or a pack count below 1. Offline catch-up does
-  not add packs to the bank.
+  an upgrade whose tier or pack item does not exist, or a pack count below 1. Offline catch-up banks
+  packs like money: what the labs banked while simulated, plus the measured rate for the rest.
 - **Client.** The Research window (`ResearchPanel`, key L, flask button in the sidebar) shows the bank
   and one card per upgrade, all read from the content. The button hides while no upgrade's tier is
   open, and for good when the content has no upgrades. `--research` opens it in the smoke run.
@@ -365,7 +365,31 @@ possible: a server can re-run a submitted command log with the same core.
    absences are exact.
 
 The host supplies the wall-clock gap from the save's `SavedAtUtc`.
-Extrapolated time adds money and lifetime earnings but not per-item sold counts.
+Extrapolated time adds money, lifetime earnings and science packs, but not per-item sold counts.
+
+**The away report** (idea F1) is what `CatchUp` returns besides the money (`OfflineReport`,
+`AwayReport.cs`). It only reads the world, so it never changes the result:
+
+- `Items`: one `AwayItem` per product made or sold. The per minute rates are measured over the
+  settled half (`MeasuredSeconds`); `Earned` is the whole absence, extrapolated at the measured rate
+  like the money. `Rewards` is the rest of `Earned`, order and goal rewards, so the lines add up.
+- `Problems`: `IdleSampler` reads every building's `EntityStatus` every 13 ticks of the measured half
+  (a prime, so it never keeps step with a machine's rhythm) and ranks the groups (building, reason,
+  detail) whose buildings waited at least half the time, by building-time lost, at most six. Each
+  `AwayProblem` names one example building for a "show me" button.
+- `Science`: packs banked per pack item.
+
+Only statuses with an `IdleReason` count. `Starved` is waiting for input ("waiting for Coal", "no
+input", a lab without packs); `Blocked` is output with nowhere to go ("output full", a drill's
+"output blocked", a jammed splitter). An empty belt or a depot with nothing to sell is neither. The
+client colours the status lamp and the Manage window's status by it: green working, yellow starved,
+red blocked (`Ui.StatusColor`).
+
+The client shows the report in a "While you were away" window after loading a factory that was
+closed at least two minutes (`Hud.OnCameBack`, from `SimHost.CameBack`), with a Show button per
+problem that selects the building and flies the camera there. Settings, Gameplay, "Report on what
+happened while you were away" turns it off for the old one line toast. To remove it, drop the
+window from `Hud` and the event from `SimHost`; the report costs nothing if no one reads it.
 
 ### Editing
 

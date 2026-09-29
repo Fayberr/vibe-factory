@@ -75,5 +75,5 @@ public sealed class MinerBehavior : Behavior<MinerParams, MinerState>
     protected override EntityStatus GetStatus(Entity e, MinerParams p, MinerState s) =>
         s.Output == null
             ? new EntityStatus(true, (float)Math.Min(1, s.Work / p.Interval), $"mining {p.ItemName}")
-            : new EntityStatus(false, 1, "output blocked");
+            : new EntityStatus(false, 1, "output blocked", IdleReason.Blocked);
 }

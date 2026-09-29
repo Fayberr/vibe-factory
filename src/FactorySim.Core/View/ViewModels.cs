@@ -13,8 +13,24 @@ public readonly record struct ItemView(ItemStack Item, float Progress, int FromP
 /// <summary>One labelled line of inspector detail ("Recipe", "smelt_iron").</summary>
 public readonly record struct InfoLine(string Label, string Value);
 
-/// <summary>Coarse machine status for UI and effects.</summary>
-public readonly record struct EntityStatus(bool Working, float Progress, string? Detail = null);
+/// <summary>
+/// Coarse machine status for UI and effects. <paramref name="Idle"/> says why a building that is not
+/// working is waiting, so the client can colour it and the away report can rank what held a factory back.
+/// </summary>
+public readonly record struct EntityStatus(bool Working, float Progress, string? Detail = null, IdleReason Idle = IdleReason.None);
+
+/// <summary>Why a building is not working.</summary>
+public enum IdleReason
+{
+    /// <summary>Working, or a building for which waiting is not a problem (an empty belt, a depot).</summary>
+    None,
+
+    /// <summary>Waiting for something to arrive: an input, a pack.</summary>
+    Starved,
+
+    /// <summary>Has something it cannot hand on: a full output, a jammed splitter.</summary>
+    Blocked,
+}
 
 /// <summary>A point in continuous grid space (cell (x,y,z) spans [x,x+1]×[y,y+1]×[z,z+1]).</summary>
 public readonly record struct GridPoint(float X, float Y, float Z)

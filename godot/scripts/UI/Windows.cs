@@ -455,7 +455,7 @@ public sealed class ManageWindow
         if (e.Def.Params is SellerParams) _speed.Set("Price", $"×{e.ValueFactor:0.##}");
         else _speed.Set("Speed", $"×{e.SpeedFactor:0.##}");
         string text = string.IsNullOrEmpty(status.Detail) ? (status.Working ? "Working" : "Idle") : char.ToUpperInvariant(status.Detail[0]) + status.Detail[1..];
-        _status.Set("Status", text, status.Working ? Palette.Ok : status.Detail is "idle" or "empty" ? new Color("#f2c14e") : Palette.Danger);
+        _status.Set("Status", text, Ui.StatusColor(status));
         _progress.Visible = status.Progress > 0;
         _progress.Value = status.Progress;
         e.Behavior.Describe(e, _lines);

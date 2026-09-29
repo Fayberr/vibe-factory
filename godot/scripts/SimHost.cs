@@ -77,6 +77,12 @@ public partial class SimHost : Node
     /// <summary>Human-readable notices (command errors, offline reports).</summary>
     public event Action<string>? Notice;
 
+    /// <summary>
+    /// Raised after a load caught up on the time the game was closed (and by the debug "simulate offline"
+    /// button). The HUD shows the away report, or a short welcome toast.
+    /// </summary>
+    public event Action<OfflineReport>? CameBack;
+
     /// <summary>Something the player tried didn't work (for the error sound).</summary>
     public event Action? Failed;
 
@@ -275,17 +281,11 @@ public partial class SimHost : Node
                 catch (Exception ex) { GD.PushWarning($"Could not restore the backup over the damaged save: {ex.Message}"); }
             }
 
-            string? welcome = null;
+            OfflineReport? cameBack = null;
             if (result.SavedAtUtc is DateTimeOffset savedAt)
             {
                 double away = (DateTimeOffset.UtcNow - savedAt).TotalSeconds;
-                if (away > 5)
-                {
-                    var report = sim.CatchUp(away);
-                    if (!report.Earned.IsZero)
-                        welcome = $"Welcome back! {FormatDuration(away)} offline: earned ${report.Earned.Format()} " +
-                                  $"({report.IncomePerSecond.Format()}/s)";
-                }
+                if (away > 5) cameBack = sim.CatchUp(away);
             }
             var info = ReadSlot(slot);
             Slot = slot;
@@ -293,7 +293,7 @@ public partial class SimHost : Node
             PlaySeconds = info?.PlaySeconds ?? 0;
             Replace(sim);
             if (restored != null) Notice?.Invoke(restored);
-            if (welcome != null) Notice?.Invoke(welcome);
+            if (cameBack != null) CameBack?.Invoke(cameBack);
             return true;
         }
         catch (Exception ex)
@@ -347,6 +347,7 @@ public partial class SimHost : Node
         Notice?.Invoke($"Simulated {FormatDuration(seconds)} offline: +{report.Earned.Format()} " +
                        $"({report.SimulatedTicks} ticks run, {report.ExtrapolatedTicks} extrapolated).");
         TicksAdvanced?.Invoke(1);
+        CameBack?.Invoke(report);
     }
 
     public static string FormatDuration(double seconds) =>

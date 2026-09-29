@@ -101,7 +101,7 @@ public sealed class LabBehavior : Behavior<LabParams, LabState>
     protected override EntityStatus GetStatus(Entity e, LabParams p, LabState s) =>
         Next(s) is { } item
             ? new EntityStatus(true, (float)Math.Min(1, s.Work / p.Interval), $"studying {p.ItemNames.GetValueOrDefault(item, item)}")
-            : new EntityStatus(false, 0, "waiting for packs");
+            : new EntityStatus(false, 0, "waiting for packs", IdleReason.Starved);
 
     /// <summary>A few levels of speed, for players who want more research from one lab.</summary>
     public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>

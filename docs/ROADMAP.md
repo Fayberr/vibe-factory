@@ -271,6 +271,16 @@ and the three `research_*` upgrades) and `ResearchTrialTests.cs`; the Research b
 shows. The numbers to tune are the upgrades' `perLevel`, `maxLevel`, `costGrowth` and `packs`, and
 the lab's `interval`. Details: "Research" in the architecture notes.
 
+### 11. The away report (done)
+
+After loading a factory that was closed at least two minutes, a "While you were away" window shows
+what the offline catch-up found: the money, each product's rate and earnings (plus order and goal
+rewards), packs banked, and the buildings that sat waiting at least half the time, grouped and
+ranked by the time lost, each with a Show button that flies the camera there. Machine statuses now
+say why they wait (starved or blocked, yellow or red lamps), and offline time banks science packs
+like money. It is idea F1; the setting turns it back into the old toast. Details: "Offline
+progress" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): which products and tiers to add on top of the tree.

@@ -31,7 +31,7 @@ Wanted:
 - **Byproducts** (`B1`), and with it `B2` priority outputs and `B3` filters, the tools that make
   byproducts solvable.
 - **Fluids, handled differently from items**: a pipe network, with pumps and tanks (`B9`, `I7`).
-- **The away report** (`F1`).
+- **The away report** (`F1`). Built in 4.2.0, roadmap step 11.
 - **Income by product** (new `F8` below): statistics on what actually makes money and what does not.
 
 Liked but unsure:
@@ -158,7 +158,8 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
 
 - **F1. The away report (M).** On return, show what was produced, what jammed and what starved while
   you were gone. This turns absence into instruction, and offline catch-up already runs. Highest
-  retention value on this page.
+  retention value on this page. *Built in 4.2.0* (roadmap step 11): products with rates and
+  earnings, and the buildings that waited, grouped by reason, each with a Show button.
 - **F2. History graphs (S).** Money, income and the production of a chosen item over time, from a
   ring buffer. Progress you can see.
 - **F3. A bottleneck ranking (M).** "Your five biggest constraints right now", each one clickable to

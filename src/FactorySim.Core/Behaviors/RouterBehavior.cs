@@ -506,13 +506,13 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         {
             if (type == null) continue;
             if (MissingOutput(e, s, type) is var missing && missing >= 0)
-                return new(false, 0, $"{OutputName(e.Def, missing)} has no belt");
+                return new(false, 0, $"{OutputName(e.Def, missing)} has no belt", IdleReason.Blocked);
         }
-        if (jam >= 0) return new(false, 0, $"{OutputName(e.Def, jam)} blocked");
+        if (jam >= 0) return new(false, 0, $"{OutputName(e.Def, jam)} blocked", IdleReason.Blocked);
 
         string stuck = (nothingTakes ? s.NoOutputItem : front) ?? "?";
         string name = p.Items.TryGetValue(stuck, out var item) ? item.Name : stuck;
-        return new(false, 0, $"nothing takes {name}");
+        return new(false, 0, $"nothing takes {name}", IdleReason.Blocked);
     }
 
     protected override void Describe(Entity e, RouterParams p, RouterState s, List<InfoLine> into)

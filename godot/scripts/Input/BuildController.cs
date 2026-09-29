@@ -317,6 +317,17 @@ public partial class BuildController : Node3D
         return result;
     }
 
+    /// <summary>Selects one building and moves the camera to it (the away report's "Show").</summary>
+    public void ShowEntity(int id)
+    {
+        if (World.GetEntity(id) is not { } e) return;
+        SetMode(ToolMode.Select);
+        Selection.Clear();
+        Selection.Add(id);
+        _camera.Focus(GridMapping.CellFloor(e.Pos));
+        Changed?.Invoke();
+    }
+
     public void ClearSelection()
     {
         if (Selection.Count == 0) return;

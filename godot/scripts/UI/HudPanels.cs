@@ -21,6 +21,10 @@ public static class Ui
         return c;
     }
 
+    /// <summary>Lamp and text colour for a status: green working, red blocked, yellow waiting (starved or empty).</summary>
+    public static Color StatusColor(EntityStatus status) =>
+        status.Working ? Palette.Ok : status.Idle == IdleReason.Blocked ? Palette.Danger : Palette.Waiting;
+
     public static Label Label(string text, int size = 15, Color? color = null)
     {
         var l = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };

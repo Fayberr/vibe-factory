@@ -516,6 +516,7 @@ public sealed class SettingsPanel
             Check("Money floating over depots as they sell", () => _s.ShowIncomePopups, v => _s.ShowIncomePopups = v),
             Check("Key hints above the hotbar", () => _s.ShowKeyHints, v => _s.ShowKeyHints = v),
             Check("Pop-ups for orders and goals", () => _s.ShowNotifications, v => _s.ShowNotifications = v),
+            Check("Report on what happened while you were away", () => _s.ShowAwayReport, v => _s.ShowAwayReport = v),
             Header("TUTORIAL"),
             Ui.TextButton("Show the tutorial again next time", () =>
             {

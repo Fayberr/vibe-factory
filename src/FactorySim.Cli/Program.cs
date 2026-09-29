@@ -68,6 +68,11 @@ static void RunDemo(ContentRegistry content)
     Console.WriteLine("== Offline for 8 hours ==");
     Console.WriteLine($"  simulated {report.SimulatedTicks} ticks, extrapolated {report.ExtrapolatedTicks} ticks");
     Console.WriteLine($"  earned {report.Earned.Format()} at {report.IncomePerSecond.Format()}/s");
+    foreach (var i in report.Items)
+        Console.WriteLine($"  {i.Item,-14} made {i.MadePerMinute,6:0.#}/min  sold {i.SoldPerMinute,6:0.#}/min  earned {i.Earned.Format()}");
+    if (report.Rewards > BigNum.Zero) Console.WriteLine($"  orders and goals earned {report.Rewards.Format()}");
+    foreach (var p in report.Problems)
+        Console.WriteLine($"  waiting: {p.Count}x {p.Building} {p.Reason.ToString().ToLowerInvariant()} ({p.Detail}) {p.IdleShare * 100:0}% of the time, e.g. #{p.ExampleId} at {p.ExamplePos}");
     PrintStats("After catch-up", sim);
 }
 

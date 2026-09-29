@@ -254,8 +254,26 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
     protected override EntityStatus GetStatus(Entity e, ProcessorParams p, ProcessorState s)
     {
         var recipe = s.Recipe == null ? null : Array.Find(p.ResolvedRecipes, r => r.Id == s.Recipe);
-        return recipe == null
-            ? new EntityStatus(false, 0, "idle")
-            : new EntityStatus(true, (float)Math.Min(1, s.Work / recipe.Ticks), $"making {string.Join(" + ", recipe.Outputs.Select(o => p.ItemNames[o.Item]))}");
+        if (recipe == null) return new EntityStatus(false, 0, Missing(p, s), IdleReason.Starved);
+        float progress = (float)Math.Min(1, s.Work / recipe.Ticks);
+        long waiting = 0;
+        foreach (var o in s.Output) waiting += o.Count;
+        // The same test Tick makes before it pauses: a full output is a machine that has stopped.
+        if (waiting >= p.OutputCapacity) return new EntityStatus(false, progress, "output full", IdleReason.Blocked);
+        return new EntityStatus(true, progress, $"making {string.Join(" + ", recipe.Outputs.Select(o => p.ItemNames[o.Item]))}");
+    }
+
+    /// <summary>
+    /// What an idle machine is short of: the chosen recipe's missing inputs, or on automatic those of the
+    /// first recipe it holds part of. "no input" when nothing it uses has arrived at all.
+    /// </summary>
+    private static string Missing(ProcessorParams p, ProcessorState s)
+    {
+        long Have(string item) => s.Inputs.TryGetValue(item, out var buf) ? buf.Count : 0;
+        RecipeDef? recipe = s.Chosen != null ? Array.Find(p.ResolvedRecipes, r => r.Id == s.Chosen) : null;
+        recipe ??= Array.Find(p.ResolvedRecipes, r => r.Inputs.Any(i => Have(i.Item) > 0));
+        if (recipe == null) return "no input";
+        var lacking = recipe.Inputs.Where(i => Have(i.Item) < i.Count).Select(i => p.ItemNames[i.Item]).ToList();
+        return lacking.Count == 0 ? "no input" : "waiting for " + string.Join(" + ", lacking);
     }
 }

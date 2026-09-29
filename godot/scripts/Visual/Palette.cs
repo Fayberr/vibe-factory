@@ -29,6 +29,9 @@ public static class Palette
     public static readonly Color Select = new("#2fb8ff");
     public static readonly Color Danger = new("#ff5a5a");
     public static readonly Color Ok = new("#5de08a");
+
+    /// <summary>A building waiting for something to arrive: worth a look, not an alarm.</summary>
+    public static readonly Color Waiting = new("#f2c14e");
     public static readonly Color Upgrade = new("#ffd257");
 
     /// <summary>Trim colour showing a building's level: none, then bronze, silver, gold, cyan, violet as it climbs.</summary>

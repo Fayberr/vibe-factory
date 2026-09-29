@@ -467,7 +467,7 @@ public partial class WorldView : Node3D
                 v.StatusAge = 0;
                 var status = v.Entity.Behavior.GetStatus(v.Entity);
                 v.Working = status.Working;
-                rig.SetStatus(status.Working ? Palette.Ok : status.Detail == "idle" ? new Color("#f2c14e") : Palette.Danger);
+                rig.SetStatus(Ui.StatusColor(status));
             }
             if (rig.Animated && rig.Root.Visible) rig.Animate(dt * _host.TimeScale, v.Working);
         }

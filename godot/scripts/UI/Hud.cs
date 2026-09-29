@@ -48,9 +48,10 @@ public partial class Hud : CanvasLayer
     private HudWindow _buyWindow = null!;
     private Label _buyText = null!;
     private PlotId _buyPlot;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!;
     private OrdersPanel _orders = null!;
     private ResearchPanel _research = null!;
+    private AwayReportPanel _away = null!;
     private Button _researchButton = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
     private TutorialPanel _tutorial = null!;
@@ -91,6 +92,7 @@ public partial class Hud : CanvasLayer
         _thumbs = thumbs;
         host.Notice += text => _toasts.Show(this, text);
         host.WorldReplaced += OnWorldReplaced;
+        host.CameBack += OnCameBack;
         host.EventRaised += ev =>
         {
             if (ev is EntityPlaced or EntityRemoved) _slotsDirty = true; // build limits changed
@@ -360,6 +362,11 @@ public partial class Hud : CanvasLayer
         _researchWindow.Body.AddChild(_research.Root);
         AddWindow(_researchWindow);
 
+        _away = new AwayReportPanel(id => _tools.ShowEntity(id));
+        _awayWindow = new HudWindow("While you were away", Icon.Clock, 440);
+        _awayWindow.Body.AddChild(_away.Root);
+        AddWindow(_awayWindow);
+
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
         _statsWindow.Body.AddChild(_stats.Root);
@@ -489,6 +496,7 @@ public partial class Hud : CanvasLayer
             : w == _statsWindow ? new Vector2(84 + 350, 70)
             : w == _ordersWindow ? new Vector2(84 + 350 + 320, 70)
             : w == _researchWindow ? new Vector2(84 + 350, 70)
+            : w == _awayWindow ? new Vector2(84, 70) // clear of the toasts at the top centre
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
@@ -551,6 +559,25 @@ public partial class Hud : CanvasLayer
     }
 
     // ---- World / content ------------------------------------------------------
+
+    /// <summary>Absences shorter than this get the toast, not the window.</summary>
+    private const double AwayReportAfterSeconds = 120;
+
+    /// <summary>After a catch-up: the "While you were away" window, or with it turned off (or a short
+    /// absence, or an empty factory) the one line welcome toast.</summary>
+    private void OnCameBack(OfflineReport report)
+    {
+        if (Settings.ShowAwayReport && report.ElapsedSeconds >= AwayReportAfterSeconds && _host.Sim.World.EntityCount > 0)
+        {
+            _away.Fill(report, _host.Content, _thumbs);
+            _awayWindow.Visible = true;
+            _refresh = 0;
+            return;
+        }
+        if (!report.Earned.IsZero)
+            _toasts.Show(this, $"Welcome back! {SimHost.FormatDuration(report.ElapsedSeconds)} offline: earned ${report.Earned.Format()} " +
+                               $"(${report.IncomePerSecond.Format()}/s)");
+    }
 
     private void OnWorldReplaced()
     {
@@ -813,7 +840,8 @@ public partial class Hud : CanvasLayer
         _researchButton.Visible = ResearchPanel.HasResearch(_host.Content) && ResearchPanel.IsOpen(world);
         if (!_researchButton.Visible) _researchWindow.Visible = false;
         if (_researchWindow.Visible) _research.Refresh(_host.Sim, _thumbs);
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow })
+        if (_awayWindow.Visible) _away.Refresh(_thumbs);
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;

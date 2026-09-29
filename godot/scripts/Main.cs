@@ -120,6 +120,12 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = false;
                 hud.ResearchWindow.Visible = true;
             }
+            if (arg.StartsWith("--away="))
+            {
+                // As if the game had been closed this long: the catch-up and its report.
+                double away = double.Parse(arg["--away=".Length..], System.Globalization.CultureInfo.InvariantCulture);
+                GetTree().CreateTimer(Math.Max(0.5, wait - 3)).Timeout += () => host.SimulateOffline(away);
+            }
             if (arg.StartsWith("--tool=") && host.Content.Buildings.TryGetValue(arg["--tool=".Length..], out var toolDef))
                 tools.SelectTool(toolDef); // with the pointer over the world, shows the ghost there
             if (arg.StartsWith("--drag="))

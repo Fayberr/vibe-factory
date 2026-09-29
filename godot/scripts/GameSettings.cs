@@ -63,6 +63,9 @@ public sealed class GameSettings
     /// <summary>Pop-ups for new, finished and missed orders and reached goals.</summary>
     public bool ShowNotifications { get; set; } = true;
 
+    /// <summary>The "While you were away" window after loading a factory that was closed a while; off = a toast.</summary>
+    public bool ShowAwayReport { get; set; } = true;
+
     /// <summary>Rebound keys (action → key name); actions not listed use their default.</summary>
     public Dictionary<string, string> Keys { get; set; } = new();
 
