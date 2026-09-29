@@ -254,9 +254,9 @@ public sealed class ManageWindow
 
     private readonly VBoxContainer _sort = new();
     private readonly GridContainer _sortRows = new() { Columns = 2 };
-    private readonly List<OptionButton> _sortPicks = new();
-    private readonly List<string?> _sortChoices = new();
+    private readonly List<SearchablePicker> _sortPicks = new();
     private string? _sortKey;
+    private string? _sortSelectionKey;
 
     private readonly GridContainer _info = new() { Columns = 2 };
     private readonly Control _infoSection;
@@ -389,11 +389,21 @@ public sealed class ManageWindow
     /// <summary>The choice tile for <paramref name="recipe"/> (null = Automatic), if shown. For scripted tests.</summary>
     public Button? TileFor(string? recipe) => _tileList.FirstOrDefault(t => t.Recipe == recipe).Button;
 
+    /// <summary>The sort-by-item picker for a splitter's output at <paramref name="output"/>, if shown. For scripted tests.</summary>
+    public SearchablePicker? SortPickerFor(int output) => output >= 0 && output < _sortPicks.Count ? _sortPicks[output] : null;
+
     public Button UpgradeButton => _upgradeButton;
 
     public void Show(Simulation sim, IReadOnlyList<Entity> selection, Thumbnails thumbs)
     {
         Window.Visible = selection.Count > 0;
+        // A stale popup must not linger over whatever is shown next.
+        string? selectionKey = selection.Count == 0 ? null : string.Join(",", selection.Select(e => e.Id));
+        if (selectionKey != _sortSelectionKey)
+        {
+            _sortSelectionKey = selectionKey;
+            foreach (var p in _sortPicks) p.Close();
+        }
         if (selection.Count == 0) return;
         var world = sim.World;
         _lines.Clear();
@@ -632,28 +642,26 @@ public sealed class ManageWindow
             .OrderBy(id => content.ItemValue.TryGetValue(id, out var v) ? v.Tier : int.MaxValue).ThenBy(id => content.Items[id].Name, StringComparer.Ordinal)
             .ToList();
         string key = e.Def.Id + "|" + string.Join(",", items);
+        var pinned = new List<SearchablePicker.Entry>
+        {
+            new(null, "Anything", null),
+            new(RouterBehavior.Overflow, "Overflow", null, "Only what the other outputs don't take, or refuse because they are full"),
+        };
+        var itemEntries = items.Select(id => new SearchablePicker.Entry(id, content.Items[id].Name, thumbs.GetItem(id))).ToList();
         if (_sortKey != key)
         {
             _sortKey = key;
             foreach (var child in _sortRows.GetChildren()) child.QueueFree();
+            foreach (var old in _sortPicks) old.Close();
             _sortPicks.Clear();
-            _sortChoices.Clear();
-            _sortChoices.Add(null);
-            _sortChoices.Add(RouterBehavior.Overflow);
-            _sortChoices.AddRange(items);
             for (int i = 0; i < outputs; i++)
             {
                 _sortRows.AddChild(Ui.Label(RouterBehavior.OutputName(e.Def, i), 14, UiTheme.Muted));
-                var pick = new OptionButton { FocusMode = Control.FocusModeEnum.None, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FitToLongestItem = false };
-                pick.AddThemeConstantOverride("icon_max_width", 22);
-                pick.AddItem("Anything");
-                pick.AddItem("Overflow");
-                pick.SetItemTooltip(1, "Only what the other outputs don't take, or refuse because they are full");
-                foreach (var id in items) pick.AddItem(content.Items[id].Name);
-                for (int k = 0; k < pick.ItemCount; k++) pick.GetPopup().SetItemIconMaxWidth(k, 22);
                 int output = i;
-                pick.ItemSelected += index => _filter(output, _sortChoices[(int)index]);
-                _sortRows.AddChild(pick);
+                var pick = new SearchablePicker(choice => _filter(output, choice));
+                pick.SetPinned(pinned);
+                pick.SetItems(itemEntries);
+                _sortRows.AddChild(pick.Button);
                 _sortPicks.Add(pick);
             }
         }
@@ -662,11 +670,10 @@ public sealed class ManageWindow
         {
             var pick = _sortPicks[i];
             var rules = selection.Select(x => x.Behavior.Filters(x) is { } f && i < f.Count ? f[i] : null).Distinct().ToList();
-            int selected = rules.Count == 1 ? _sortChoices.IndexOf(rules[0]) : -1; // -1: mixed
-            if (pick.Selected != selected) pick.Selected = selected;
+            bool mixed = rules.Count != 1;
+            pick.SetSelected(mixed ? null : rules[0], mixed);
             // Icons may arrive after the list was built.
-            for (int k = 2; k < _sortChoices.Count; k++)
-                if (pick.GetItemIcon(k) == null && thumbs.GetItem(_sortChoices[k]!) is { } tex) pick.SetItemIcon(k, tex);
+            pick.RefreshIcons(thumbs.GetItem);
         }
     }
 

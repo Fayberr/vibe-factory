@@ -257,6 +257,17 @@ public partial class UiScenario : Node
         await Key(Godot.Key.I);
         Check(!Menus.PauseVisible && !Hud.ProgressWindow.Visible && !Hud.StatsWindow.Visible, "Esc resumes; P and I close their windows");
 
+        // 12b. Splitter sort picker: a searchable, bounded list instead of a long item dropdown.
+        await Focus(14, 8);
+        Tools.SelectTool(w.Content.Buildings["splitter"]);
+        await Click(Cell(14, 8));
+        await Key(Godot.Key.Escape);
+        await Click(Cell(14, 8));
+        await Frames(12);
+        Check(Hud.Manage.SortPickerFor(0) != null && SearchablePicker.VisibleRows == 10,
+            "the splitter's sort picker exists and caps its visible rows at 10");
+        await Key(Godot.Key.Escape);
+
         // 13. Menus, as a normal (non-sandbox) game sees them: locked tiers, limits.
         Host.Sim.World.Sandbox = false;
         await Key(Godot.Key.B);
