@@ -17,6 +17,7 @@ public enum ToolMode
     Delete,
     Move,
     Paste,
+    Land,
 }
 
 /// <summary>
@@ -28,6 +29,7 @@ public enum ToolMode
 ///  • Upgrade: click or drag a box to raise building levels; Shift-click upgrades a whole line.
 ///  • Delete:  click or drag a box.
 ///  • Move / Paste: a blueprint follows the cursor; R rotates it; click to drop.
+///  • Land:    plots you can buy glow; click one to buy it (price grows with distance from the start).
 /// Height: everything is built at the current build height (0 = ground, the lowest there is).
 /// Q/E, PageDown/PageUp or Shift+wheel change it; ramps carry it along (a ramp up leaves you
 /// one level higher). Tab hides everything above it. All edits go through the undo history.
@@ -47,6 +49,7 @@ public partial class BuildController : Node3D
     private Vector2 _mouse;
     private bool _overWorld;
     private GridPos? _hoverCell;
+    private PlotId? _hoverPlot;
     private Entity? _hoverEntity;
 
     private bool _lmbDown, _dragging;
@@ -178,6 +181,8 @@ public partial class BuildController : Node3D
         _dragging = false;
         _lmbDown = false;
         _view.ShowGrid(mode is ToolMode.Build or ToolMode.Move or ToolMode.Paste);
+        _hoverPlot = null;
+        _view.SetLandMode(mode == ToolMode.Land);
         Changed?.Invoke();
     }
 
@@ -486,6 +491,7 @@ public partial class BuildController : Node3D
                 : Keybinds.Is(key, "upgrade") ? UpgradeKey
                 : Keybinds.Is(key, "hide_above") ? ToggleHideAbove
                 : Keybinds.Is(key, "delete_tool") ? () => SetMode(Mode == ToolMode.Delete ? ToolMode.Select : ToolMode.Delete)
+                : Keybinds.Is(key, "land_tool") ? () => SetMode(Mode == ToolMode.Land ? ToolMode.Select : ToolMode.Land)
                 : Keybinds.Is(key, "select_tool") ? () => SetMode(ToolMode.Select)
                 : Keybinds.Is(key, "move") ? BeginMove
                 : Keybinds.Is(key, "copy") ? () => CopySelection(enterPaste: true)
@@ -588,6 +594,9 @@ public partial class BuildController : Node3D
                     : Input.IsKeyPressed(Key.Shift) ? ConnectedLine(_hoverEntity)
                     : new List<Entity> { _hoverEntity };
                 if (toUpgrade.Count > 0) UpgradeEntities(toUpgrade);
+                break;
+            case ToolMode.Land:
+                if (!wasDrag) BuyHoveredPlot();
                 break;
             case ToolMode.Delete:
                 var targets = wasDrag ? EntitiesInBox() : _hoverEntity != null ? new List<Entity> { _hoverEntity } : new List<Entity>();
@@ -732,7 +741,9 @@ public partial class BuildController : Node3D
         if (!_overWorld)
         {
             _hoverCell = null;
+            _hoverPlot = null;
             _hoverEntity = null;
+            if (Mode == ToolMode.Land) _view.SetHoverPlot(null);
             return;
         }
         var cam = _camera.Camera;
@@ -747,6 +758,28 @@ public partial class BuildController : Node3D
             if (World.Bounds.Contains(cell)) _hoverCell = cell;
         }
         _hoverEntity = _view.Pick(origin, dir);
+
+        // Buying land points at the ground itself, whatever the build height.
+        _hoverPlot = null;
+        if (Mode == ToolMode.Land && new Plane(Vector3.Up, 0).IntersectsRay(origin, dir) is { } ground)
+        {
+            var plot = World.Land.PlotAt(Mathf.FloorToInt(ground.X), Mathf.FloorToInt(ground.Z));
+            if (World.Land.OnMap(plot)) _hoverPlot = plot;
+        }
+        if (Mode == ToolMode.Land) _view.SetHoverPlot(_hoverPlot);
+    }
+
+    /// <summary>Buys the plot under the cursor (the price and the "next to your land" rule are the simulation's).</summary>
+    private void BuyHoveredPlot()
+    {
+        if (_hoverPlot is not { } plot) return;
+        if (World.Sandbox)
+        {
+            Notice("Sandbox: the whole map is already yours");
+            return;
+        }
+        var price = World.Land.PriceOf(plot);
+        if (_host.Execute(new BuyPlot(plot.Column, plot.Row)).Ok) Notice($"Bought {plot} for ${price.Format()}");
     }
 
     private void UpdatePreview()
@@ -770,13 +803,17 @@ public partial class BuildController : Node3D
                 {
                     if (!World.Content.Buildings.TryGetValue(defId, out var def)) continue;
                     bool ok = Entity.CellsFor(def, pos, facing).All(c =>
-                        World.Bounds.Contains(c) && (World.EntityAt(c) is not { } o || (moving != null && moving.Contains(o.Id))));
+                        World.CellProblem(c) == null && (World.EntityAt(c) is not { } o || (moving != null && moving.Contains(o.Id))));
                     allOk &= ok;
                     _specs.Add(new GhostSpec(def, pos, facing, ModelFactory.ShapeFromPorts(def), ok));
                 }
                 CursorInfo = !allOk ? ("Blocked: find a free spot", false)
                     : Mode == ToolMode.Paste ? ($"Paste {_floating.Count}  ${_floating.Cost(World.Content).Format()}{AtHeight()}", true)
                     : ($"Move {_floating.Count} here{AtHeight()}", true);
+                break;
+
+            case ToolMode.Land when _hoverPlot is { } plot:
+                CursorInfo = LandInfo(plot);
                 break;
 
             case ToolMode.Upgrade when !_dragging && _hoverEntity is { } up:
@@ -936,6 +973,18 @@ public partial class BuildController : Node3D
         foreach (var (id, h) in want) _view.SetHighlight(id, h);
         _applied.Clear();
         foreach (var kv in want) _applied[kv.Key] = kv.Value;
+    }
+
+    private (string Text, bool Ok) LandInfo(PlotId plot)
+    {
+        var land = World.Land;
+        if (World.Sandbox) return ("Sandbox: the whole map is yours", false);
+        if (land.Owns(plot)) return ($"{plot}: yours", false);
+        var price = land.PriceOf(plot);
+        if (land.WhyNot(plot) is { } why) return ($"{plot} ${price.Format()}: {why}", false);
+        return World.Money >= price
+            ? ($"Buy {plot} for ${price.Format()}", true)
+            : ($"{plot} costs ${price.Format()} (have ${World.Money.Format()})", false);
     }
 
     private bool Report(CommandResult r)

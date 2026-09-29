@@ -32,6 +32,7 @@ public static class Keybinds
         new("move", "Move selection", Key.M, "Building"),
         new("copy", "Copy and paste", Key.C, "Building"),
         new("select_tool", "Select tool", Key.V, "Building"),
+        new("land_tool", "Buy land", Key.L, "Building"),
 
         new("build_menu", "Build menu", Key.B, "Windows"),
         new("progress", "Progress", Key.P, "Windows"),

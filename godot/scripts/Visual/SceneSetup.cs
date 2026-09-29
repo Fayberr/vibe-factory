@@ -47,9 +47,14 @@ public static class SceneSetup
         });
     }
 
-    /// <summary>Grass ground with the plot tinted, a concrete kerb around it, and a shader grid.</summary>
-    public static ShaderMaterial AddGround(Node3D parent, GridBounds bounds)
+    /// <summary>
+    /// Grass ground with the map laid out on it: your plots are bright, land you do not own is dull, plots
+    /// you can buy glow gold in buy mode, the outer ring of cells is blue (depots work there), and a
+    /// concrete kerb runs around the whole map. Ownership reaches the shader as one texel per plot.
+    /// </summary>
+    public static ShaderMaterial AddGround(Node3D parent, World world)
     {
+        var land = world.Land;
         var noise = new NoiseTexture2D
         {
             Width = 512,
@@ -59,25 +64,42 @@ public static class SceneSetup
         };
         var material = new ShaderMaterial { Shader = new Shader { Code = Shaders.Ground } };
         material.SetShaderParameter("noise_tex", noise);
-        material.SetShaderParameter("plot_rect", new Vector4(bounds.Min.X, bounds.Min.Y, bounds.Max.X + 1, bounds.Max.Y + 1));
+        material.SetShaderParameter("plots", OwnershipTexture(world));
+        material.SetShaderParameter("map_rect", new Vector4(0, 0, land.Width, land.Height));
+        material.SetShaderParameter("plot_grid", new Vector2(land.Columns, land.Rows));
+        material.SetShaderParameter("plot_size", (float)land.PlotSize);
         parent.AddChild(new MeshInstance3D
         {
             Name = "Ground",
             Mesh = new PlaneMesh { Size = new Vector2(600, 600) },
             MaterialOverride = material,
-            Position = new Vector3(bounds.Min.X + 16, -0.001f, bounds.Min.Y + 16),
+            Position = new Vector3(land.Width / 2f, -0.001f, land.Height / 2f),
         });
 
-        // Kerb around the buildable plot.
+        // Kerb around the whole map.
         var mb = new MeshBuilder();
         var kerb = Palette.Solid(Palette.Concrete, 0.9f);
-        float x0 = bounds.Min.X, z0 = bounds.Min.Y, x1 = bounds.Max.X + 1, z1 = bounds.Max.Y + 1, w = 0.35f, h = 0.05f;
+        float x0 = 0, z0 = 0, x1 = land.Width, z1 = land.Height, w = 0.35f, h = 0.05f;
         mb.Box(kerb, new Vector3((x0 + x1) / 2, h / 2, z0 - w / 2), new Vector3(x1 - x0 + 2 * w, h, w), 0.015f);
         mb.Box(kerb, new Vector3((x0 + x1) / 2, h / 2, z1 + w / 2), new Vector3(x1 - x0 + 2 * w, h, w), 0.015f);
         mb.Box(kerb, new Vector3(x0 - w / 2, h / 2, (z0 + z1) / 2), new Vector3(w, h, z1 - z0), 0.015f);
         mb.Box(kerb, new Vector3(x1 + w / 2, h / 2, (z0 + z1) / 2), new Vector3(w, h, z1 - z0), 0.015f);
         parent.AddChild(new MeshInstance3D { Name = "Kerb", Mesh = mb.Commit() });
         return material;
+    }
+
+    /// <summary>One texel per plot: red when it is yours (everything in sandbox), green when you can buy it now.</summary>
+    private static ImageTexture OwnershipTexture(World world)
+    {
+        var land = world.Land;
+        var image = Image.CreateEmpty(land.Columns, land.Rows, false, Image.Format.Rgba8);
+        foreach (var plot in land.All())
+        {
+            bool owned = world.Sandbox || land.Owns(plot);
+            bool buyable = !world.Sandbox && land.WhyNot(plot) == null;
+            image.SetPixel(plot.Column, plot.Row, new Color(owned ? 1 : 0, buyable ? 1 : 0, 0, 1));
+        }
+        return ImageTexture.CreateFromImage(image);
     }
 
     /// <summary>Translucent grid plane shown when building on a layer other than the ground.</summary>

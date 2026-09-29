@@ -136,6 +136,9 @@ public partial class AudioManager : Node
                 case TierUnlocked:
                     Play("tier_unlocked");
                     break;
+                case PlotBought:
+                    Play("upgrade");
+                    break;
                 case ContractCompleted:
                     Play("contract_done");
                     break;

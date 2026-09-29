@@ -101,9 +101,9 @@ public partial class Hud : CanvasLayer
                     _toasts.Show(this, $"Goal reached: {m.Name}, +${m.Reward.Format()}");
                     return;
             }
+            if (ev is PlotBought) return; // the tool says so itself; a bought plot is not news to whoever clicked
             if (ev is not TierUnlocked t) return;
-            var b = host.Sim.World.Bounds;
-            _toasts.Show(this, $"Tier {t.Tier} unlocked: {t.Name}! Plot is now {b.Max.X - b.Min.X + 1}×{b.Max.Y - b.Min.Y + 1}, new buildings in the build menu.");
+            _toasts.Show(this, $"Tier {t.Tier} unlocked: {t.Name}! New buildings are in the build menu.");
             RefreshHotbar();
         };
         tools.Changed += () =>
@@ -180,6 +180,8 @@ public partial class Hud : CanvasLayer
         Keyed(_toolButtons[ToolMode.Move], () => $"Move selection ({K("move")})");
         Tool(ToolMode.Paste, Icon.Copy, "", () => _tools.CopySelection(enterPaste: true));
         Keyed(_toolButtons[ToolMode.Paste], () => $"Copy selection & paste ({K("copy")})\nCtrl+C / Ctrl+V / Ctrl+X");
+        Tool(ToolMode.Land, Icon.Land, "", () => _tools.SetMode(_tools.Mode == ToolMode.Land ? ToolMode.Select : ToolMode.Land));
+        Keyed(_toolButtons[ToolMode.Land], () => $"Buy land ({K("land_tool")})\nClick a glowing plot next to your land.\nFurther from the start costs more.");
         bar.AddChild(new VSeparator());
         _undo = Ui.IconButton(Icon.Undo, "Undo (Ctrl+Z)", () => _tools.Undo());
         _redo = Ui.IconButton(Icon.Redo, "Redo (Ctrl+Y)", () => _tools.Redo());
@@ -452,7 +454,7 @@ public partial class Hud : CanvasLayer
             ("Shift+wheel", "Build height"), (K("hide_above"), "Hide above build height"),
             (K("pick"), "Pick hovered building"), (K("upgrade"), "Upgrade tool / selection"),
             ($"Shift+LMB ({K("upgrade")})", "Upgrade whole belt line"), (K("delete_tool"), "Delete tool"),
-            ("Del", "Delete selection"), (K("move"), "Move selection"),
+            (K("land_tool"), "Buy land (plots next to yours)"), ("Del", "Delete selection"), (K("move"), "Move selection"),
             (K("copy"), "Copy & paste selection"), ("Ctrl+C / V / X", "Copy / paste / cut"),
             ("Ctrl+Z / Y", "Undo / redo"), ("Ctrl+A", "Select all"),
             ("Esc / RMB click", "Cancel tool"), ($"{K("pan_forward")}{K("pan_left")}{K("pan_back")}{K("pan_right")}, arrows", "Pan (Shift = fast)"),
@@ -699,8 +701,9 @@ public partial class Hud : CanvasLayer
             ToolMode.Delete => H(("LMB", "Delete"), ("Drag", "Delete area"), ("Ctrl+Z", "Undo"), ("Esc", "Cancel")),
             ToolMode.Move => H(("LMB", "Drop here"), (K("rotate"), "Rotate"), (UpDown, "Up/down"), ("Esc", "Cancel")),
             ToolMode.Paste => H(("LMB", "Paste"), (K("rotate"), "Rotate"), (UpDown, "Height"), ("Esc", "Done")),
+            ToolMode.Land => H(("LMB", "Buy plot"), (K("land_tool"), "Done"), ("Esc", "Cancel")),
             _ when _tools.Selection.Count > 0 => H((K("upgrade"), "Upgrade"), (K("rotate"), "Rotate"), (K("move"), "Move"), (K("copy"), "Copy"), ("Del", "Delete"), ("Shift+LMB", "Add"), ("Esc", "Deselect")),
-            _ => H(("1-0", "Hotbar"), (K("build_menu"), "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), (K("upgrade"), "Upgrade"), (K("delete_tool"), "Delete"), (K("progress"), "Progress"), (K("help"), "Help")),
+            _ => H(("1-0", "Hotbar"), (K("build_menu"), "Build menu"), ("LMB", "Select"), ("Drag", "Box select"), (K("upgrade"), "Upgrade"), (K("delete_tool"), "Delete"), (K("land_tool"), "Land"), (K("progress"), "Progress"), (K("help"), "Help")),
         };
     }
 

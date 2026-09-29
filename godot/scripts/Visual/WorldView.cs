@@ -54,6 +54,10 @@ public partial class WorldView : Node3D
     private Node3D _entities = null!;
     private ShaderMaterial _ground = null!;
     private MeshInstance3D _layerGrid = null!;
+    private Node3D? _landLabels;
+    private readonly Dictionary<PlotId, (Label3D Label, BigNum Price)> _plotLabels = new();
+    private bool _landMode;
+    private double _landRefresh;
     private int _layer;
     private bool _cutaway;
     private float _gridTarget, _grid;
@@ -220,19 +224,75 @@ public partial class WorldView : Node3D
         SnapshotItems();
     }
 
-    /// <summary>Ground, kerb and height grid for the current plot (it grows with every tier).</summary>
+    /// <summary>Ground, kerb, height grid and plot price labels for the whole map (redone when land is bought).</summary>
     private void RebuildGround()
     {
         foreach (var child in GetChildren())
-            if (child.Name == "Ground" || child.Name == "Kerb" || child.Name == "LayerGrid")
+            if (child.Name == "Ground" || child.Name == "Kerb" || child.Name == "LayerGrid" || child.Name == "LandLabels")
             {
                 RemoveChild(child);
                 child.QueueFree();
             }
-        _ground = SceneSetup.AddGround(this, World.Bounds);
+        _ground = SceneSetup.AddGround(this, World);
         _layerGrid = SceneSetup.AddLayerGrid(this, World.Bounds);
         _ground.SetShaderParameter("grid_strength", _grid);
+        _ground.SetShaderParameter("land_mode", _landMode ? 1f : 0f);
+        BuildLandLabels();
         SetLayer(_layer, _cutaway);
+    }
+
+    /// <summary>Buy mode: plots you can buy glow and every plot you do not own shows its price.</summary>
+    public void SetLandMode(bool on)
+    {
+        _landMode = on;
+        _ground?.SetShaderParameter("land_mode", on ? 1f : 0f);
+        if (_landLabels != null) _landLabels.Visible = on;
+        if (!on) SetHoverPlot(null);
+        else RefreshLandLabels();
+    }
+
+    /// <summary>The plot under the cursor in buy mode (highlighted), or null.</summary>
+    public void SetHoverPlot(PlotId? plot) =>
+        _ground?.SetShaderParameter("hover_plot", plot is { } p ? new Vector2(p.Column, p.Row) : new Vector2(-1, -1));
+
+    private void BuildLandLabels()
+    {
+        _plotLabels.Clear();
+        _landLabels = new Node3D { Name = "LandLabels", Visible = _landMode };
+        AddChild(_landLabels);
+        var land = World.Land;
+        if (World.Sandbox) return; // everything is yours, nothing to buy
+        foreach (var plot in land.All())
+        {
+            if (land.Owns(plot)) continue;
+            var cells = land.CellsOf(plot);
+            var label = new Label3D
+            {
+                Text = "$" + land.PriceOf(plot).Format(),
+                FontSize = 64,
+                PixelSize = 0.03f,
+                OutlineSize = 14,
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+                NoDepthTest = true,
+                Position = new Vector3((cells.MinX + cells.MaxX + 1) / 2f, 0.6f, (cells.MinY + cells.MaxY + 1) / 2f),
+            };
+            _landLabels.AddChild(label);
+            _plotLabels[plot] = (label, land.PriceOf(plot));
+        }
+        RefreshLandLabels();
+    }
+
+    /// <summary>Colours the price labels: green when you can afford the plot, red when not, grey when it is not next to your land yet.</summary>
+    private void RefreshLandLabels()
+    {
+        var land = World.Land;
+        foreach (var (plot, (label, price)) in _plotLabels)
+        {
+            var colour = land.WhyNot(plot) != null ? new Color("#9aa7b4")
+                : World.Money >= price ? new Color("#7dffb0") : new Color("#ff8a80");
+            label.Modulate = colour;
+            label.OutlineModulate = new Color(0.05f, 0.08f, 0.12f, 0.95f);
+        }
     }
 
     private void OnSimEvent(SimEvent ev)
@@ -254,7 +314,7 @@ public partial class WorldView : Node3D
             case EntityLevelChanged l:
                 _dirty.Add(l.EntityId);
                 break;
-            case TierUnlocked:
+            case PlotBought:
                 RebuildGround();
                 break;
             case ItemSold s:
@@ -422,6 +482,11 @@ public partial class WorldView : Node3D
 
         _grid = Mathf.MoveToward(_grid, _gridTarget, dt * 4f);
         _ground?.SetShaderParameter("grid_strength", _grid);
+        if (_landMode && (_landRefresh -= delta) <= 0)
+        {
+            _landRefresh = 0.25;
+            RefreshLandLabels();
+        }
 
         _incomeTimer += delta;
         if (_incomeTimer > 0.7)

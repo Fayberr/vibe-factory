@@ -57,10 +57,14 @@ public partial class Main : Node3D
         else flow.ShowTitle();
     }
 
-    /// <summary>Centre of the built area, or of the plot's first 16×16 cells when empty.</summary>
+    /// <summary>Centre of the built area, or of the starting plot when the world is empty.</summary>
     internal static Vector3 FocusPoint(World world)
     {
-        if (world.EntityCount == 0) return new Vector3(world.Bounds.Min.X + 16, 0, world.Bounds.Min.Y + 16);
+        if (world.EntityCount == 0)
+        {
+            var start = world.Land.CellsOf(world.Land.Start);
+            return new Vector3((start.MinX + start.MaxX + 1) / 2f, 0, (start.MinY + start.MaxY + 1) / 2f);
+        }
         var sum = Vector3.Zero;
         foreach (var e in world.Entities) sum += GridMapping.CellFloor(e.Pos);
         return sum / world.EntityCount;
@@ -108,6 +112,7 @@ public partial class Main : Node3D
                 hud.ProgressWindow.Visible = true;
                 hud.OrdersWindow.Visible = true;
             }
+            if (arg == "--land") tools.SetMode(ToolMode.Land); // the buy-land overlay, for screenshots
             if (arg.StartsWith("--tool=") && host.Content.Buildings.TryGetValue(arg["--tool=".Length..], out var toolDef))
                 tools.SelectTool(toolDef); // with the pointer over the world, shows the ghost there
             if (arg.StartsWith("--drag="))

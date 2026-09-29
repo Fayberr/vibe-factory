@@ -252,6 +252,7 @@ public sealed class ProgressPanel
     private readonly Label _earnedText = Ui.Label("", 12, UiTheme.Muted);
     private readonly Button _unlock;
     private readonly Label _limits = Ui.Label("", 13);
+    private readonly Label _land = Ui.Label("", 13);
     private readonly VBoxContainer _nextBox = new();
     private readonly Label _goalsTitle = Ui.Label("", 11, UiTheme.Muted);
     private readonly VBoxContainer _goals = new();
@@ -275,6 +276,11 @@ public sealed class ProgressPanel
         body.AddChild(_nextBox);
 
         body.AddChild(new HSeparator());
+        body.AddChild(Ui.Label("LAND", 11, UiTheme.Muted));
+        _land.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _land.CustomMinimumSize = new Vector2(300, 0);
+        body.AddChild(_land);
+        body.AddChild(new HSeparator());
         body.AddChild(Ui.Label("BUILD LIMITS", 11, UiTheme.Muted));
         body.AddChild(_limits);
         body.AddChild(Ui.Label("Upgrades are per building: select one and press U.", 12, UiTheme.Muted));
@@ -291,7 +297,8 @@ public sealed class ProgressPanel
         var world = sim.World;
         var tiers = world.Content.Tiers;
         int t = world.UnlockedTier;
-        _current.Text = $"Tier {t} · {tiers[t].Name} · plot {world.Bounds.Max.X - world.Bounds.Min.X + 1}×{world.Bounds.Max.Y - world.Bounds.Min.Y + 1}";
+        _current.Text = $"Tier {t} · {tiers[t].Name}";
+        _land.Text = LandText(world);
 
         _nextBox.Visible = t + 1 < tiers.Count;
         if (t + 1 < tiers.Count)
@@ -299,7 +306,7 @@ public sealed class ProgressPanel
             var next = tiers[t + 1];
             var unlocks = world.Content.BuildingList.Where(b => b.Tier == t + 1).Select(b => b.Name);
             _nextName.Text = $"{t + 1} · {next.Name}";
-            _nextInfo.Text = $"{next.Description}\nUnlocks: {string.Join(", ", unlocks)}\nPlot grows to {next.PlotSize}×{next.PlotSize}, build limits rise.";
+            _nextInfo.Text = $"{next.Description}\nUnlocks: {string.Join(", ", unlocks)}\nBuild limits rise.";
             double need = next.RequiredEarnings.ToDouble(), have = world.Stats.TotalEarned.ToDouble();
             _earned.Value = need <= 0 ? 1 : Math.Min(1, have / need);
             _earnedText.Text = $"Lifetime earnings ${world.Stats.TotalEarned.Format()} / ${next.RequiredEarnings.Format()}";
@@ -314,6 +321,15 @@ public sealed class ProgressPanel
             .Select(b => $"{b.Name,-16} {Ui.LimitText(world, b)}");
         _limits.Text = string.Join("\n", lines);
         RefreshGoals(sim);
+    }
+
+    private static string LandText(World world)
+    {
+        var land = world.Land;
+        if (world.Sandbox) return "Sandbox: the whole map is yours.";
+        string owned = $"{land.OwnedCount} of {land.Count} plots are yours.";
+        if (land.Buyable().Select(p => (PlotId?)p).FirstOrDefault() is not { } next) return owned + " That is the whole map.";
+        return $"{owned} The next one costs ${land.PriceOf(next).Format()}. Press {Keybinds.Name("land_tool")} to buy land; the further from your start, the more it costs.";
     }
 
     /// <summary>The next few milestones with their progress and reward.</summary>

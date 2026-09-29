@@ -147,7 +147,7 @@ public partial class CameraRig : Node3D
     {
         var before = GroundUnder(screen);
         float old = _distanceTarget;
-        _distanceTarget = Mathf.Clamp(_distanceTarget * factor, 5f, 80f);
+        _distanceTarget = Mathf.Clamp(_distanceTarget * factor, 5f, 120f);
         if (before is { } p) _focusTarget += (p - _focusTarget) with { Y = 0 } * (1 - _distanceTarget / old);
     }
 

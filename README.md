@@ -60,12 +60,14 @@ dotnet test                                   # core test suite
 dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, stats, save/load, offline catch-up
 dotnet run --project "src/FactorySim.Cli" -- balance        # economy report over the content file
 dotnet run --project "src/FactorySim.Cli" -- balance item robot  # what one robot needs, ore to depot
+dotnet run --project "src/FactorySim.Cli" -- balance land   # what each ring of plots costs and when you can afford it
 ```
 
 **Balance tool.** `balance` is a calculator over `base.json`: `balance tiers` estimates how long
 each tier takes, `balance items` lists what everything is worth and what uses it, and
 `balance item <name> [rate]` breaks down one production line (machines, ores per second, build
-cost, payback). Options: `--level N` (every building at level N), `--polish none|products|all`,
+cost, payback), and `balance land` prices the map's plots against income (which tier can afford
+each ring, and how many minutes of income it is). Options: `--level N` (every building at level N), `--polish none|products|all`,
 `--tier N` (what is unlocked), `--pack extra.json` (repeatable). It reads content only, so it can
 check a balance change before it ships.
 
@@ -101,6 +103,7 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `Tab` | Hide everything above the build height |
 | `U` | Upgrade the selection, or open the upgrade tool (click, drag a box, `Shift`-click a whole belt line) |
 | `X` | Delete tool (click or drag a box) · `Del` deletes the selection |
+| `L` | Buy land: plots you can buy glow gold with their price, click one to buy it |
 | `M` | Move the selection (keeps items on belts; `E`/`Q` lifts or lowers it) |
 | `C` · `Ctrl+C` / `Ctrl+V` / `Ctrl+X` | Copy & paste selection · copy / paste / cut |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo (a dragged line is one step) |
@@ -132,7 +135,7 @@ their choice.
 
 - **Tiers.** Eight tiers (Basics, Workshop, Industry, Petrochemicals, Electronics,
   Robotics, Aerospace, Space). Each needs lifetime earnings plus a price, unlocks new
-  extractors and machines, grows the plot and raises build limits. The factory card
+  extractors and machines and raises build limits. The factory card
   always shows the next goal; `P` opens the details. The late game adds bauxite,
   aluminium, drones, rocket fuel and satellites, and ends at a launch complex.
 - **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
@@ -153,13 +156,21 @@ their choice.
   passes it by 1.5, once per item, paid only when the item is sold. Machines value their
   inputs at the plain rate, so polishing an ingredient is wasted: put it right before the
   depot. Raw ore keeps its 25% cut, so polished ore still sells for 1.5× that.
+- **Land.** The map is a fixed 5 x 5 grid of plots, each 15 x 15 cells (75 x 75). Everyone starts
+  with the one plot at the bottom middle and buys the rest (`L`, then click a glowing plot).
+  A plot must share an edge with land you own, never just a corner. The price depends on how far
+  the plot is from your starting plot, not on how many you own: the three plots next to the start
+  cost the same ($2.5K), and every step further out costs eight times more, up to $82M in the far
+  corners. You can only build on your own land; the blue rim around the whole map is where
+  depots and export terminals work, so a plot on the map's edge is worth more than its size.
+  Sandbox owns the whole map for free.
 - **Build limits.** Extractors and depots are capped per tier (for example 4 iron drills
   at the start and 2 more with every tier). Belts and machines are unlimited,
   but logistics is not free: a belt tile costs $10, a ramp $25, a splitter or merger $200.
 - **Depots are the bottleneck.** A Market Depot costs $50, takes items in through one side
   only (the blue side, under its green canopy) and there are few of them: 2 at the start,
   one more every second tier. So instead of a depot per drill, you merge lines into them.
-  **Depots stand on the edge of the map**, with that input facing your factory: goods leave
+  **Depots stand on the edge of the map** (the blue rim), with that input facing your factory: goods leave
   at the rim, and the belts that reach it are the factory's arteries. Placed at the end of a
   belt, a depot turns by itself to take that belt in, which is the way it should face anyway.
   Export Terminals (double price) follow the same rule.
@@ -167,7 +178,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (143)
+dotnet test                                                     # core and save-file tests (194)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit
@@ -188,6 +199,7 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).
+# --land (the buy-land overlay).
 ```
 
 ## Continuous integration and downloads

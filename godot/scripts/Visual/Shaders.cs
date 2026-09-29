@@ -31,7 +31,15 @@ public static class Shaders
         uniform vec3 grass_a : source_color = vec3(0.30, 0.55, 0.22);
         uniform vec3 grass_b : source_color = vec3(0.43, 0.69, 0.30);
         uniform vec3 plot_tint : source_color = vec3(1.06, 1.06, 1.0);
-        uniform vec4 plot_rect = vec4(0.0, 0.0, 32.0, 32.0);
+        uniform vec3 buy_tint : source_color = vec3(1.0, 0.78, 0.25);
+        uniform vec3 rim_tint : source_color = vec3(0.25, 0.62, 1.0);
+        // One texel per plot: r = owned, g = can be bought right now.
+        uniform sampler2D plots : filter_nearest, repeat_disable;
+        uniform vec4 map_rect = vec4(0.0, 0.0, 75.0, 75.0);
+        uniform vec2 plot_grid = vec2(5.0, 5.0);
+        uniform float plot_size = 15.0;
+        uniform vec2 hover_plot = vec2(-1.0, -1.0);
+        uniform float land_mode = 0.0;
         uniform float grid_strength = 0.0;
         uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
         varying vec3 wpos;
@@ -42,11 +50,37 @@ public static class Shaders
             vec3 c = mix(grass_a, grass_b, smoothstep(0.3, 0.7, n));
             c *= 0.86 + 0.26 * d;
             vec2 p = wpos.xz;
-            float inside = step(plot_rect.x, p.x) * step(plot_rect.y, p.y) * step(p.x, plot_rect.z) * step(p.y, plot_rect.w);
-            c = mix(c, c * plot_tint, inside);
+            float on_map = step(map_rect.x, p.x) * step(map_rect.y, p.y) * step(p.x, map_rect.z) * step(p.y, map_rect.w);
+            vec2 pc = (p - map_rect.xy) / plot_size;
+            vec2 pid = clamp(floor(pc), vec2(0.0), plot_grid - 1.0);
+            vec4 land = texture(plots, (pid + 0.5) / plot_grid);
+            float owned = on_map * land.r;
+            float locked = on_map * (1.0 - land.r);
+            float buyable = on_map * land.g * (1.0 - land.r);
+
+            // Land you do not own yet is dull and grey; yours is a little brighter.
+            float luma = dot(c, vec3(0.30, 0.59, 0.11));
+            c = mix(c, vec3(luma) * 0.78, locked * 0.55);
+            c = mix(c, c * plot_tint, owned);
+            // Buy mode: plots you can buy are gold, the one under the cursor glows.
+            c = mix(c, buy_tint * (0.75 + 0.25 * d), buyable * land_mode * 0.42);
+            float hovered = on_map * step(abs(pid.x - hover_plot.x), 0.5) * step(abs(pid.y - hover_plot.y), 0.5);
+            c = mix(c, c * 1.25 + vec3(0.10, 0.08, 0.02), hovered * land_mode * 0.7);
+
+            // Plot borders: faint always, clear in buy mode.
+            vec2 f = fract(pc);
+            float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) * plot_size;
+            float border = (1.0 - smoothstep(0.06, 0.16, edge)) * on_map;
+            c = mix(c, vec3(0.94, 0.97, 0.86), border * mix(0.10, 0.55, land_mode));
+
+            // The outermost ring of cells is where depots and export terminals work.
+            float to_edge = min(min(p.x - map_rect.x, map_rect.z - p.x), min(p.y - map_rect.y, map_rect.w - p.y));
+            float rim = on_map * (1.0 - smoothstep(0.9, 1.0, to_edge));
+            c = mix(c, rim_tint, rim * mix(0.22, 0.42, owned));
+
             vec2 g = abs(fract(p) - 0.5);
             float line = smoothstep(0.475, 0.5, max(g.x, g.y));
-            c = mix(c, vec3(0.95, 1.0, 0.9), line * grid_strength * inside * 0.22);
+            c = mix(c, vec3(0.95, 1.0, 0.9), line * grid_strength * owned * 0.22);
             ALBEDO = c;
             ROUGHNESS = 0.96;
             SPECULAR = 0.12;

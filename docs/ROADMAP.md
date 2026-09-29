@@ -97,21 +97,28 @@ Two follow-ups from looking at the game after step 1:
 
 ### 6. Depots on the map edge (done)
 
-Market depots and export terminals sit on the boundary of the plot, with their one input facing
+Market depots and export terminals sit on the boundary of the map, with their one input facing
 inward, so goods leave at the rim and the belts that reach it become the map's arteries. It is a
-content flag (`"placement": "plotEdge"` on the building), checked when something is placed, turned
+content flag (`"placement": "mapEdge"` on the building), checked when something is placed, turned
 or moved, and deliberately not checked when a save is loaded: a depot the player already paid for
 is never thrown away because a rule changed. Sandbox (free building) ignores it.
 
 The example factory was rebuilt to match: each of its three lines now ends with a belt run to the
-rim, turning north into a depot that faces off the plot. A test builds the example with the rule
+rim, turning south into a depot that faces off the map. A test builds the example with the rule
 on, so the reference factory cannot drift into being illegal.
+
+### 7. The map is a grid of plots you buy (done)
+
+The map is a fixed 5 x 5 grid of 15 x 15 plots. Everyone starts with the plot at the bottom middle
+and buys the rest, one plot at a time, only where it shares an edge with land they own. Price
+grows with distance from the start plot (not with how many are owned), so the three neighbours
+cost the same and the far corners are an endgame goal. The outer rim of the whole map is where
+depots and export terminals work, which replaced the earlier plot that grew with every tier.
+Tiers still unlock buildings and raise build limits, but no longer change the size of the world.
+
+`balance land` shows the price rings against income. Saves from before the land are migrated
+without losing a building; see the Land section of the architecture notes.
 
 ## Open questions
 
-- **Starting plot size.** The plot is 24 x 24 at the start and grows with tiers. Fabian wants to
-  try starting smaller (15 x 15 or 20 x 20) and letting players buy more space, which also makes
-  the first depot a much shorter run. That is a change to how the map grows, not to this rule:
-  the rule is written against whatever the plot is, and depots that end up inland when the plot
-  grows keep working.
 - Which of steps 2 to 4 to start.

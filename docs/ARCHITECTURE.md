@@ -38,8 +38,26 @@ Rules that keep it decoupled:
 
 `GridPos(X, Y, Z)`: X east, Y south, Z up. Z = 0 is the ground plate and the lowest
 level (`GridBounds.Min.Z` is 0, and saves from older versions are clamped to it).
-The grid is sparse (a dictionary), so its size costs nothing. `GridBounds` limits
-the buildable plot; every tier grows it (`TierDef.PlotSize`).
+The grid is sparse (a dictionary), so its size costs nothing. `World.Bounds` is the
+whole map (`Land.Bounds`): a fixed grid of plots, `MapDef` in `base.json` (15-cell plots,
+5 columns by 5 rows, start plot bottom middle, base price and growth per ring).
+
+### Land
+
+`Land` (`World.Land`) is the ownership layer on that map: a set of owned `PlotId`s (column,
+row), always containing the start plot. Only owned cells can be built on (`World.OwnsCell`,
+`World.CellProblem` say why not); sandbox owns everything without changing the set. `BuyPlot`
+is the command and `PlotBought` the event. A plot can be bought when it shares an edge with an
+owned plot (`Land.Touches`, `Land.WhyNot`). Its price is `PlotPrice * PriceGrowth^(d-1)`, where
+`d` is the Manhattan distance in plots from the start plot (`Land.PriceOf`), so it never depends
+on how much land is owned. `Land.Buyable()` lists what can be bought, cheapest first. Belt
+routing only runs over owned cells. `LandPacing` (Balance) prices the rings against income for
+`balance land`.
+
+The saved land (`LandSave`: plot size and owned plots, save version 2) is restored plot by plot.
+Loading never drops a building: a plot under any saved building is owned, and a map too small
+for an old save grows to fit it. Version 1 saves (before plots) own every plot their old
+buildable area touched, which can leave owned plots apart from the start plot.
 
 A building def has a **footprint** (local cells, facing north) and **ports**. A
 port is an `in`/`out` on a *side* of a *footprint cell*. An output on side S of
@@ -109,7 +127,7 @@ underneath. Lifts and multi-level machines use the same mechanism.
   several levels atomically and is undoable; removing a building refunds everything
   invested in it; blueprints keep levels and charge for them.
 - **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings plus
-  a price (`UnlockTier`), and grow the plot. `limit` (base, plus `perTier` for every
+  a price (`UnlockTier`). `limit` (base, plus `perTier` for every
   `every` tiers after the building's own) caps extractors and depots; placement, paste
   and undo all check it. Depots have a single input, which makes them the bottleneck.
 - **Choices.** `SelectRecipe` sets what a machine makes (null = automatic): it then only
@@ -188,7 +206,7 @@ Extrapolated time adds money and lifetime earnings but not per-item sold counts.
   never downgrading pricier pieces, keeping a replaced building's direction, the
   anchor height for ramps (a ramp down placed on the ground stands on it), turning a
   single-input building (a depot) toward the belt that feeds its cell (`FaceFeeder`),
-  **routing** (`Route`, in `BuildPlanner.Routing.cs`: A* over the plot for the fewest cells,
+  **routing** (`Route`, in `BuildPlanner.Routing.cs`: A* over your land for the fewest cells,
   then the fewest turns; it goes around buildings, bridges perpendicular belt lines as one
   macro step (ramp up, deck, ramp down, straight on), avoids cells other buildings output
   into, and starts from an output or ends in an input when the drag starts or ends on a
