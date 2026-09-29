@@ -75,6 +75,11 @@ check a balance change before it ships.
 [latest release](https://github.com/Fayberr/vibe-factory/releases/latest), direct link:
 [VibeFactory-Windows.zip](https://github.com/Fayberr/vibe-factory/releases/latest/download/VibeFactory-Windows.zip).
 
+A push to `main` rebuilds that release. A push that only touches documentation (`docs/`, any `.md`,
+`LICENSE`, `.gitignore`) does not, since there is no client to build. Run the
+[workflow](https://github.com/Fayberr/vibe-factory/actions/workflows/build.yml) by hand from the
+Actions tab to build one of those commits anyway.
+
 **New to it?** A short tutorial walks you through your first factory (drill, belt, smelter,
 depot, first upgrade) the first time you play. Reopen it any time from the Game menu (`G`).
 
