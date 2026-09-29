@@ -74,6 +74,10 @@ public sealed class HudWindow
         };
     }
 
+    /// <summary>The part of the body that is actually on screen, for hit tests that must not count
+    /// content scrolled out of view.</summary>
+    public Rect2 ViewRect => _scroll.GetGlobalRect();
+
     /// <summary>Room left for the body: the screen height minus the title bar and a margin.</summary>
     private void FitHeight()
     {
@@ -233,8 +237,6 @@ public sealed class ManageWindow
     private readonly GridContainer _tiles = new() { Columns = 4 };
     private readonly List<(string? Recipe, Button Button, TextureRect Image, TextureRect Extra, Label Name)> _tileList = new();
     private string? _tilesKey;
-    private string? _hoverRecipe;
-    private bool _hovering;
 
     private readonly TextureRect _itemImage = new()
     {
@@ -491,16 +493,29 @@ public sealed class ManageWindow
         }
         _deselect.Visible = chosen.Any(x => x != null);
 
-        // Details: the hovered choice, else the chosen one, else what it is making now.
+        // Details: the tile under the cursor, else the chosen one, else what it is making now.
+        // The hover is read from the tile rects on every refresh instead of being remembered from
+        // MouseEntered/MouseExited: the window changes height as the detail changes, so a tile can
+        // slide out from under a still cursor without Godot sending an exit, and a remembered flag
+        // then goes on previewing a recipe the player is not pointing at. Clipping the tile rect to
+        // the scrolling view keeps a scrolled-away tile from counting. Only a recipe tile previews,
+        // so hovering Automatic keeps showing the machine's own state.
+        var pointer = _tiles.GetGlobalMousePosition();
+        var view = Window.ViewRect;
+        var hover = _tileList.FirstOrDefault(t => t.Recipe != null
+            && t.Button.GetGlobalRect().Intersection(view).HasPoint(pointer));
         var running = (e.State as ProcessorState)?.Recipe;
-        string? shown = _hovering ? _hoverRecipe : common is { } picked && picked != "\0" ? picked : running;
+        string? shown = hover.Button != null ? hover.Recipe : common is { } picked && picked != "\0" ? picked : running;
         var recipe = shown != null ? sim.Content.Recipes[shown] : recipes[0];
         var output = recipe.Outputs[0];
         var item = sim.Content.Items[output.Item];
-        bool auto = !_hovering && common == null;
+        bool auto = hover.Button == null && common == null;
+        // A hovered tile that is not the chosen one is a preview of a recipe the machine would run
+        // if picked, so say so rather than looking like the machine's real setting.
+        bool preview = hover.Button != null && hover.Recipe != common;
         _itemImage.Texture = thumbs.GetItem(item.Id);
         _itemName.Text = string.Join(" + ", recipe.Outputs.Select(o => o.Count > 1 ? $"{sim.Content.Items[o.Item].Name} ×{o.Count}" : sim.Content.Items[o.Item].Name))
-                         + (auto ? "  (automatic)" : "");
+                         + (auto ? "  (automatic)" : preview ? "  (preview)" : "");
         _itemName.TooltipText = recipe.Outputs.Length > 1 ? "Makes all of these from one craft; the craft's value is shared evenly between them." : "";
         SetParts(recipe.Inputs.Select(i => (i.Item, i.Count)).ToList(), sim.Content, thumbs);
         if (recipe.Outputs.Length == 1)
@@ -540,7 +555,6 @@ public sealed class ManageWindow
     {
         if (_tilesKey == key) return;
         _tilesKey = key;
-        _hovering = false;
         foreach (var t in _tileList) t.Button.QueueFree();
         _tileList.Clear();
         foreach (var (recipe, label) in choices)
@@ -595,8 +609,6 @@ public sealed class ManageWindow
             button.AddChild(name);
             var r = recipe;
             button.Pressed += () => _choose(r);
-            button.MouseEntered += () => { _hovering = r != null; _hoverRecipe = r; };
-            button.MouseExited += () => { if (_hoverRecipe == r) _hovering = false; };
             _tiles.AddChild(button);
             _tileList.Add((recipe, button, image, extra, name));
         }
