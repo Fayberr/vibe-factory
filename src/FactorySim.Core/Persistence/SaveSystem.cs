@@ -115,7 +115,9 @@ public static class SaveSystem
                 warnings.Add($"Dropped entity #{es.Id}: unknown building '{es.Def}'.");
                 continue;
             }
-            if (!world.CanPlace(def, es.Pos, es.Facing).Ok)
+            // Placement rules are off here on purpose: a depot built before the rule existed
+            // keeps its spot, and one the player placed in sandbox stays where they put it.
+            if (!world.CanPlace(def, es.Pos, es.Facing, rules: false).Ok)
             {
                 warnings.Add($"Dropped entity #{es.Id} ({es.Def}): footprint no longer fits.");
                 continue;

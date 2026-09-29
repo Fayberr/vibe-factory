@@ -95,6 +95,23 @@ Two follow-ups from looking at the game after step 1:
   ingredient does nothing; the polisher goes at the end of the line. The tool keeps the
   compounding variant as `--polish all`, a what-if for comparing balance changes.
 
+### 6. Depots on the map edge (done)
+
+Market depots and export terminals sit on the boundary of the plot, with their one input facing
+inward, so goods leave at the rim and the belts that reach it become the map's arteries. It is a
+content flag (`"placement": "plotEdge"` on the building), checked when something is placed, turned
+or moved, and deliberately not checked when a save is loaded: a depot the player already paid for
+is never thrown away because a rule changed. Sandbox (free building) ignores it.
+
+The example factory was rebuilt to match: each of its three lines now ends with a belt run to the
+rim, turning north into a depot that faces off the plot. A test builds the example with the rule
+on, so the reference factory cannot drift into being illegal.
+
 ## Open questions
 
-None right now. The next decision is which of steps 2 to 4 to start.
+- **Starting plot size.** The plot is 24 x 24 at the start and grows with tiers. Fabian wants to
+  try starting smaller (15 x 15 or 20 x 20) and letting players buy more space, which also makes
+  the first depot a much shorter run. That is a change to how the map grows, not to this rule:
+  the rule is written against whatever the plot is, and depots that end up inland when the plot
+  grows keep working.
+- Which of steps 2 to 4 to start.

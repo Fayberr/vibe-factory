@@ -124,8 +124,9 @@ public sealed class World
     /// whose group <paramref name="def"/> lists in <see cref="BuildingDef.Replaces"/>.
     /// <paramref name="replaced"/> receives the buildings that would be removed.
     /// </summary>
-    public PlacementCheck CanPlaceReplacing(BuildingDef def, GridPos pos, Dir facing, List<Entity> replaced)
+    public PlacementCheck CanPlaceReplacing(BuildingDef def, GridPos pos, Dir facing, List<Entity> replaced, bool rules = true)
     {
+        if (rules && CheckPlacement(def, pos, facing) is { Ok: false } rule) return rule;
         replaced.Clear();
         foreach (var cell in Entity.CellsFor(def, pos, facing))
         {
@@ -146,8 +147,14 @@ public sealed class World
         return PlacementCheck.Success;
     }
 
-    public PlacementCheck CanPlace(BuildingDef def, GridPos pos, Dir facing, Entity? ignore = null)
+    /// <summary>
+    /// Whether <paramref name="def"/> fits at <paramref name="pos"/>. With <paramref name="rules"/>
+    /// off it checks only the ground, the plot and what already stands there: loading a save does
+    /// that, so a factory built before a rule existed is never thrown away.
+    /// </summary>
+    public PlacementCheck CanPlace(BuildingDef def, GridPos pos, Dir facing, Entity? ignore = null, bool rules = true)
     {
+        if (rules && CheckPlacement(def, pos, facing) is { Ok: false } rule) return rule;
         foreach (var cell in Entity.CellsFor(def, pos, facing))
         {
             if (!Bounds.Contains(cell)) return PlacementCheck.Fail(OutsideReason(cell));
@@ -156,6 +163,34 @@ public sealed class World
         }
         return PlacementCheck.Success;
     }
+
+    /// <summary>True when a cell lies off the plot sideways. Height is ground and sky, not an edge.</summary>
+    public bool OffPlot(GridPos cell) =>
+        cell.X < Bounds.Min.X || cell.X > Bounds.Max.X || cell.Y < Bounds.Min.Y || cell.Y > Bounds.Max.Y;
+
+    /// <summary>
+    /// The extra placement rule of a definition (<see cref="BuildingDef.Placement"/>). "plotEdge"
+    /// wants the building against the boundary of the plot with every input facing inward, so what
+    /// it does looks off the plot. Depots use it: goods leave at the edge of the map, and the belts
+    /// that feed them come from inside. Free building in sandbox ignores it.
+    /// </summary>
+    public PlacementCheck CheckPlacement(BuildingDef def, GridPos pos, Dir facing)
+    {
+        if (Sandbox || def.Placement.Length == 0) return PlacementCheck.Success;
+        if (def.InputPorts.Count == 0) return PlacementCheck.Success;
+        foreach (int port in def.InputPorts)
+        {
+            var p = def.Ports[port];
+            var outward = p.Side.ToWorld(facing).Opposite();
+            if (!OffPlot(pos + p.Cell.Rotate(facing) + outward.Offset()))
+                return PlacementCheck.Fail($"{def.Name} belongs on the edge of the map, taking items from the inside");
+        }
+        return PlacementCheck.Success;
+    }
+
+    /// <summary>Whether this building already obeys its placement rule. One that does not (an old
+    /// save, or one built in sandbox) may still be moved and turned, but must not get worse.</summary>
+    public bool ObeysPlacement(Entity e) => CheckPlacement(e.Def, e.Pos, e.Facing).Ok;
 
     private string OutsideReason(GridPos cell) =>
         cell.Z < Bounds.Min.Z ? "Can't build below the ground"

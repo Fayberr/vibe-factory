@@ -15,7 +15,8 @@
 │  Behaviors ─── conveyor · router · miner · processor · seller  (state on entity)    │
 │  Editing ───── blueprints, batch commands, undo/redo, BuildPlanner (drags, bridges) │
 │  Progression ─ customer orders (contracts), milestones                             │
-│  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes)   │
+│  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes,   │
+│                placement rules)                                                     │
 │  Balance ───── the content as an economy: recipe book, production chains, tier      │
 │                pacing. Calculates only, never runs; used by the CLI's balance report │
 │  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │

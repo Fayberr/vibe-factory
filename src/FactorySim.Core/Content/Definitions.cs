@@ -73,6 +73,14 @@ public sealed class BuildingDef
     public string Group { get; init; } = "";
 
     /// <summary>
+    /// Extra placement rule, "" (anywhere) or "plotEdge": the building must sit against the
+    /// boundary of the buildable plot with its inputs facing inward, so the side opposite every
+    /// input looks off the plot. Depots use it, which puts them around the rim of the map and
+    /// turns the belts that feed them into the map's arteries. Skipped in sandbox.
+    /// </summary>
+    public string Placement { get; init; } = "";
+
+    /// <summary>
     /// Groups this building may be placed over: the occupants are removed (refunded) and this
     /// takes their place. A splitter lists "belt" so it can be dropped into a line; a belt does
     /// not list "machine", so dragging belts never destroys machines.

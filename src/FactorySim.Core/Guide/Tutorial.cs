@@ -29,7 +29,7 @@ public static class Tutorial
             "Raw ore sells for only a quarter of its value. Press 7 and place a Smelter at the end of the belt, facing the same way.",
             w => Fed(w, "smelter"), "slot:smelter"),
         new("depot", "Sell the ingots",
-            "Press 9 and place a Market Depot where the smelter's orange arrow points (or lay a belt to it). A depot takes items in on one side only, the blue one, and turns to face the line you put it on.",
+            "Press 9 and place a Market Depot on the edge of the map, with its blue input side facing your factory, then lay a belt from the smelter out to it. Goods leave at the rim. A depot takes items in on one side only, that blue one, and turns by itself to take in the belt you run to it.",
             w => Fed(w, "seller"), "slot:seller"),
         new("earn", "Earn your first $10",
             "Items now flow from the drill through the smelter into the depot. Watch the money in the bottom left.",

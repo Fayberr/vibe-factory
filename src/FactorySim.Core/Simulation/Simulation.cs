@@ -168,7 +168,9 @@ public sealed partial class Simulation
         var e = World.EntityAt(c.Cell);
         if (e == null) return CommandResult.Fail($"Nothing at {c.Cell}");
         var facing = c.Facing ?? e.Facing.RotateCW();
-        var check = World.CanPlace(e.Def, e.Pos, facing, ignore: e);
+        // A building that already breaks its placement rule (an old save) may still be turned;
+        // one that obeys it must keep obeying it.
+        var check = World.CanPlace(e.Def, e.Pos, facing, ignore: e, rules: World.ObeysPlacement(e));
         if (!check.Ok) return CommandResult.Fail(check.Reason!);
         World.Reorient(e, e.Pos, facing);
         if (Events.Enabled) Events.Add(new EntityReoriented(World.Tick, e.Id, e.Pos, e.Facing));
@@ -242,6 +244,8 @@ public sealed partial class Simulation
         var claimed = new HashSet<GridPos>();
         foreach (var (e, pos, facing) in plan)
         {
+            if (World.ObeysPlacement(e) && World.CheckPlacement(e.Def, pos, facing) is { Ok: false } rule)
+                return CommandResult.Fail(rule.Reason!);
             foreach (var cell in Entity.CellsFor(e.Def, pos, facing))
             {
                 if (!World.Bounds.Contains(cell)) return CommandResult.Fail($"{cell} is outside the plot");

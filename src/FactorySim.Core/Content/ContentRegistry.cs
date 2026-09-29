@@ -160,6 +160,8 @@ public sealed class ContentRegistry
 
             if (b.Tier < 0 || b.Tier >= Tiers.Count)
                 throw new ContentException($"Building '{b.Id}': tier {b.Tier} does not exist (tiers 0..{Tiers.Count - 1}).");
+            if (b.Placement is not ("" or "plotEdge"))
+                throw new ContentException($"Building '{b.Id}': unknown placement rule '{b.Placement}'. Known: plotEdge.");
 
             b.Params = BindParams(b, behavior);
             behavior.Bind(b, this);

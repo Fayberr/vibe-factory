@@ -85,9 +85,9 @@ public class ProgressionTests
     public void Upgrading_a_drill_costs_money_and_speeds_it_up()
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 10_000);
-        sim.Place("iron_miner", 0, 0, 0, Dir.East);
-        sim.Place("seller", 1, 0, 0, Dir.East);
-        var drill = sim.World.EntityAt(new GridPos(0, 0, 0))!;
+        sim.Place("iron_miner", 22, 0, 0, Dir.East);
+        sim.Place("seller", 23, 0, 0, Dir.East); // depots stand on the edge of the plot
+        var drill = sim.World.EntityAt(new GridPos(22, 0, 0))!;
         var track = drill.Def.Upgrade!;
 
         var before = sim.World.Money;
@@ -131,21 +131,22 @@ public class ProgressionTests
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 10_000);
         var history = new EditHistory(sim);
-        sim.Place("seller", 0, 0, 0, Dir.East);
+        var at = new GridPos(23, 0, 0); // on the edge of the plot, where depots belong
+        sim.Place("seller", at.X, at.Y, at.Z, Dir.East);
         var start = sim.World.Money;
 
-        history.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(0, 0, 0), 4) }));
+        history.Execute(new SetBuildingLevels(new[] { new LevelChange(at, 4) }));
         Assert.True(sim.World.Money < start);
         history.Undo();
-        Assert.Equal(1, sim.World.EntityAt(new GridPos(0, 0, 0))!.Level);
+        Assert.Equal(1, sim.World.EntityAt(at)!.Level);
         Assert.Equal(start.ToDouble(), sim.World.Money.ToDouble(), 6);
 
         history.Redo();
-        history.Execute(new RemoveBuildings(new[] { new GridPos(0, 0, 0) }));
+        history.Execute(new RemoveBuildings(new[] { at }));
         var price = sim.Content.Buildings["seller"].Cost;
         Assert.Equal((start + price).ToDouble(), sim.World.Money.ToDouble(), 6); // price + all upgrades back
         history.Undo();
-        Assert.Equal(4, sim.World.EntityAt(new GridPos(0, 0, 0))!.Level);
+        Assert.Equal(4, sim.World.EntityAt(at)!.Level);
     }
 
     [Fact]

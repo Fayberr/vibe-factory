@@ -93,8 +93,10 @@ public class ConveyorTests
 
         var stats = sim.World.Stats;
         string sold = string.Join(", ", stats.Sold.Select(kv => $"{kv.Key}={kv.Value}"));
-        Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 40, sold);  // line A went over the bridge (~11 tiles: ~11 s to the first sale)
-        Assert.True(stats.Sold.GetValueOrDefault("copper_wire") > 50, sold); // line B went under it
+        // Each line now ends with a belt run out to the rim of the plot, where its depot stands,
+        // so the first sale is ~15 tiles in (level 1 belts move 1 tile/s).
+        Assert.True(stats.Sold.GetValueOrDefault("iron_ingot") > 35, sold);  // line A went over the bridge
+        Assert.True(stats.Sold.GetValueOrDefault("copper_wire") > 35, sold); // line B went under it
         Assert.True(stats.Sold.GetValueOrDefault("crate") > 10, sold);       // line C merged planks and plates
         Assert.Equal(0, stats.Sold.GetValueOrDefault("iron_ore"));      // nothing leaked across lines
         Assert.Equal(0, stats.Sold.GetValueOrDefault("copper_ore"));

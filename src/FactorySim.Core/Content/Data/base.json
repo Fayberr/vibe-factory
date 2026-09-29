@@ -333,16 +333,18 @@
       "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 50, "category": "economy", "tier": 0,
       "group": "seller", "replaces": [ "seller", "belt" ],
       "limit": { "base": 2, "perTier": 1, "every": 2 },
+      "placement": "plotEdge",
       "ports": [ { "kind": "in", "side": "back" } ],
-      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered into its one input (the blue side). Depots are few, so merge lines into them. Raw resources fetch only 25%. Upgrade it for better prices." }
+      "meta": { "model": "depot", "accent": "#4ade80", "glyph": "$", "description": "Sells everything delivered into its one input (the blue side). It stands on the edge of the map with that input facing your factory: goods leave at the rim, belts bring them there. Depots are few, so merge lines into them. Raw resources fetch only 25%. Upgrade it for better prices." }
     },
     {
       "id": "export_terminal", "name": "Export Terminal", "behavior": "seller", "cost": 2.5e4, "category": "economy", "tier": 3,
       "group": "seller", "replaces": [ "seller", "belt" ],
       "limit": { "base": 1, "perTier": 1 },
+      "placement": "plotEdge",
       "ports": [ { "kind": "in", "side": "back" } ],
       "params": { "multiplier": 2 },
-      "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price, through one input (the blue side)." }
+      "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price, through one input (the blue side), from the edge of the map like a market depot." }
     }
   ],
 

@@ -159,8 +159,10 @@ their choice.
 - **Depots are the bottleneck.** A Market Depot costs $50, takes items in through one side
   only (the blue side, under its green canopy) and there are few of them: 2 at the start,
   one more every second tier. So instead of a depot per drill, you merge lines into them.
-  Export Terminals (double price) also have a single input. Placed at the end of a belt,
-  a depot turns to face it by itself.
+  **Depots stand on the edge of the map**, with that input facing your factory: goods leave
+  at the rim, and the belts that reach it are the factory's arteries. Placed at the end of a
+  belt, a depot turns by itself to take that belt in, which is the way it should face anyway.
+  Export Terminals (double price) follow the same rule.
 
 ## Testing
 
