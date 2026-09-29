@@ -240,10 +240,9 @@ lives on fayber.dev.
 
 A recipe can make two things from one craft, and a splitter can sort a mixed belt: each output takes
 anything, one item, or the overflow (what the other outputs do not take or refuse because they are
-full). A full output only stalls the items bound for it: while another output is taking items the
-splitter sets them aside (counted, not drawn, up to a million) so items with a free output of their
-own keep leaving, and releases them once their output clears. The lazy way out is one splitter with
-the wanted item on one output and overflow into a depot; no sink building. Filters are a `SetFilter`
+full). A full output stops the splitter rather than the hub storing the surplus, which is his call of
+2026-09-29 (see the Router entry in ARCHITECTURE.md). The lazy way out is one splitter with the
+wanted item on one output and overflow into a depot; no sink building. Filters are a `SetFilter`
 command: undoable, saved, kept by blueprints.
 
 The content is a trial, to see if it is liked: an Oil Refinery can crack crude oil into plastic and

@@ -26,10 +26,7 @@ public class SplitterFilterTests
               "ports": [ { "kind": "out", "side": "front" } ], "params": { "item": "iron_ore", "interval": 1, "amount": 1 } },
             { "id": "test_mixer", "name": "Mixer", "behavior": "processor",
               "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
-              "params": { "recipes": [ "test_plate_and_rod" ], "inputCapacity": 8, "outputCapacity": 8 } },
-            { "id": "test_small_hold_splitter", "name": "Small Splitter", "behavior": "router",
-              "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" }, { "kind": "out", "side": "left" }, { "kind": "out", "side": "right" } ],
-              "params": { "speed": 50, "spacing": 250, "holdLimit": 10 } }
+              "params": { "recipes": [ "test_plate_and_rod" ], "inputCapacity": 8, "outputCapacity": 8 } }
           ]
         }
         """));
@@ -41,13 +38,13 @@ public class SplitterFilterTests
     /// (4,2), left (3,1) and right (3,3) unless <paramref name="front"/>, <paramref name="left"/> or
     /// <paramref name="right"/> say otherwise ("belt" = a one-tile dead end that fills and blocks).
     /// </summary>
-    private static Simulation Sorter(string? front = "seller", string? left = "seller", string? right = "seller", string hub = "splitter")
+    private static Simulation Sorter(string? front = "seller", string? left = "seller", string? right = "seller")
     {
         var sim = TestUtil.NewSim(Content);
         sim.Place("test_fast_drill", 0, 2, 0, Dir.East);
         sim.Place("test_mixer", 1, 2, 0, Dir.East);
         sim.Place("conveyor", 2, 2, 0, Dir.East);
-        sim.Place(hub, Hub.X, Hub.Y, 0, Dir.East);
+        sim.Place("splitter", Hub.X, Hub.Y, 0, Dir.East);
         void Out(string? what, int x, int y, Dir dir)
         {
             if (what == "belt") sim.Place("conveyor", x, y, 0, dir);
@@ -167,223 +164,6 @@ public class SplitterFilterTests
         Assert.Equal(plates, sim.Sold("iron_plate")); // a rod sits at the centre, so nothing passes
         var state = (RouterState)sim.World.EntityAt(Hub)!.State;
         Assert.Contains(state.Items, it => it.Item.Type == "iron_rod");
-    }
-
-    [Fact]
-    public void A_jammed_output_does_not_stall_items_bound_for_a_free_output()
-    {
-        // Front takes plates but its belt is a dead end, so it fills and refuses forever. Left takes
-        // rods and has a seller, so it always has room. Once the front output is jammed, rods must
-        // keep leaving for a while longer (held plates make room), even though the splitter will
-        // eventually run out of room to hold plates and lock up too, same as it does today.
-        var sim = Sorter(front: "belt", left: "seller", right: null);
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        var state = (RouterState)sim.World.EntityAt(Hub)!.State;
-
-        int tick = 0;
-        while (state.Held.Count == 0 && tick < 1000) { sim.Step(1); tick++; }
-        Assert.True(state.Held.Count > 0, "the front output never jammed; the test setup is wrong");
-        long rodsAtFirstJam = sim.Sold("iron_rod");
-
-        sim.Step(500);
-        long rodsAfterHoldingFilled = sim.Sold("iron_rod");
-
-        Assert.True(rodsAfterHoldingFilled > rodsAtFirstJam,
-            "rods bound for the free left output stopped the moment the front output jammed, instead of keeping flowing while the splitter still had room to hold plates");
-    }
-
-    [Fact]
-    public void A_splitter_with_held_items_saves_and_loads_identically()
-    {
-        Simulation Build()
-        {
-            var sim = Sorter(front: "belt", left: "seller", right: null);
-            Filter(sim, Front, "iron_plate");
-            Filter(sim, Left, "iron_rod");
-            return sim;
-        }
-        var uninterrupted = Build();
-        uninterrupted.Step(300);
-        var state = (RouterState)uninterrupted.World.EntityAt(Hub)!.State;
-        Assert.True(state.Held.Count > 0, "test setup did not jam the front output");
-        uninterrupted.Step(200);
-
-        var first = Build();
-        first.Step(300);
-        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(first), Content);
-        Assert.Empty(loaded.Warnings);
-        loaded.Simulation.Step(200);
-
-        Assert.Equal(SaveSystem.Serialize(uninterrupted), SaveSystem.Serialize(loaded.Simulation));
-    }
-
-    [Fact]
-    public void A_long_jam_saves_and_loads_identically()
-    {
-        Simulation Build()
-        {
-            var sim = Sorter(front: "belt", left: "seller", right: null);
-            Filter(sim, Front, "iron_plate");
-            Filter(sim, Left, "iron_rod");
-            return sim;
-        }
-        var uninterrupted = Build();
-        uninterrupted.Step(10000);
-
-        var first = Build();
-        first.Step(5000);
-        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(first), Content);
-        Assert.Empty(loaded.Warnings);
-        loaded.Simulation.Step(5000);
-
-        Assert.Equal(SaveSystem.Serialize(uninterrupted), SaveSystem.Serialize(loaded.Simulation));
-    }
-
-    [Fact]
-    public void A_save_from_version_3_8_1_with_one_entry_per_held_item_loads()
-    {
-        var sim = Sorter(front: "belt", left: "seller", right: null);
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        sim.Step(1000);
-        var hubState = (RouterState)sim.World.EntityAt(Hub)!.State;
-        var held = Assert.Single(hubState.Held);
-
-        // 3.8.1 kept a list of lane items (item, pos, from, to), one per held item and no copy count.
-        string item = System.Text.Json.JsonSerializer.Serialize(held.Item, Json.Options);
-        string oldEntry = $"{{\"item\":{item},\"pos\":1000,\"from\":0,\"to\":{held.To}}}";
-        var node = System.Text.Json.Nodes.JsonNode.Parse(SaveSystem.Serialize(sim))!;
-        foreach (var ent in node["entities"]!.AsArray())
-            if (ent!["state"]?["held"] is System.Text.Json.Nodes.JsonArray arr && arr.Count > 0)
-            {
-                arr.Clear();
-                arr.Add(System.Text.Json.Nodes.JsonNode.Parse(oldEntry));
-                arr.Add(System.Text.Json.Nodes.JsonNode.Parse(oldEntry.Replace($"\"uid\":{held.Item.Uid}", "\"uid\":999999")));
-            }
-        string json = node.ToJsonString();
-        Assert.Contains("\"pos\":1000", json);
-
-        var loaded = SaveSystem.Deserialize(json, Content);
-        Assert.Empty(loaded.Warnings);
-        var hub = loaded.Simulation.World.EntityAt(Hub)!;
-        Assert.Equal("splitter", hub.Def.Id);
-        var state = (RouterState)hub.State;
-        Assert.Equal(2, state.Held.Count);
-        Assert.All(state.Held, h => Assert.Equal(1, h.Copies));
-        loaded.Simulation.Step(1000); // and it runs on, rods still flowing
-        Assert.True(loaded.Simulation.Sold("iron_rod") > sim.Sold("iron_rod"));
-    }
-
-    [Fact]
-    public void A_save_from_before_the_held_field_existed_loads_with_none_held()
-    {
-        var sim = Sorter(front: "belt", left: "seller", right: null);
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        string json = SaveSystem.Serialize(sim).Replace("\"held\":[]", "").Replace(",,", ",");
-        Assert.DoesNotContain("\"held\"", json);
-
-        var loaded = SaveSystem.Deserialize(json, Content);
-        Assert.Empty(loaded.Warnings);
-        var hub = loaded.Simulation.World.EntityAt(Hub)!;
-        Assert.Equal("splitter", hub.Def.Id);
-        Assert.Empty(((RouterState)hub.State).Held);
-    }
-
-    [Fact]
-    public void A_permanently_jammed_output_never_stops_items_bound_for_a_free_output()
-    {
-        // The owner's case: one mixed belt, the plate output is a dead end that stays full for good, the
-        // rod output sells. Rods must keep leaving at their full share for the whole run, not for a few
-        // hundred ticks until some pocket fills up.
-        var sim = Sorter(front: "belt", left: "seller", right: null);
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        sim.Step(1000); // the dead end fills and jams well within this
-
-        var perWindow = new List<long>();
-        for (int w = 0; w < 10; w++)
-        {
-            long before = sim.Sold("iron_rod");
-            sim.Step(1000);
-            perWindow.Add(sim.Sold("iron_rod") - before);
-        }
-
-        // Half of a 4/s belt is 2 rods/s, so 100 per 1000 ticks (50 s), in every window.
-        Assert.True(perWindow.All(n => n >= 95), "rods per 1000 ticks: " + string.Join(", ", perWindow));
-        Assert.Equal(0, sim.Sold("iron_plate"));
-
-        // The plates set aside are identical, so however many there are they take one entry in the save.
-        var state = (RouterState)sim.World.EntityAt(Hub)!.State;
-        var held = Assert.Single(state.Held);
-        Assert.Equal("iron_plate", held.Item.Type);
-        Assert.True(held.Copies > 1000, $"only {held.Copies} plates held");
-    }
-
-    [Fact]
-    public void The_items_set_aside_stop_at_the_hold_limit_and_then_the_splitter_blocks()
-    {
-        var sim = Sorter(front: "belt", left: "seller", right: null, hub: "test_small_hold_splitter");
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        var state = (RouterState)sim.World.EntityAt(Hub)!.State;
-
-        sim.Step(2000);
-        Assert.Equal(10, state.Held.Sum(h => h.Copies));
-        long rods = sim.Sold("iron_rod");
-        sim.Step(8000);
-
-        // Never more than the limit, and past it a plate blocks the belt again, rods included.
-        Assert.Equal(10, state.Held.Sum(h => h.Copies));
-        Assert.Equal(rods, sim.Sold("iron_rod"));
-        Assert.Contains(state.Items, it => it.Item.Type == "iron_plate");
-    }
-
-    [Fact]
-    public void Nothing_is_set_aside_while_every_output_is_full()
-    {
-        // Both outputs are dead ends. Once both fill, holding plates would only swallow the belt, so the
-        // splitter must block and hold the line back, as it always has.
-        var sim = Sorter(front: "belt", left: "belt", right: null);
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        var state = (RouterState)sim.World.EntityAt(Hub)!.State;
-
-        sim.Step(1000);
-        long heldEarly = state.Held.Sum(h => h.Copies);
-        sim.Step(9000);
-
-        Assert.InRange(heldEarly, 0, 8);
-        Assert.Equal(heldEarly, state.Held.Sum(h => h.Copies));
-    }
-
-    [Fact]
-    public void A_plain_splitter_never_sets_items_aside()
-    {
-        var sim = Sorter(front: "belt", left: "belt", right: "belt");
-        sim.Step(3000);
-        Assert.Empty(((RouterState)sim.World.EntityAt(Hub)!.State).Held);
-    }
-
-    [Fact]
-    public void Held_items_leave_in_full_once_their_output_clears()
-    {
-        var sim = Sorter(front: "belt", left: "seller", right: null);
-        Filter(sim, Front, "iron_plate");
-        Filter(sim, Left, "iron_rod");
-        var state = (RouterState)sim.World.EntityAt(Hub)!.State;
-        sim.Step(2000);
-        long held = state.Held.Sum(h => h.Copies);
-        Assert.True(held > 150, $"only {held} plates held");
-
-        // Swap the dead end for a seller: the backlog drains ahead of new plates and nothing is lost.
-        Assert.True(sim.Execute(new RemoveBuilding(FrontDepot)).Ok);
-        sim.Place("seller", FrontDepot.X, FrontDepot.Y, 0, Dir.East);
-        sim.Step(20 * (int)held);
-
-        Assert.Empty(state.Held);
-        Assert.True(sim.Sold("iron_plate") >= held, $"sold {sim.Sold("iron_plate")} of {held} held plates");
     }
 
     // ---- Overflow -----------------------------------------------------------------------
@@ -572,5 +352,74 @@ public class SplitterFilterTests
         var lines = new List<View.InfoLine>();
         hub.Behavior.Describe(hub, lines);
         Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: Iron Plate · Left: anything · Right: overflow");
+    }
+
+    // ---- A full output stops the splitter: back pressure, not a pocket -------------------
+
+    /// <summary>
+    /// The owner's rule, chosen 2026-09-29: a byproduct that cannot leave is an ordinary item, so it
+    /// stops the splitter rather than being set aside somewhere. Plates already at the front of the hub
+    /// leave through their own free output; the rod then sits at the front with its belt full, and the
+    /// whole splitter stops, so the plates behind it stop too. Nothing is stored, which is the point:
+    /// a permanently full tar belt is supposed to hold the line back, not be hidden by a pocket.
+    /// </summary>
+    [Fact]
+    public void A_full_filtered_output_stops_the_splitter_and_stores_nothing()
+    {
+        var sim = Sorter(left: "belt"); // a one tile dead end fills, then refuses everything
+        Filter(sim, Left, "iron_rod");
+        sim.Step(600); // the dead end fills, then a rod reaches the front of the hub
+
+        long plates = sim.Sold("iron_plate");
+        var hub = sim.World.EntityAt(Hub)!;
+        var state = (RouterState)hub.State;
+        Assert.Contains(state.Items, it => it.Item.Type == "iron_rod"); // the rod is in the lane, not in a pocket
+
+        sim.Step(4000);
+
+        Assert.True(plates > 0, "the plates at the front never left at all, so the setup is wrong");
+        Assert.Equal(plates, sim.Sold("iron_plate")); // and from there the line is stopped, free output or not
+        Assert.Equal(0, sim.Sold("iron_rod"));
+        Assert.Contains(((RouterState)hub.State).Items, it => it.Item.Type == "iron_rod"); // still sitting there
+        var lines = new List<View.InfoLine>();
+        hub.Behavior.Describe(hub, lines);
+        Assert.DoesNotContain(lines, l => l.Label == "Held"); // nothing is set aside, so nothing to report
+    }
+
+    /// <summary>
+    /// 3.8.1 and 3.8.2 wrote the items a hub had set aside as a "held" list on the router state. That
+    /// field is gone now, so a save made by those versions must still load, must keep its splitter, and
+    /// must run on. The set-aside items themselves are simply dropped, which is the only thing that can
+    /// happen to items that no longer exist anywhere.
+    /// </summary>
+    [Fact]
+    public void A_save_from_version_3_8_2_with_held_items_still_loads_the_splitter()
+    {
+        var sim = Sorter(front: "belt", left: "seller", right: null);
+        Filter(sim, Front, "iron_plate");
+        Filter(sim, Left, "iron_rod");
+        sim.Step(1000);
+        var laneItem = ((RouterState)sim.World.EntityAt(Hub)!.State).Items[0].Item;
+
+        var node = System.Text.Json.Nodes.JsonNode.Parse(SaveSystem.Serialize(sim))!;
+        int patched = 0;
+        foreach (var ent in node["entities"]!.AsArray())
+            // Only the filtered splitter writes "filters", so that is the state to add "held" to.
+            if (ent!["state"] is System.Text.Json.Nodes.JsonObject st && st.ContainsKey("filters"))
+            {
+                string item = System.Text.Json.JsonSerializer.Serialize(laneItem, Json.Options);
+                st["held"] = System.Text.Json.Nodes.JsonNode.Parse($"[{{\"item\":{item},\"to\":0,\"copies\":174}}]");
+                patched++;
+            }
+        Assert.Equal(1, patched);
+        string json = node.ToJsonString();
+        Assert.Contains("\"held\"", json);
+
+        var loaded = SaveSystem.Deserialize(json, Content);
+        var hub = loaded.Simulation.World.EntityAt(Hub)!;
+        Assert.Equal("splitter", hub.Def.Id); // the building itself is never dropped by a load
+        Assert.Equal(new string?[] { "iron_plate", "iron_rod", null }, hub.Behavior.Filters(hub));
+        loaded.Simulation.Step(1000);
+        Assert.True(loaded.Simulation.Sold("iron_rod") > 0, "the line did not run on after loading");
     }
 }

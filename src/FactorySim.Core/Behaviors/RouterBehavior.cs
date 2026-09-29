@@ -9,13 +9,6 @@ public sealed class RouterParams
     public int Speed { get; init; } = 100;
     public int Spacing { get; init; } = 250;
 
-    /// <summary>
-    /// Most stacks a sorting hub sets aside for full outputs (see <see cref="RouterState.Held"/>). Identical
-    /// stacks are kept as one count, so this bounds a number, not memory: at the fastest a hub moves (one
-    /// item a tick) it is over 13 hours of nothing but the jammed item before the hub blocks again.
-    /// </summary>
-    public long HoldLimit { get; init; } = 1_000_000;
-
     [JsonIgnore] internal IReadOnlyDictionary<string, ItemDef> Items { get; set; } = new Dictionary<string, ItemDef>();
 }
 
@@ -30,10 +23,7 @@ public sealed class RouterState
     /// <summary>Input port that gets priority next (fair merging).</summary>
     public int NextIn { get; set; } = -1;
 
-    /// <summary>
-    /// Per port: last tick an offer through it was refused. For an input that means it has items waiting;
-    /// for an output of a sorting hub that it was full (reset once it takes an item again).
-    /// </summary>
+    /// <summary>Per port: last tick an offer through it was refused (i.e. it has items waiting).</summary>
     public long[] RefusedAt { get; set; } = Array.Empty<long>();
 
     /// <summary>
@@ -48,26 +38,6 @@ public sealed class RouterState
     /// of outputs takes turns on its own (one shared cursor would send every other item to one output).
     /// </summary>
     public long[]? LastPicked { get; set; }
-
-    /// <summary>
-    /// Items a sorting hub set aside because their outputs were full while another output was still
-    /// taking items: out of <see cref="Items"/>, so the belt behind them keeps moving, and retried every
-    /// tick, first in line first. Identical stacks share one entry. Not drawn; the inspector counts them.
-    /// Empty on old saves, which load with none held.
-    /// </summary>
-    public List<HeldItems> Held { get; set; } = new();
-}
-
-/// <summary><see cref="Copies"/> identical stacks waiting for output port <see cref="To"/>.</summary>
-public sealed class HeldItems
-{
-    /// <summary>The next stack to leave; the others are copies of it made as it goes.</summary>
-    public ItemStack Item { get; set; } = null!;
-
-    public int To { get; set; }
-
-    /// <summary>1 on saves from before identical stacks were merged, where each entry held one.</summary>
-    public long Copies { get; set; } = 1;
 }
 
 /// <summary>An item crossing a hub: entered through <see cref="From"/>, leaving through <see cref="To"/> (-1 = not chosen yet).</summary>
@@ -113,21 +83,11 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     public override UpgradeTrack DefaultUpgrade(BuildingDef def) =>
         new() { MaxLevel = 9, SpeedPerLevel = 0.5, CostFactor = 1.5, CostGrowth = 2.2 };
 
-    /// <summary>Most distinct kinds of stack held at once (a kind can be any number of copies).</summary>
-    private const int MaxHeldKinds = 32;
-
-    /// <summary>How long an output that refused stays counted as full before a held item probes it again.</summary>
-    private const int RecheckTicks = Simulation.TicksPerSecond;
-
-    private const long Never = long.MinValue / 2;
-
     protected override void Tick(TickContext ctx, Entity e, RouterParams p, RouterState s)
     {
-        int speed = Speed(ctx, e, p);
-        DrainHeld(ctx, e, s, speed);
-
         var items = s.Items;
         if (items.Count == 0) return;
+        int speed = Speed(ctx, e, p);
         int w = 0;
 
         for (int i = 0; i < items.Count; i++)
@@ -141,11 +101,7 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
 
             if (w == 0 && target >= Length)
             {
-                if (TryExit(ctx, e, s, it.Item, it.To, target - Length)) continue;
-                // Every output it may use is full. If another output is still taking items, set this one
-                // aside so the items behind it keep going there; otherwise it blocks the belt as it
-                // always did, which is also what holds the line back when everything downstream is full.
-                if (MayHold(ctx, e, s, it.Item.Type) && Hold(p, s, it.Item, it.To)) continue;
+                if (TryExit(ctx, e, s, ref it, target - Length)) continue;
                 target = Length;
             }
 
@@ -217,107 +173,30 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     /// Leave through the chosen output, or another connected one of the same group if it is blocked,
     /// or an overflow output. The group is checked again here, since filters may have changed.
     /// </summary>
-    private static bool TryExit(TickContext ctx, Entity e, RouterState s, ItemStack item, int to, int overflow)
+    private static bool TryExit(TickContext ctx, Entity e, RouterState s, ref RouterItem it, int overflow)
     {
         var outs = e.Def.OutputPorts;
         int start = 0;
-        while (start < outs.Count - 1 && outs[start] != to) start++;
-        string type = item.Type;
+        while (start < outs.Count - 1 && outs[start] != it.To) start++;
+        string type = it.Item.Type;
         var home = HomeOf(e, s, type);
         if (home == Group.None) return false; // nothing takes it any more: wait until a filter or belt changes
         var chosen = GroupOf(s, start, type);
-        if ((chosen == home || chosen == Group.Overflow) && Offer(ctx, e, s, to, item, overflow)) return true;
+        if ((chosen == home || chosen == Group.Overflow) && ctx.Push(e, it.To, it.Item, overflow)) return true;
         for (int k = 1; k < outs.Count; k++)
         {
             int idx = (start + k) % outs.Count;
-            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != home || !Offer(ctx, e, s, outs[idx], item, overflow)) continue;
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != home || !ctx.Push(e, outs[idx], it.Item, overflow)) continue;
             return true;
         }
         if (home == Group.Overflow || s.Filters == null) return false;
         for (int k = 1; k < outs.Count; k++)
         {
             int idx = (start + k) % outs.Count;
-            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != Group.Overflow || !Offer(ctx, e, s, outs[idx], item, overflow)) continue;
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != Group.Overflow || !ctx.Push(e, outs[idx], it.Item, overflow)) continue;
             return true;
         }
         return false;
-    }
-
-    /// <summary>Push out through one port. A sorting hub notes whether the output was full, for <see cref="MayHold"/>.</summary>
-    private static bool Offer(TickContext ctx, Entity e, RouterState s, int port, ItemStack item, int overflow)
-    {
-        bool took = ctx.Push(e, port, item, overflow);
-        if (s.Filters != null && port < s.RefusedAt.Length) s.RefusedAt[port] = took ? Never : ctx.Tick;
-        return took;
-    }
-
-    /// <summary>
-    /// Whether an item whose outputs are all full may be set aside: only in a sorting hub (a plain one
-    /// has nowhere else to send anything), only if some output takes it at all, and only while an output
-    /// it can never use is not known to be full. An output that refused a while ago counts as free once,
-    /// as a probe, so a line that stopped on a full output restarts when that output clears.
-    /// </summary>
-    private static bool MayHold(TickContext ctx, Entity e, RouterState s, string type)
-    {
-        if (s.Filters == null) return false;
-        var home = HomeOf(e, s, type);
-        if (home == Group.None) return false;
-        var outs = e.Def.OutputPorts;
-        int probe = -1;
-        for (int i = 0; i < outs.Count; i++)
-        {
-            int port = outs[i];
-            if (!e.Link(port).IsConnected || port >= s.RefusedAt.Length) continue;
-            var g = GroupOf(s, i, type);
-            if (g == home || g == Group.Overflow) continue; // one of its own, and all of those were full
-            if (s.RefusedAt[port] == Never) return true;
-            if (probe < 0 && s.RefusedAt[port] < ctx.Tick - RecheckTicks) probe = port;
-        }
-        if (probe < 0) return false;
-        s.RefusedAt[probe] = ctx.Tick; // one probe per recheck while it stays silent
-        return true;
-    }
-
-    /// <summary>Set an item aside, merged with identical ones for the same output. False when the hold is full.</summary>
-    private static bool Hold(RouterParams p, RouterState s, ItemStack item, int to)
-    {
-        long total = 0;
-        foreach (var h in s.Held) total += h.Copies;
-        if (total >= p.HoldLimit) return false;
-        foreach (var h in s.Held)
-            if (h.To == to && Same(h.Item, item))
-            {
-                h.Copies++;
-                return true;
-            }
-        if (s.Held.Count >= MaxHeldKinds) return false;
-        s.Held.Add(new HeldItems { Item = item, To = to });
-        return true;
-    }
-
-    /// <summary>Stacks that differ only in their id. Tagged stacks are never merged, so a copy needs no tags.</summary>
-    private static bool Same(ItemStack a, ItemStack b) =>
-        a.Tags == null && b.Tags == null && a.Type == b.Type && a.Count == b.Count && a.UnitValue == b.UnitValue && a.ValueBonus == b.ValueBonus;
-
-    /// <summary>Retry items held aside for a full output, first in line first. A retry that still fails stays held.</summary>
-    private static void DrainHeld(TickContext ctx, Entity e, RouterState s, int speed)
-    {
-        var held = s.Held;
-        if (held.Count == 0) return;
-        int w = 0;
-        for (int i = 0; i < held.Count; i++)
-        {
-            var h = held[i];
-            if (TryExit(ctx, e, s, h.Item, h.To, speed))
-            {
-                if (--h.Copies <= 0) continue;
-                var next = ctx.CreateItem(h.Item.Type, h.Item.Count, h.Item.UnitValue);
-                next.ValueBonus = h.Item.ValueBonus;
-                h.Item = next;
-            }
-            held[w++] = h;
-        }
-        if (w < held.Count) held.RemoveRange(w, held.Count - w);
     }
 
     protected override bool TryAccept(TickContext ctx, Entity e, RouterParams p, RouterState s, ItemStack item, int port, int overflow)
@@ -395,23 +274,11 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
 
     protected override void CollectItems(Entity e, RouterParams p, RouterState s, List<ItemView> into)
     {
-        // Held items are not drawn: there can be thousands, and they would only pile up on one spot.
         foreach (var it in s.Items) into.Add(new ItemView(it.Item, it.Pos / (float)Length, it.From, it.To));
     }
 
-    private static long HeldCount(RouterState s)
-    {
-        long n = 0;
-        foreach (var h in s.Held) n += h.Copies;
-        return n;
-    }
-
-    protected override EntityStatus GetStatus(Entity e, RouterParams p, RouterState s)
-    {
-        long held = HeldCount(s);
-        if (held > 0) return new(true, 0, $"holding {held} item(s) for a full output");
-        return new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
-    }
+    protected override EntityStatus GetStatus(Entity e, RouterParams p, RouterState s) =>
+        new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
 
     protected override void Describe(Entity e, RouterParams p, RouterState s, List<InfoLine> into)
     {
@@ -421,11 +288,6 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         double speed = Math.Min(p.Speed * e.SpeedFactor, p.Spacing);
         into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
         into.Add(new InfoLine("Inside", s.Items.Count.ToString()));
-        foreach (var g in s.Held.GroupBy(h => (h.Item.Type, h.To)))
-        {
-            string name = p.Items.TryGetValue(g.Key.Type, out var item) ? item.Name : g.Key.Type;
-            into.Add(new InfoLine("Held", $"{g.Sum(h => h.Copies)} {name}, {e.Def.Ports[g.Key.To].Side.ToString().ToLowerInvariant()} output full"));
-        }
         if (s.Filters is { } f)
             into.Add(new InfoLine("Sorting", string.Join(" · ", f.Select((rule, i) => $"{OutputName(e.Def, i)}: {RuleName(p, rule)}"))));
     }
