@@ -117,6 +117,13 @@ public static class SaveSystem
         };
         RestoreLand(world, data, content);
 
+        // An order for an item the content no longer has could never be delivered.
+        foreach (var c in world.Contracts.Open.Where(c => !content.Items.ContainsKey(c.Item)).ToList())
+        {
+            world.Contracts.Open.Remove(c);
+            warnings.Add($"Dropped order #{c.Id}: unknown item '{c.Item}'.");
+        }
+
         foreach (var (id, level) in data.Upgrades)
         {
             if (content.Upgrades.ContainsKey(id)) world.SetUpgradeLevel(id, level);

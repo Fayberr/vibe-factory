@@ -1,3 +1,4 @@
+using FactorySim.Content;
 using FactorySim.Persistence;
 
 namespace FactorySim.Tests;
@@ -48,6 +49,40 @@ public class GoalsTests
         sim.Step(fresh.ExpiresAtTick - sim.World.Tick + 20);
         Assert.DoesNotContain(sim.World.Contracts.Open, c => c.Id == fresh.Id);
         Assert.True(sim.World.Contracts.Expired >= 1);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Byproducts_are_never_ordered(bool byproduct)
+    {
+        // A tier 0 item next to the iron ingot: flagged as a byproduct it is never asked for, and the
+        // same item without the flag is (so the check is not passing by luck).
+        var content = ContentRegistry.LoadDefault(null, ContentRegistry.ParsePack($$"""
+            {
+              "items": [ { "id": "test_slag", "name": "Slag", "byproduct": {{(byproduct ? "true" : "false")}} } ],
+              "recipes": [ { "id": "test_smelt_slag", "inputs": [ { "item": "iron_ore", "count": 1 } ],
+                             "outputs": [ { "item": "iron_ingot", "count": 1 }, { "item": "test_slag", "count": 1 } ], "ticks": 16, "valueMultiplier": 4 } ],
+              "buildings": [ { "id": "test_slag_smelter", "behavior": "processor",
+                               "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
+                               "params": { "recipes": [ "test_smelt_slag" ] } } ]
+            }
+            """));
+        var sim = TestUtil.NewSim(content, money: 1e9, goals: true);
+        sim.Place("iron_miner", 72, 0, 0, Dir.East);
+        sim.Place("smelter", 73, 0, 0, Dir.East);
+        sim.Place("seller", 74, 0, 0, Dir.East);
+        sim.Step(20 * 5);
+
+        var offered = new HashSet<string>();
+        for (int i = 0; i < 40; i++)
+        {
+            var order = sim.World.Contracts.Open[0];
+            offered.Add(order.Item);
+            Assert.True(sim.Execute(new RerollContract(order.Id)).Ok);
+        }
+        Assert.Equal(!byproduct, offered.Contains("test_slag"));
+        Assert.Contains("iron_ingot", offered);
     }
 
     [Fact]

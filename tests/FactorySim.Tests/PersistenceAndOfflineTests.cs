@@ -37,6 +37,18 @@ public class PersistenceAndOfflineTests
     }
 
     [Fact]
+    public void Load_drops_orders_for_items_that_no_longer_exist()
+    {
+        var sim = TestUtil.NewSim(goals: true);
+        sim.World.Contracts.Open.Add(new Contract { Id = 7, Item = "removed_item", Quantity = 10 });
+        sim.World.Contracts.Open.Add(new Contract { Id = 8, Item = "iron_ingot", Quantity = 10 });
+
+        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(sim), TestUtil.Content);
+        Assert.Equal(new[] { 8 }, loaded.Simulation.World.Contracts.Open.Select(c => c.Id));
+        Assert.Contains(loaded.Warnings, w => w.Contains("removed_item"));
+    }
+
+    [Fact]
     public void Same_inputs_same_outputs()
     {
         var a = Demo();

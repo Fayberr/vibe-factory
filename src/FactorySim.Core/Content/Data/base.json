@@ -79,7 +79,10 @@
     { "id": "aluminium",    "name": "Aluminium",    "baseValue": 0,               "meta": { "color": "#c9d3dc", "shape": "ingot" } },
     { "id": "drone",        "name": "Drone",        "baseValue": 0,               "meta": { "color": "#ffb13b", "shape": "drone" } },
     { "id": "rocket_fuel",  "name": "Rocket Fuel",  "baseValue": 0,               "meta": { "color": "#8ae05a", "shape": "barrel" } },
-    { "id": "satellite",    "name": "Satellite",    "baseValue": 0,               "meta": { "color": "#dfe8f2", "shape": "satellite" } }
+    { "id": "satellite",    "name": "Satellite",    "baseValue": 0,               "meta": { "color": "#dfe8f2", "shape": "satellite" } },
+    // Byproduct trial (see "Byproducts" in docs/ARCHITECTURE.md): tar comes out of cracking crude oil
+    // next to plastic, and a blast furnace burns it instead of coal. "byproduct" keeps it out of orders.
+    { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } }
   ],
 
   "recipes": [
@@ -112,7 +115,14 @@
     { "id": "make_aluminium", "inputs": [ { "item": "bauxite", "count": 2 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "aluminium", "count": 1 } ], "ticks": 40, "valueMultiplier": 3 },
     { "id": "make_drone", "inputs": [ { "item": "frame", "count": 1 }, { "item": "aluminium", "count": 2 }, { "item": "robot", "count": 1 } ], "outputs": [ { "item": "drone", "count": 1 } ], "ticks": 90, "valueMultiplier": 3.2 },
     { "id": "make_fuel", "inputs": [ { "item": "crude_oil", "count": 2 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "rocket_fuel", "count": 1 } ], "ticks": 40, "valueMultiplier": 4 },
-    { "id": "make_satellite", "inputs": [ { "item": "drone", "count": 1 }, { "item": "jewelry", "count": 2 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "satellite", "count": 1 } ], "ticks": 120, "valueMultiplier": 2.0 }
+    { "id": "make_satellite", "inputs": [ { "item": "drone", "count": 1 }, { "item": "jewelry", "count": 2 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "satellite", "count": 1 } ], "ticks": 120, "valueMultiplier": 2.0 },
+    // Byproduct trial. A craft's value is split evenly over all its output units, so both recipes are
+    // tuned to make exactly what the plain recipes make: plastic $1 and steel $7.5, and tar $1 like the
+    // coal it replaces. Cracking gives less plastic per oil (1.5 against 2) but works through oil 50%
+    // faster, and its tar saves a coal drill. A refinery never cracks unless the player chooses it; a
+    // blast furnace left on automatic burns tar when tar arrives and coal does not.
+    { "id": "crack_oil", "inputs": [ { "item": "crude_oil", "count": 2 } ], "outputs": [ { "item": "plastic", "count": 3 }, { "item": "tar", "count": 1 } ], "ticks": 40, "valueMultiplier": 2 },
+    { "id": "forge_steel_tar", "inputs": [ { "item": "iron_ingot", "count": 1 }, { "item": "tar", "count": 1 } ], "outputs": [ { "item": "steel", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 }
   ],
 
   "buildings": [
@@ -282,7 +292,7 @@
       "id": "blast_furnace", "name": "Blast Furnace", "behavior": "processor", "cost": 1500, "category": "processing", "tier": 2,
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
-      "params": { "recipes": [ "forge_steel" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "params": { "recipes": [ "forge_steel", "forge_steel_tar" ], "inputCapacity": 8, "outputCapacity": 8 }, // the second recipe is the byproduct trial
       "meta": { "model": "forge", "accent": "#ff5a2a", "glyph": "B", "description": "Fuses iron ingots with coal into steel (2.5× value)." }
     },
     {
@@ -303,7 +313,7 @@
       "id": "refinery", "name": "Oil Refinery", "behavior": "processor", "cost": 5000, "category": "processing", "tier": 3,
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
-      "params": { "recipes": [ "refine_plastic" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "params": { "recipes": [ "refine_plastic", "crack_oil" ], "inputCapacity": 8, "outputCapacity": 8 }, // the second recipe is the byproduct trial
       "meta": { "model": "refinery", "accent": "#e2513a", "glyph": "F", "description": "Refines each barrel of crude into 2 plastic." }
     },
 

@@ -18,6 +18,12 @@ public sealed class ItemDef
     /// <summary>Unprocessed resource (ore, logs, sand, oil). Markets pay only a fraction for these.</summary>
     public bool Raw { get; init; }
 
+    /// <summary>
+    /// Made on the side of another product. Byproducts sell and craft like anything else, but are never
+    /// asked for in an order: dealing with them stays optional.
+    /// </summary>
+    public bool Byproduct { get; init; }
+
     public Dictionary<string, string> Meta { get; init; } = new();
 }
 

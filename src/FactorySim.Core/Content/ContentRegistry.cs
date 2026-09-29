@@ -79,6 +79,9 @@ public sealed class ContentRegistry
         return Build(behaviors ?? BehaviorRegistry.CreateDefault(), packs);
     }
 
+    /// <summary>The text of the built-in base pack (base.json), comments included.</summary>
+    public static string BasePackJson() => ReadEmbedded(BaseResource);
+
     public static ContentPack ParsePack(string json)
     {
         try
