@@ -84,10 +84,14 @@ Actions tab to build one of those commits anyway.
 **Updating.** [`tools/Update-VibeFactory.cmd`](tools/Update-VibeFactory.cmd) keeps a folder on the
 newest build, and it ships inside `VibeFactory-Windows.zip`, so unzipping once is enough to have it.
 Keep it in the folder you play from and double-click it: it downloads the current release, replaces
-everything in that folder except the script itself, and deletes the zip. It does not start the game,
-it refuses to run while the game is open (its files cannot be replaced then), and it downloads
-before it deletes anything, so a failed download leaves the build you have alone. Saves are not in
-that folder (Godot keeps them in its own user folder), so they are never touched.
+everything in that folder except the script itself, and deletes the zip. It runs unattended, so it
+never asks a question, and a clean run closes its own window; it waits only when something went
+wrong, so the message can be read. It does not start the game, and it refuses to run while the game
+is open (its files cannot be replaced then). Nothing in the folder is deleted until a download has
+arrived, passed a size check, and been proved to be a readable archive that actually holds the game,
+so a failed or slow download leaves the build you have alone. A folder holding none of the game's own
+files is refused rather than emptied, which is what keeps a stray double-click elsewhere harmless.
+Saves are not in that folder (Godot keeps them in its own user folder), so they are never touched.
 
 It is also attached to the release on its own as `Update-VibeFactory.cmd`, which downloads as a file.
 Do not fetch it from the repository page: GitHub serves it as plain text there, so a browser shows
