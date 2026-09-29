@@ -33,15 +33,21 @@ Wanted, in his words:
   designated spots. Build the no-chore variant in A1 above, where a patch is a rate bonus and never a
   requirement, or drop the idea entirely. Do not build the required-placement version.
 
-Confirmed 2026-09-29 (second pass), and this is now the clearest direction the game has:
+Confirmed 2026-09-29 (second pass):
 
-- **I1, science packs and labs.** Plus the framing that matters most: he had already imagined the
-  research or skill tree being paid in **items you manufacture**, not money. So research is a
-  production line: labs eat packs, packs are built from the factory, and the tree is bought with
-  goods. Design progression around that from here on.
-- **I2 and D1, a research tree** rather than a linear tier list, since a tree paid in goods is what
-  makes the choice real.
-- **I7, the chemistry layer**, so fluids are handled differently from items.
+- **Research that is paid in manufactured items.** He had already imagined it that way, so this is
+  the direction for progression (`I1`, science packs and labs).
+- **Byproducts** (`B1`), and with it `B2` priority outputs and `B3` filters, the tools that make
+  byproducts solvable.
+- **Fluids, handled differently from items** (`B9`, `I7`).
+- **The away report** (`F1`).
+- **Income by product, which he raised himself** (new `F8` below): statistics on what actually makes
+  money and what does not.
+
+**Corrected 2026-09-29:** an earlier version of this note claimed he had confirmed the tech graph
+(`I2`/`D1`). He did not. He said he does not really understand it, and the same for megaprojects
+(`I4`). Both now have a plain words explanation at their entry and are **undecided**. Do not build
+either without asking again.
 
 Unsure, decide later: everything else in Part 2 and Part 3.
 
@@ -160,6 +166,12 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   coloured by reason. The cheapest large win here, because the data already exists.
 - **F6. A throughput view (M).** Show belts near capacity and mergers as gates.
 - **F7. Self set targets (S/M).** "Keep 200 circuits in stock", with an indicator when you are under.
+- **F8. Income by product (S). Raised by Fabian himself.** A ranked list of which products actually
+  earn: income per second per item over the last few minutes, lifetime earned per item, and each
+  one's share of total income, so it is obvious that circuits are 60% of the money and crates are 2%.
+  It answers the question every factory owner asks: what do I expand, and what do I stop making.
+  Nearly free, because `StatsTracker` already keeps lifetime `Sold` and `Produced` per item and a
+  rolling 60 s income window, so only a per-item window is new.
 
 ## G. Ownership and expression
 
@@ -222,10 +234,16 @@ rather than polishing a corner. Ranked inside each group roughly by fit with wha
   paid in packs rather than money. It turns progression into a production line, so every tier ends
   with "build the next science chain" instead of "sell enough stuff". It marries directly with D1
   (branching research) and it makes the whole factory matter, because packs pull from every chain.
-- **I2. A technology graph instead of a line (L).** Right now the 8 tiers are linear, so every run
-  follows the same order. A graph with parallel branches means a run is a set of choices: go deep on
-  electronics first, or on oil, or on logistics. This is the biggest structural replay lever
-  available, and it is the natural home for I1 and D1.
+- **I2. A technology graph instead of a line (L).** A graph with parallel branches means a run is a
+  set of choices: go deep on electronics first, or on oil, or on logistics. This is the biggest
+  structural replay lever available, and it is the natural home for I1 and D1.
+  - **In plain words.** Today the 8 tiers are a straight line: tier 3 opens after tier 2, in the same
+    order in every game, so every run walks the same sequence. A graph replaces that line with a web
+    you choose from. You spend research packs on the branch you want, so one player goes electronics
+    first and another goes oil first, and their factories end up different.
+  - **Middle option, much smaller (recommended if this is wanted at all).** Keep the linear tiers
+    exactly as they are and let research packs *additionally* unlock optional side branches (extra
+    recipes and machines). You choose what to spend on, runs differ, and progression is not rebuilt.
 - **I3. Launches as a real loop (L).** The satellite is already the final product and the only dead
   end. Make it the engine: build a launch pad, launch what you build, and each launch grants a
   permanent bonus (a stat, a recipe, a land ring) plus a record to beat. The endgame becomes a goal
@@ -233,6 +251,11 @@ rather than polishing a corner. Ranked inside each group roughly by fit with wha
 - **I4. Megaprojects or wonders (L).** One huge structure that consumes the factory's output for
   hours and visibly grows, so there is something to look at and something to feed. Optional, and the
   player picks which one to attempt, so finished factories differ.
+  - **In plain words.** A single giant build target, such as a space elevator or an orbital station,
+    that needs a steady supply of many late products delivered to one structure over hours. It gives
+    an open-ended game an optional long finish line and something to watch grow, and finishing it
+    could pay a permanent bonus or open a new area. It stays optional, so the game keeps its open end
+    either way. Skip it if a finish line is not wanted.
 - **I5. Cross-run unlocks (M).** Achievements and records that unlock new starting options for the
   next run (a new starting plot, a modifier, a blueprint). Not prestige: nothing is ever lost, no
   reset loop, but a fresh start is genuinely different. Strong replay value without the downward
