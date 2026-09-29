@@ -499,7 +499,7 @@ public partial class Hud : CanvasLayer
             ("Shift+wheel", "Build height"), (K("hide_above"), "Hide above build height"),
             (K("pick"), "Pick hovered building"), (K("upgrade"), "Upgrade tool / selection"),
             ($"Shift+LMB ({K("upgrade")})", "Upgrade whole belt line"), (K("delete_tool"), "Delete tool"),
-            ("Click a buy tag", "Buy a plot (it asks first)"), ("Del", "Delete selection"), (K("move"), "Move selection"),
+            ("Click a plot next to yours", "Buy it (it asks first)"), ("Del", "Delete selection"), (K("move"), "Move selection"),
             (K("copy"), "Copy & paste selection"), ("Ctrl+C / V / X", "Copy / paste / cut"),
             ("Ctrl+Z / Y", "Undo / redo"), ("Ctrl+A", "Select all"),
             ("Esc / RMB click", "Cancel tool"), ($"{K("pan_forward")}{K("pan_left")}{K("pan_back")}{K("pan_right")}, arrows", "Pan (Shift = fast)"),

@@ -28,7 +28,7 @@ public enum ToolMode
 ///  • Upgrade: click or drag a box to raise building levels; Shift-click upgrades a whole line.
 ///  • Delete:  click or drag a box.
 ///  • Move / Paste: a blueprint follows the cursor; R rotates it; click to drop.
-///  While building, moving or pasting, plots you can buy show a buy tag; clicking land that is not
+///  While building, moving or pasting, every plot you do not own shows its price on the ground; clicking land that is not
 ///  yours yet asks <see cref="BuyPlotRequested"/> (the HUD confirms, then buys).
 /// Height: everything is built at the current build height (0 = ground, the lowest there is).
 /// Q/E, PageDown/PageUp or Shift+wheel change it; ramps carry it along (a ramp up leaves you

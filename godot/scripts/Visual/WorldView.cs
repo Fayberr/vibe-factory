@@ -55,9 +55,7 @@ public partial class WorldView : Node3D
     private ShaderMaterial _ground = null!;
     private MeshInstance3D _layerGrid = null!;
     private Node3D? _landLabels;
-    private readonly Dictionary<PlotId, (Label3D Label, BigNum Price)> _plotLabels = new();
     private bool _landMode;
-    private double _landRefresh;
     private int _layer;
     private bool _cutaway;
     private float _gridTarget, _grid;
@@ -241,54 +239,50 @@ public partial class WorldView : Node3D
         SetLayer(_layer, _cutaway);
     }
 
-    /// <summary>While placing: plots you can buy glow gold and carry a big buy tag with their price.</summary>
+    /// <summary>While placing: plots you can buy glow gold, and every plot you do not own shows its price flat on the ground.</summary>
     public void SetLandMode(bool on)
     {
         _landMode = on;
         _ground?.SetShaderParameter("land_mode", on ? 1f : 0f);
         if (_landLabels != null) _landLabels.Visible = on;
         if (!on) SetHoverPlot(null);
-        else RefreshLandLabels();
     }
 
     /// <summary>The buyable plot under the cursor (highlighted), or null.</summary>
     public void SetHoverPlot(PlotId? plot) =>
         _ground?.SetShaderParameter("hover_plot", plot is { } p ? new Vector2(p.Column, p.Row) : new Vector2(-1, -1));
 
+    /// <summary>
+    /// One grey price tag per plot you do not own yet, painted flat on the ground (not a billboard). Plots you
+    /// can buy right now say "BUY PLOT"; the ones further out just show what they will cost.
+    /// </summary>
     private void BuildLandLabels()
     {
-        _plotLabels.Clear();
         _landLabels = new Node3D { Name = "LandLabels", Visible = _landMode };
         AddChild(_landLabels);
         var land = World.Land;
         if (World.Sandbox) return; // everything is yours, nothing to buy
-        foreach (var plot in land.Buyable())
+        var grey = new Color("#b4b9c2");
+        var outline = new Color(0.05f, 0.08f, 0.12f, 0.9f);
+        // Lie flat, and read upright from the default camera (the map is axis-aligned, the camera is turned).
+        var flat = new Vector3(-90f, CameraRig.DefaultYaw, 0f);
+        foreach (var plot in land.All())
         {
+            if (land.Owns(plot)) continue;
             var cells = land.CellsOf(plot);
-            var price = land.PriceOf(plot);
-            var label = new Label3D
+            var head = land.WhyNot(plot) == null ? "BUY PLOT" : "PLOT";
+            _landLabels.AddChild(new Label3D
             {
-                Text = "BUY PLOT\n$" + price.Format(),
+                Text = head + "\n$" + land.PriceOf(plot).Format(),
                 FontSize = 72,
-                PixelSize = 0.045f,
+                PixelSize = 0.036f,
                 OutlineSize = 16,
-                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-                NoDepthTest = true,
-                Position = new Vector3((cells.MinX + cells.MaxX + 1) / 2f, 0.8f, (cells.MinY + cells.MaxY + 1) / 2f),
-            };
-            _landLabels.AddChild(label);
-            _plotLabels[plot] = (label, price);
-        }
-        RefreshLandLabels();
-    }
-
-    /// <summary>Colours the buy tags: green when you can afford the plot, red when you cannot yet.</summary>
-    private void RefreshLandLabels()
-    {
-        foreach (var (label, price) in _plotLabels.Values)
-        {
-            label.Modulate = World.Money >= price ? new Color("#7dffb0") : new Color("#ff8a80");
-            label.OutlineModulate = new Color(0.05f, 0.08f, 0.12f, 0.95f);
+                Modulate = grey,
+                OutlineModulate = outline,
+                Billboard = BaseMaterial3D.BillboardModeEnum.Disabled,
+                RotationDegrees = flat,
+                Position = new Vector3((cells.MinX + cells.MaxX + 1) / 2f, 0.05f, (cells.MinY + cells.MaxY + 1) / 2f),
+            });
         }
     }
 
@@ -479,11 +473,6 @@ public partial class WorldView : Node3D
 
         _grid = Mathf.MoveToward(_grid, _gridTarget, dt * 4f);
         _ground?.SetShaderParameter("grid_strength", _grid);
-        if (_landMode && (_landRefresh -= delta) <= 0)
-        {
-            _landRefresh = 0.25;
-            RefreshLandLabels();
-        }
 
         _incomeTimer += delta;
         if (_incomeTimer > 0.7)

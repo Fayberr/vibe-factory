@@ -8,8 +8,11 @@ namespace FactorySim.Client;
 /// </summary>
 public partial class CameraRig : Node3D
 {
-    private float _yaw = 40f, _pitch = -52f, _distance = 20f;
-    private float _yawTarget = 40f, _pitchTarget = -52f, _distanceTarget = 20f;
+    /// <summary>The yaw the camera starts at and returns to (also how the ground price tags are turned to read upright).</summary>
+    public const float DefaultYaw = 40f;
+
+    private float _yaw = DefaultYaw, _pitch = -52f, _distance = 20f;
+    private float _yawTarget = DefaultYaw, _pitchTarget = -52f, _distanceTarget = 20f;
     private Vector3 _focus, _focusTarget;
     private bool _orbiting, _panning;
     private Vector2 _mouse;
@@ -136,7 +139,7 @@ public partial class CameraRig : Node3D
                 Pan(new Vector2(-mm.Relative.X, -mm.Relative.Y * 1.3f) * scale);
                 break;
             case InputEventKey { Pressed: true, Echo: false, CtrlPressed: false } key when Keybinds.Is(key, "reset_view"):
-                _yawTarget = 40;
+                _yawTarget = DefaultYaw;
                 _pitchTarget = -52;
                 break;
         }

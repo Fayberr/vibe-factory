@@ -156,7 +156,7 @@ their choice.
   inputs at the plain rate, so polishing an ingredient is wasted: put it right before the
   depot. Raw ore keeps its 25% cut, so polished ore still sells for 1.5× that.
 - **Land.** The map is a fixed 5 x 5 grid of plots, each 15 x 15 cells (75 x 75). Everyone starts
-  with the one plot at the bottom middle and buys the rest (while you build, move or paste, plots you can buy carry a big buy tag; click the plot and confirm).
+  with the one plot at the bottom middle and buys the rest (while you build, move or paste, every plot you do not own shows its price flat on the ground, and the ones next to yours can be bought: click the plot and confirm).
   A plot must share an edge with land you own, never just a corner. The price depends on how far
   the plot is from your starting plot, not on how many you own: the three plots next to the start
   cost the same ($2.5K), and every step further out costs eight times more, up to $82M in the far

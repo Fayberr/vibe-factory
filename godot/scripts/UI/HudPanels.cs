@@ -329,7 +329,7 @@ public sealed class ProgressPanel
         if (world.Sandbox) return "Sandbox: the whole map is yours.";
         string owned = $"{land.OwnedCount} of {land.Count} plots are yours.";
         if (land.Buyable().Select(p => (PlotId?)p).FirstOrDefault() is not { } next) return owned + " That is the whole map.";
-        return $"{owned} The next one costs ${land.PriceOf(next).Format()}. Plots next to yours show a buy tag while you build; the further from your start, the more they cost.";
+        return $"{owned} The next one costs ${land.PriceOf(next).Format()}. While you build, every plot you do not own shows its price on the ground and the ones next to yours can be bought with a click; the further from your start, the more they cost.";
     }
 
     /// <summary>The next few milestones with their progress and reward.</summary>
