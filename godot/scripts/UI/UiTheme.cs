@@ -7,6 +7,13 @@ public static class UiTheme
 {
     public static readonly Color Text = new("#e9eef5");
     public static readonly Color Muted = new("#93a0b1");
+
+    /// <summary>
+    /// The build stamp in the corners: a step brighter than <see cref="Muted"/>, still short of a label.
+    /// It used to be Muted, and the number nobody could find over the factory was the one a bug report is
+    /// asked for. See <c>Ui.VersionStamp</c>.
+    /// </summary>
+    public static readonly Color Stamp = new("#c8d3e0");
     public static readonly Color Accent = new("#4fb6ff");
     public static readonly Color Money = new("#6be38f");
     public static readonly Color PanelBg = new(0.07f, 0.085f, 0.11f, 0.9f);

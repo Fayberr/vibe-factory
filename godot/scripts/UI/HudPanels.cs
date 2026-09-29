@@ -29,12 +29,13 @@ public static class Ui
         return l;
     }
 
-    /// <summary>The build stamp, for a corner of the HUD or of the title screen: small and dim, and
-    /// the commit on hover, which is what a bug report needs. Pass rather than Ignore so the tooltip
-    /// fires; callers place it where nothing is behind it.</summary>
-    public static Label VersionStamp(Color? color = null)
+    /// <summary>The build stamp, for a corner of the HUD or of the title screen: quiet, and the commit on
+    /// hover, which is what a bug report needs. Pass rather than Ignore so the tooltip fires; callers place
+    /// it where nothing is behind it. A size above the other small print and <see cref="UiTheme.Stamp"/>
+    /// rather than Muted, so it can be read off the screen without hunting for it.</summary>
+    public static Label VersionStamp(Color? color = null, int size = 14)
     {
-        var stamp = Label(BuildInfo.Label, 12, color ?? UiTheme.Muted);
+        var stamp = Label(BuildInfo.Label, size, color ?? UiTheme.Stamp);
         stamp.MouseFilter = Control.MouseFilterEnum.Pass;
         stamp.TooltipText = BuildInfo.Tooltip;
         return stamp;

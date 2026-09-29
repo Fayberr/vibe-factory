@@ -139,8 +139,9 @@ public partial class Hud : CanvasLayer
         _fps.MouseFilter = Control.MouseFilterEnum.Ignore;
         _root.AddChild(Ui.Anchor(_fps, 1, 0, -12, 8, Control.GrowDirection.Begin, Control.GrowDirection.End));
 
-        // The version, always on screen but out of the way: bottom right, small and dim. Hovering it
-        // names the commit the build came from, which is what a bug report needs.
+        // The version, always on screen and out of the way: bottom right, a size above the other small
+        // print and a step brighter than it used to be, because a bug report starts with it and it was
+        // hard to read over the factory. Hovering it names the commit the build came from.
         _version = Ui.VersionStamp();
         _root.AddChild(Ui.Anchor(_version, 1, 1, -12, -10, Control.GrowDirection.Begin, Control.GrowDirection.Begin));
 

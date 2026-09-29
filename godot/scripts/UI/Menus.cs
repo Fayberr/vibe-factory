@@ -112,9 +112,10 @@ public partial class MenuLayer : CanvasLayer
         _title.AddChild(Ui.Anchor(credit, 0, 1, 96, -24, Control.GrowDirection.End, Control.GrowDirection.Begin));
 
         // The same build stamp as the HUD, mirrored into the other bottom corner, so a screenshot of
-        // the menu names its build too. Dim white like the credits line, since the menu is drawn over
-        // the running factory rather than over a panel.
-        _titleVersion = Ui.VersionStamp(new Color(1, 1, 1, 0.45f));
+        // the menu names its build too. White rather than the credits line's dim white, since the menu
+        // is drawn over the running factory rather than over a panel and this is the line a bug report
+        // is asked for; the size comes from Ui.VersionStamp.
+        _titleVersion = Ui.VersionStamp(new Color(1, 1, 1, 0.62f));
         _title.AddChild(Ui.Anchor(_titleVersion, 1, 1, -24, -24, Control.GrowDirection.Begin, Control.GrowDirection.Begin));
     }
 

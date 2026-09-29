@@ -235,9 +235,11 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 
 The version is one line in [`VERSION`](VERSION) at the repository root, in `major.minor.patch` form,
 and that file is the only place it is written. The build reads it into every assembly, so the number
-the game shows is the number it was compiled with. The client stamps it in a small dim label in the
-bottom right corner of the screen, reading `Build 3.8.10`; hovering that label adds the commit the
-build came from, which is what a bug report needs to name the exact build.
+the game shows is the number it was compiled with. The client stamps it in a small label in the
+bottom right corner of the screen, reading `Build 4.0.0`; hovering that label adds the commit the
+build came from, which is what a bug report needs to name the exact build. It sits a size above the
+other small print and a step brighter than `UiTheme.Muted` (`UiTheme.Stamp`), so it can be read off a
+screenshot without hunting for it, and the title screen carries the same stamp in the opposite corner.
 
 Bump it by hand when a build is worth telling apart:
 
