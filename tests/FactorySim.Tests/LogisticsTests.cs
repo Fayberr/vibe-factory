@@ -145,11 +145,11 @@ public class LogisticsTests
             return sim.Sold("iron_ore") - before;
         }
 
-        // Level 1: speed 50 / spacing 200 = 0.25 items/tick (5/s), a quarter above a level-1 belt,
+        // Level 1: speed 50 / spacing 250 = 0.2 items/tick (4/s), the same as a level-1 belt,
         // even though the three maxed input belts could bring 60/s.
-        Assert.InRange(Throughput(1), 495, 505);
-        // Level 3: twice the speed.
-        Assert.InRange(Throughput(3), 995, 1005);
+        Assert.InRange(Throughput(1), 395, 405);
+        // Level 3: speed × 2.33, so a bit over 9/s.
+        Assert.InRange(Throughput(3), 920, 940);
         // Level 7 (the max) reaches the physical cap, speed = spacing: one item per tick (20/s).
         Assert.InRange(Throughput(7), 1995, 2001);
         Assert.Equal(7, TestUtil.Content.Building("merger").Upgrade!.MaxLevel);

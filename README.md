@@ -148,7 +148,8 @@ their choice.
   window shows the next four with progress bars.
 - **Per-building upgrades.** There are no global upgrades. Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
-  splitters go from 4 to 20 items/s over 9 levels, mergers from 5 to 20 over 7, market
+  splitters go from 4 to 20 items/s over 9 levels, mergers from 4 to 20 over 7 (level 1
+  merges at belt speed, so a merger is a real throughput gate until it is levelled), market
   depots pay more. Ten drills means ten upgrades. Levels show as coloured trims (bronze,
   silver, gold, cyan, violet) and are kept by copy/paste.
 - **Raw resources sell for 25%, and every ore is worth the same $1.** An item is worth the

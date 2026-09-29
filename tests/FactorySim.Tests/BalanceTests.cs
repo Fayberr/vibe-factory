@@ -145,7 +145,7 @@ public class BalanceTests
         var high = Book(12);
         var merger = TestUtil.Content.Building("merger");
         Assert.Equal(7, high.LevelOf(merger));
-        Assert.Equal(4, high.Speed(merger), 9); // 1 + 0.5 × 6
+        Assert.Equal(5, high.Speed(merger), 2); // 1 + 0.667 × 6: enough to reach the item-per-tick cap
     }
 
     [Fact]
