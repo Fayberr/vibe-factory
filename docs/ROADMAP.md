@@ -1,7 +1,7 @@
 # Roadmap: depth and long-term play
 
-Where the game is going and why. Decisions are Fabian's; numbers are starting points that the
-balance tool (step 0 below) checks before they ship.
+Where the game is going and why. Numbers are starting points that the balance tool (step 0 below)
+checks before they ship.
 
 ## The problem
 
@@ -33,9 +33,9 @@ Why it happened (steps 2 and 3 fixed the first two):
 - Reference for the feel: a Roblox factory game where a go-kart needs motors, wheels and a frame,
   the frame needs steel and another metal, motors need batteries, batteries need electronics.
 
-## Design principles: deep but optional (Fabian, 2026-09-29)
+## Design principles: deep but optional
 
-The goal, in his words: a player should be able to go really deep into the game and really have to
+The goal: a player should be able to go really deep into the game and really have to
 think, but should never *have* to. You can also just play it for fun, on the side. The deep end is
 crazy interconnected factories; the shallow end is a relaxing game you can leave running. Next to
 that: more content, more versatility, more things to do.
@@ -176,11 +176,11 @@ without losing a building; see the Land section of the architecture notes.
 
 ### 8. Multiplayer (planned, nothing built)
 
-Two concepts Fabian wants: **neighbours** (each player runs their own factory side by side, with a
+The two concepts: **neighbours** (each player runs their own factory side by side, with a
 leaderboard comparing money, income per second and tier) and a **shared factory** (two players build
 one together).
 
-Requirements (Fabian, 2026-09-29):
+Requirements:
 
 - **No Steam app page**, so no $100 and no Steamworks account. Steam is out for now, which also
   gives up Remote Play Together (it needs a store page) and Steam leaderboards. Steam can be added
@@ -207,8 +207,8 @@ Proposed design (not decided):
   ("Connected via: Pi"). A DNS record under fayber.dev could carry the list, so the fallback order
   can change without shipping a build. Online is always best-effort: starting the game must never
   wait on the network, and the UI says plainly when features are unavailable and the game is solo.
-- **Reaching the Pi from outside the house is the one piece that needs a one-time decision by Fabian**,
-  because the Pi sits behind his home NAT: either a router port forward (no third party, but needs a
+- **Reaching the Pi from outside the house is the one piece that needs a one-time decision**,
+  because the Pi sits behind a home NAT: either a router port forward (no third party, but needs a
   public IPv4 and no CGNAT) or a tunnel that dials outward (for example Cloudflare Tunnel, free and
   no router changes). Same-house and same-LAN play needs neither. Speaking WebSocket over TLS keeps
   both hosts, and any future one, interchangeable.

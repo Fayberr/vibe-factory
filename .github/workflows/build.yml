@@ -9,6 +9,14 @@ on:
   push:
     branches:
       - main
+    # Docs and metadata only: there is nothing to compile, so the Windows client is
+    # not rebuilt and the latest-build release is left as it is. Run the workflow by
+    # hand (workflow_dispatch) when a build is wanted from such a commit anyway.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:

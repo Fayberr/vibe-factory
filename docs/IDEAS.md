@@ -21,33 +21,33 @@ Weak, and this is what most of the list below attacks:
 - **There is only one progression axis.** Tiers. The global stat upgrade list is empty, so money
   only buys buildings, land and levels.
 
-## Fabian's picks (2026-09-29)
+## Picks so far
 
-Wanted, in his words:
+Wanted:
 
-- **B1, byproducts, and with it B2 and B3** (priority outputs and filters, the tools that make
-  byproducts solvable).
-- **B9, fluids** (pipes, pumps, tanks). Called out as really liked.
-- **D1, branching research.** "Definitely something we should add."
-- **A1, ore deposits: liked but unsure**, because he does not want to have to place drills on
-  designated spots. Build the no-chore variant in A1 above, where a patch is a rate bonus and never a
-  requirement, or drop the idea entirely. Do not build the required-placement version.
-
-Confirmed 2026-09-29 (second pass):
-
-- **Research that is paid in manufactured items.** He had already imagined it that way, so this is
-  the direction for progression (`I1`, science packs and labs).
+- **Research that is paid in manufactured items** (`I1`, science packs and labs). Research is a
+  production line: labs eat packs, packs are built in the factory, and the tree is bought with goods
+  rather than money.
 - **Byproducts** (`B1`), and with it `B2` priority outputs and `B3` filters, the tools that make
   byproducts solvable.
 - **Fluids, handled differently from items** (`B9`, `I7`).
 - **The away report** (`F1`).
-- **Income by product, which he raised himself** (new `F8` below): statistics on what actually makes
-  money and what does not.
+- **Income by product** (new `F8` below): statistics on what actually makes money and what does not.
 
-**Corrected 2026-09-29:** an earlier version of this note claimed he had confirmed the tech graph
-(`I2`/`D1`). He did not. He said he does not really understand it, and the same for megaprojects
-(`I4`). Both now have a plain words explanation at their entry and are **undecided**. Do not build
-either without asking again.
+Liked but unsure:
+
+- **A1, ore deposits.** The required-placement version is not wanted: having to place drills on
+  designated spots is the objection. Build the no-chore variant in A1 above, where a patch is a rate
+  bonus and never a requirement, or drop the idea entirely.
+
+Not yet decided:
+
+- **The tech graph (`I2`/`D1`) and megaprojects (`I4`).** Neither settled nor ruled out, and both
+  currently read as unclear, so each now carries a plain words explanation at its entry, plus, for
+  `I2`, a much smaller middle option (keep the linear tiers, let research packs additionally unlock
+  optional side branches). Do not build either without asking.
+
+Parked but not rejected: everything else in Parts 1 to 3.
 
 Unsure, decide later: everything else in Part 2 and Part 3.
 
@@ -166,7 +166,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   coloured by reason. The cheapest large win here, because the data already exists.
 - **F6. A throughput view (M).** Show belts near capacity and mergers as gates.
 - **F7. Self set targets (S/M).** "Keep 200 circuits in stock", with an indicator when you are under.
-- **F8. Income by product (S). Raised by Fabian himself.** A ranked list of which products actually
+- **F8. Income by product (S).** A ranked list of which products actually
   earn: income per second per item over the last few minutes, lifetime earned per item, and each
   one's share of total income, so it is obvious that circuits are 60% of the money and crates are 2%.
   It answers the question every factory owner asks: what do I expand, and what do I stop making.
@@ -415,8 +415,8 @@ Effort: (S) small, (M) medium, (L) large, (XL) very large.
 ## Where I would start, given the confirmed taste
 
 1. **I1 + I2 + R2 + R6, research as a product.** Science packs from several chains, a tree paid in
-   goods, and some techs that finish by producing rather than spending. This is the direction he
-   already had in mind, and R6 is cheap enough to prove the feel immediately.
+   goods, and some techs that finish by producing rather than spending. This is the intended
+   direction, and R6 is cheap enough to prove the feel immediately.
 2. **R4 + M3, modules and sockets.** Once research is a product, modules are the natural next product
    to research, and they deepen every machine at once.
 3. **K4 first, then K1 and K2, the chemistry layer.** Barrels make fluids real without a pipe
