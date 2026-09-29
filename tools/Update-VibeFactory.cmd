@@ -3,6 +3,7 @@ rem Vibe Factory updater. Put this file in the folder you play the game from and
 rem double-click it: it fetches the newest release, replaces everything in this
 rem folder except this script, and starts nothing. Your saves are not here (they
 rem live in Godot's user folder), so they are never touched.
+rem Revision 2 (2026-09-29): prefer the IPv6 route for the download, see :download.
 setlocal EnableExtensions
 title Vibe Factory updater
 pushd "%~dp0" || (echo Could not open the folder this script is in. & pause & exit /b 1)
@@ -36,11 +37,29 @@ rem Download before deleting anything, so a failure leaves the old build alone.
 echo Downloading the newest build...
 if exist "%ZIP%" del /q "%ZIP%"
 where curl.exe >nul 2>nul
-if not errorlevel 1 (
-    curl.exe -L -f --retry 3 -o "%ZIP%" "%URL%"
-) else (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%URL%' -OutFile '%ZIP%'"
-)
+if errorlevel 1 goto :download_ps
+
+rem Measured on the owner's line: IPv4 to the release host runs at about 500 KB/s
+rem while IPv6 runs at 15 MB/s. That 30x turns this download from seconds into
+rem three minutes. Plain curl races the two and gives IPv6 only a 200 ms head
+rem start, so which one it picks is a coin toss. Ask for IPv6 explicitly, and fall
+rem back to the default route when there is no IPv6 so other machines still work.
+curl.exe -6 --connect-timeout 10 -L -f --retry 2 -o "%ZIP%" "%URL%"
+if not errorlevel 1 goto :downloaded
+rem A failed attempt leaves a partial file behind, and the next step deletes
+rem everything else in this folder, so a partial file must never be taken for the
+rem build. curl -f plus this errorlevel check is what guarantees that.
+if exist "%ZIP%" del /q "%ZIP%"
+echo No IPv6 route to the release host, trying over IPv4 instead.
+echo That route is much slower here, so this attempt can take a few minutes.
+curl.exe -L -f --retry 3 -o "%ZIP%" "%URL%"
+if errorlevel 1 if exist "%ZIP%" del /q "%ZIP%"
+goto :downloaded
+
+:download_ps
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%URL%' -OutFile '%ZIP%'"
+
+:downloaded
 if not exist "%ZIP%" (
     echo.
     echo Download failed. Nothing was changed, the build in this folder still works.
@@ -48,7 +67,8 @@ if not exist "%ZIP%" (
 )
 set "SIZE=0"
 for %%A in ("%ZIP%") do set "SIZE=%%~zA"
-if %SIZE% LSS 1000000 (
+rem 87 MB today. Anything under 20 MB is a truncated download or an error page.
+if %SIZE% LSS 20000000 (
     echo.
     echo That download is too small to be the game. Nothing was changed.
     del /q "%ZIP%"
