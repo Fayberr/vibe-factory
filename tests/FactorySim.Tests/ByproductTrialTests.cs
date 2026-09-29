@@ -102,6 +102,98 @@ public class ByproductTrialTests
         Assert.Equal(7.5, steel.UnitValue.ToDouble(), 9);
     }
 
+    /// <summary>
+    /// The one that stops a cracking line for good. A furnace fed coal and tar together used to burn the
+    /// coal for ever: an automatic machine keeps the recipe it started on while its inputs last, so the tar
+    /// stayed in the buffer, the belt feeding it filled up, and everything sorting into that belt stopped.
+    /// A byproduct in a buffer is there to be consumed, so it is now taken ahead of the def's recipe order.
+    /// What got burned is read off the buffers, not off the recipe, which moves on once the tar is gone.
+    /// </summary>
+    [Fact]
+    public void A_furnace_holding_tar_burns_it_instead_of_banking_it_behind_the_coal()
+    {
+        var (sim, furnace) = Machine("blast_furnace", null, ("iron_ingot", 2, 2), ("coal", 2, 1), ("tar", 1, 1));
+        var state = (ProcessorState)furnace.State;
+        sim.Step(40); // one craft: the tar, not the coal
+
+        Assert.Equal(0, state.Inputs["tar"].Count);   // the byproduct is what got burned
+        Assert.Equal(2, state.Inputs["coal"].Count);  // the coal is still there, untouched
+        Assert.Equal(1, state.Inputs["iron_ingot"].Count);
+        Assert.Equal("steel", Assert.Single(state.Output).Type);
+
+        // With the tar gone it falls back to coal, so the preference is not a lock-in either.
+        sim.Step(40);
+        Assert.Equal(1, state.Inputs["coal"].Count);
+        Assert.Equal(0, state.Inputs["iron_ingot"].Count);
+        Assert.Equal(2, state.Output.Count);
+    }
+
+    [Fact]
+    public void A_furnace_with_no_tar_burns_coal_exactly_as_before()
+    {
+        var (sim, furnace) = Machine("blast_furnace", null, ("iron_ingot", 3, 2), ("coal", 3, 1));
+        sim.Step(70);
+
+        var state = (ProcessorState)furnace.State;
+        Assert.Equal(1, state.Inputs["coal"].Count);
+        Assert.Equal(1, state.Inputs["iron_ingot"].Count);
+        Assert.Equal(2, state.Output.Count);
+    }
+
+    [Fact]
+    public void A_chosen_recipe_still_wins_over_the_byproduct()
+    {
+        // The player asked for coal steel, so the tar is left alone rather than quietly burned.
+        var (sim, furnace) = Machine("blast_furnace", "forge_steel", ("iron_ingot", 2, 2), ("coal", 2, 1), ("tar", 1, 1));
+        sim.Step(40);
+
+        var state = (ProcessorState)furnace.State;
+        Assert.Equal("forge_steel", state.Recipe);
+        Assert.Equal(1, state.Inputs["tar"].Count);
+        Assert.Equal(1, state.Inputs["coal"].Count);
+    }
+
+    /// <summary>
+    /// The reported factory, end to end: crack oil into plastic and tar, sort the plastic out the front to
+    /// a depot and the tar down into a blast furnace that is also fed coal. Before the byproduct rule the
+    /// furnace banked the tar, its belt stayed full, and the splitter stopped for good with the plastic
+    /// still sitting in it and the front belt empty.
+    /// </summary>
+    [Fact]
+    public void A_cracking_line_no_longer_jams_when_the_furnace_is_also_fed_coal()
+    {
+        var sim = TestUtil.NewSim();
+        sim.Place("refinery", 0, 2, 0, Dir.East);
+        Assert.True(sim.Execute(new SelectRecipe(new GridPos(0, 2, 0), "crack_oil")).Ok);
+        ((ProcessorState)sim.World.EntityAt(new GridPos(0, 2, 0))!.State).Inputs["crude_oil"] = new InputBuffer { Count = 60, ValueSum = 60 };
+        sim.Place("conveyor", 1, 2, 0, Dir.East);
+        sim.Place("splitter", 2, 2, 0, Dir.East);
+        sim.Place("seller", 3, 2, 0, Dir.East);  // front: the plastic
+        sim.Place("conveyor", 2, 3, 0, Dir.South);
+        sim.Place("conveyor", 2, 4, 0, Dir.South);
+        sim.Place("blast_furnace", 2, 5, 0, Dir.South);
+        sim.Place("seller", 2, 6, 0, Dir.South); // so the steel can leave and the furnace keeps running
+        // The furnace is fed coal as well as the tar, which is the case that used to deadlock it.
+        var furnace = (ProcessorState)sim.World.EntityAt(new GridPos(2, 5, 0))!.State;
+        furnace.Inputs["coal"] = new InputBuffer { Count = 8, ValueSum = 8 };
+        furnace.Inputs["iron_ingot"] = new InputBuffer { Count = 40, ValueSum = 80 };
+        Assert.True(sim.Execute(new SetFilter(new GridPos(2, 2, 0), 0, "plastic")).Ok);
+        Assert.True(sim.Execute(new SetFilter(new GridPos(2, 2, 0), 2, "tar")).Ok);
+
+        sim.Step(300);
+        long early = sim.Sold("plastic");
+        sim.DrainEvents();
+        sim.Step(600);
+        long later = sim.Sold("plastic");
+
+        var hub = sim.World.EntityAt(new GridPos(2, 2, 0))!;
+        var status = hub.Behavior.GetStatus(hub);
+        Assert.True(early > 0, "no plastic left the splitter at all, so the setup is wrong");
+        Assert.True(later > early, $"the plastic stopped flowing: {early} then {later}");
+        Assert.True(status.Working, $"the splitter jammed: {status.Detail}");
+        Assert.True(sim.Sold("steel") > 0, "the tar never reached the furnace, so nothing proves it burned");
+    }
+
     [Fact]
     public void A_cracking_line_sorts_plastic_one_way_and_tar_into_a_depot()
     {

@@ -19,6 +19,12 @@ public sealed class ProcessorParams
     [JsonIgnore] internal HashSet<string> Ingredients { get; set; } = new();
     [JsonIgnore] internal Dictionary<string, HashSet<string>> IngredientsOf { get; set; } = new();
     [JsonIgnore] internal Dictionary<string, string> ItemNames { get; set; } = new();
+
+    /// <summary>
+    /// Recipes that consume a byproduct. A machine on automatic prefers these, because a byproduct
+    /// sitting in a buffer is there to be consumed, not banked (see <c>PickRecipe</c>).
+    /// </summary>
+    [JsonIgnore] internal HashSet<string> ByproductRecipes { get; set; } = new();
 }
 
 public sealed class InputBuffer
@@ -76,6 +82,9 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         p.IngredientsOf = resolved.ToDictionary(r => r.Id, r => r.Inputs.Select(i => i.Item).ToHashSet());
         p.ItemNames = resolved.SelectMany(r => r.Inputs.Concat(r.Outputs)).Select(a => a.Item).Distinct()
             .ToDictionary(id => id, id => content.Items[id].Name);
+        p.ByproductRecipes = resolved
+            .Where(r => r.Inputs.Any(i => content.Items.TryGetValue(i.Item, out var d) && d.Byproduct))
+            .Select(r => r.Id).ToHashSet();
     }
 
     protected override void Tick(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s)
@@ -113,6 +122,12 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         // A choice that no longer exists (a save from before a recipe was renamed or removed) counts as automatic.
         if (s.Chosen != null && Array.Find(p.ResolvedRecipes, r => r.Id == s.Chosen) is { } chosen)
             return MaxCrafts(chosen, s) > 0 ? chosen : null;
+        // A byproduct in the buffer is there to be consumed, not banked, so it is taken ahead of the
+        // def's order. Without this a furnace fed both coal and tar burns coal for ever: the recipe
+        // below keeps whatever it started on while its inputs last, so the tar would sit there and the
+        // belt feeding it would back up for good. A byproduct that cannot leave is a factory that stops.
+        foreach (var r in p.ResolvedRecipes)
+            if (p.ByproductRecipes.Contains(r.Id) && MaxCrafts(r, s) > 0) return r;
         // Stick with the current recipe while it is still possible (avoids thrashing).
         foreach (var r in p.ResolvedRecipes)
             if (r.Id == s.Recipe && MaxCrafts(r, s) > 0) return r;

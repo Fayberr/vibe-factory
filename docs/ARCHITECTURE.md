@@ -213,6 +213,17 @@ spillway, and the panel says which output is holding the line up when one is.
 `ItemDef.Byproduct` (`"byproduct": true`) marks an item that is made on the side. It sells and
 crafts like any other item, but is never asked for in an order, so dealing with it stays optional.
 
+A machine on automatic **consumes a byproduct it is holding**: `ProcessorBehavior.PickRecipe` takes a
+recipe whose inputs include a byproduct ahead of the def's recipe order, before the rule that keeps
+the current recipe while its inputs last. Without that, a blast furnace fed coal and tar together
+burned coal for ever (`forge_steel` is listed first), so the tar sat in its buffer, the belt feeding
+it filled up, and everything sorting into that belt stopped for good: the player built the whole
+chain and still got a dead factory with no hint as to why. A byproduct is there to be consumed, not
+banked. The player's chosen recipe still wins (`Chosen`), and with no byproduct in the buffer the
+order is exactly as before. The only cost is that a machine whose byproduct arrives slower than it
+can burn it alternates between the two recipes, and a switch resets `Work`, so it loses part of a
+craft each time; that is the cheap price of never banking a byproduct.
+
 **The trial content** in `base.json` is marked "Byproduct trial" in comments: an Oil Refinery can
 crack crude oil (2 crude oil → 3 plastic + 1 tar), and a Blast Furnace can burn tar instead of coal
 (iron ingot + tar → steel). Both are tuned so that every unit is worth what the plain recipes make:
