@@ -80,11 +80,21 @@ More products and tiers on top of that tree. Adding a tier or product should sta
 in `base.json`, with no code changes. Ideas not decided yet: ore deposits placed on the map by
 seed, alternative recipes, end-game megaprojects.
 
+### 5. Polish and belt look (done)
+
+Two follow-ups from looking at the game after step 1:
+
+- **Items overlapped their belt slot.** A belt tile holds four slots (a quarter tile each), but
+  planks (0.30), logs (0.28), glass (0.24), ingots (0.32) and motors (0.26) were longer than
+  that, so a busy belt read as one continuous ribbon. Every item mesh now fits its slot with a
+  visible gap (nothing above 0.18). Pure art: no speed, spacing or throughput changed.
+- **Polishing compounded.** A polisher multiplied the value of what passed it, and a machine
+  took that value over, so a polisher at every stage multiplied value by 1.5 each time (a
+  three-step chain earned 3.4× the plain one). Decided against: a bonus is now paid when the
+  item is sold and nowhere else, so it never carries into the next product. Polishing an
+  ingredient does nothing; the polisher goes at the end of the line. The tool keeps the
+  compounding variant as `--polish all`, a what-if for comparing balance changes.
+
 ## Open questions
 
-- **Belt look:** keep the slower belts (items travel 1 tile/s at level 1, packed a quarter tile
-  apart) or keep the old item speed with wider gaps (2 tiles/s, half a tile apart)? Throughput
-  is the same either way.
-- **Polisher:** still runs at 8 items/s at level 1. Follow the new belt speeds or not?
-- **Compounding polish:** processed items keep the value of their polished ingredients, so
-  polishing every stage multiplies value by 1.5 per stage. Intended or not?
+None right now. The next decision is which of steps 2 to 4 to start.

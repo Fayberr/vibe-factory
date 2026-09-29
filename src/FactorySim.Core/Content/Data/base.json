@@ -225,7 +225,7 @@
       "upgrade": { "maxLevel": 10, "speedPerLevel": 0.15, "valuePerLevel": 0.1, "costFactor": 1.5, "costGrowth": 1.8 },
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "out", "side": "front" } ],
       "params": { "speed": 100, "spacing": 250, "effect": { "tag": "polished", "valueMultiplier": 1.5, "once": true } },
-      "meta": { "model": "polisher", "accent": "#35d0c9", "glyph": "P", "description": "In-line upgrader: ×1.5 value, once per item. Drop it onto a belt." }
+      "meta": { "model": "polisher", "accent": "#35d0c9", "glyph": "P", "description": "In-line upgrader: ×1.5 value, once per item, paid when the item is sold. Crafting values its inputs at the plain rate, so polish what you sell, not what you feed a machine. Drop it onto a belt." }
     },
     {
       "id": "sawmill", "name": "Sawmill", "behavior": "processor", "cost": 120, "category": "processing", "tier": 1,

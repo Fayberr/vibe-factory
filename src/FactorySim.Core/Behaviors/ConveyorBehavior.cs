@@ -41,7 +41,7 @@ public sealed class ItemEffect
         if (Once && item.HasTag(Tag)) return false;
         if (RequiresTag != null && !item.HasTag(RequiresTag)) return false;
         if (Items != null && Array.IndexOf(Items, item.Type) < 0) return false;
-        if (ValueMultiplier * bonus != 1) item.UnitValue *= ValueMultiplier * bonus;
+        if (ValueMultiplier * bonus != 1) item.ValueBonus *= ValueMultiplier * bonus;
         item.SetTag(Tag, item.GetTag(Tag) + 1);
         return true;
     }
@@ -187,7 +187,7 @@ public sealed class ConveyorBehavior : Behavior<ConveyorParams, ConveyorState>
         into.Add(new InfoLine("Speed", $"{speed * Simulation.TicksPerSecond / Length:0.##} tiles/s"));
         into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
         if (p.Effect != null)
-            into.Add(new InfoLine("Effect", $"×{p.Effect.ValueMultiplier * e.ValueFactor:0.##} value{(p.Effect.Once ? ", once per item" : "")}"));
+            into.Add(new InfoLine("Effect", $"×{p.Effect.ValueMultiplier * e.ValueFactor:0.##} value{(p.Effect.Once ? ", once per item" : "")}, paid on sale"));
         into.Add(new InfoLine("On belt", s.Items.Count.ToString()));
     }
 }

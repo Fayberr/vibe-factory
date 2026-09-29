@@ -13,6 +13,8 @@ namespace FactorySim.Cli;
 ///   balance item &lt;item&gt; [rate]  the full production line for one item (default 1/s)
 /// Options: --level N (every building at level N), --polish none|products|all,
 ///          --tier N (unlocked tier for items/item, default the last), --pack extra.json (repeatable).
+/// Polish: none, products (what the game does: one polisher before the depot) or all (a
+/// hypothetical where the bonus compounds at every stage, which the game does not allow).
 /// </summary>
 public static class BalanceCommand
 {
@@ -105,7 +107,7 @@ public static class BalanceCommand
         {
             PolishMode.None => "no polishing",
             PolishMode.Products => $"products polished (x{Num(book.PolishMultiplier)})",
-            _ => $"every step polished (x{Num(book.PolishMultiplier)} each)",
+            _ => $"every stage polished (x{Num(book.PolishMultiplier)} each, not what the game does)",
         };
         return $"== {title}: buildings at level {book.Assumptions.Level}, {polish}, " +
                $"belts carry {Num(book.BeltItemsPerSecond)}/s ==\n";

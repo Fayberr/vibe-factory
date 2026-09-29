@@ -47,7 +47,8 @@ public sealed class ProcessorState
 /// Recipe-driven machine: buffers ingredients from any input port, crafts, and emits
 /// output bundles. Refining, smelting and multi-ingredient merging (alloys, parts) are
 /// all this behavior with different recipes. Output value derives from consumed input
-/// value × recipe multiplier, so upstream upgrades carry through the chain.
+/// value × recipe multiplier, so upstream machine levels carry through the chain. In-line
+/// effects (the polisher) do not: they pay at the depot and nowhere else.
 /// By default it runs whichever recipe its inputs allow; the player can choose one, and
 /// then it only takes that recipe's ingredients.
 /// </summary>

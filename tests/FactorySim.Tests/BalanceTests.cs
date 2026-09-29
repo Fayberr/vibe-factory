@@ -147,8 +147,10 @@ public class BalanceTests
     }
 
     [Fact]
-    public void Polishing_every_step_compounds_through_the_chain()
+    public void The_compounding_what_if_multiplies_value_at_every_stage()
     {
+        // The game pays a polish bonus once, at the depot. This mode models the alternative
+        // where a machine takes the polished value of its inputs over, for comparing balances.
         var plain = Book(1, PolishMode.None);
         var all = Book(1, PolishMode.EveryStep);
 

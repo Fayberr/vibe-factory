@@ -16,12 +16,24 @@ public sealed class ItemStack
 
     public string Type { get; set; } = "";
     public long Count { get; set; } = 1;
+    /// <summary>What one unit is worth as it is: the value its maker gave it.</summary>
     public BigNum UnitValue { get; set; }
+
+    /// <summary>
+    /// Extra multiplier from in-line effects (the polisher), paid when the item is sold.
+    /// Crafting values its inputs by <see cref="UnitValue"/>, so a bonus never carries into
+    /// the next product: polish the finished item or lose it.
+    /// </summary>
+    public double ValueBonus { get; set; } = 1;
 
     /// <summary>Status effects and one-shot markers (e.g. "polished", "heat"). Null until first used.</summary>
     public Dictionary<string, double>? Tags { get; set; }
 
+    /// <summary>Plain value of the whole bundle, bonus excluded: what a machine consumes.</summary>
     public BigNum TotalValue => UnitValue * Count;
+
+    /// <summary>What the bundle fetches at a depot, in-line bonus included.</summary>
+    public BigNum SaleValue => UnitValue * ValueBonus * Count;
 
     public bool HasTag(string tag) => Tags != null && Tags.ContainsKey(tag);
 
@@ -29,5 +41,5 @@ public sealed class ItemStack
 
     public void SetTag(string tag, double value) => (Tags ??= new Dictionary<string, double>())[tag] = value;
 
-    public override string ToString() => $"{Count}x {Type} @{UnitValue.Format()}";
+    public override string ToString() => $"{Count}x {Type} @{SaleValue.Format()}";
 }

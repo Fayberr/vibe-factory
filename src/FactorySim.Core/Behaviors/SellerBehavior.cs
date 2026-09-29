@@ -31,7 +31,7 @@ public sealed class SellerBehavior : Behavior<SellerParams, SellerState>
     protected override bool TryAccept(TickContext ctx, Entity e, SellerParams p, SellerState s, ItemStack item, int port, int overflow)
     {
         double raw = ctx.Content.Items.TryGetValue(item.Type, out var def) && def.Raw ? p.RawMultiplier : 1;
-        BigNum payout = item.TotalValue * (p.Multiplier * raw * e.ValueFactor * ctx.Stat(StatIds.SellMultiplier));
+        BigNum payout = item.SaleValue * (p.Multiplier * raw * e.ValueFactor * ctx.Stat(StatIds.SellMultiplier));
         s.Earned += payout;
         s.Units += item.Count;
         ctx.Sell(e, item, payout);

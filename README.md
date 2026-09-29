@@ -149,6 +149,10 @@ their choice.
   silver, gold, cyan, violet) and are kept by copy/paste.
 - **Raw resources sell for 25%.** Processing is what pays: an ingot sells for 8× what its
   ore fetches raw, and a robot is worth about 1600 iron ore.
+- **The Polisher pays at the depot.** An in-line machine that multiplies the value of what
+  passes it by 1.5, once per item, paid only when the item is sold. Machines value their
+  inputs at the plain rate, so polishing an ingredient is wasted: put it right before the
+  depot. Raw ore keeps its 25% cut, so polished ore still sells for 1.5× that.
 - **Build limits.** Extractors and depots are capped per tier (for example 4 iron drills
   at the start and 2 more with every tier). Belts and machines are unlimited,
   but logistics is not free: a belt tile costs $10, a ramp $25, a splitter or merger $200.

@@ -12,8 +12,11 @@ public enum PolishMode
     /// <summary>Only what gets sold is polished, right before the depot.</summary>
     Products,
 
-    /// <summary>Every ore and every intermediate is polished too. Value carries into what is made
-    /// from it, so this compounds with every stage.</summary>
+    /// <summary>
+    /// Every ore and every intermediate is polished too, and the bonus carries into what is made
+    /// from it. A what-if for balance experiments: the game does not work this way (a machine
+    /// values its inputs at the plain rate, so a bonus is only ever paid on a sale).
+    /// </summary>
     EveryStep,
 }
 
