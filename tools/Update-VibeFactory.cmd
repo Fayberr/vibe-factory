@@ -3,7 +3,7 @@ rem Vibe Factory updater. Put this file in the folder you play the game from and
 rem double-click it: it fetches the newest release, replaces everything in this
 rem folder except this script, and starts nothing. Your saves are not here (they
 rem live in Godot's user folder), so they are never touched.
-rem Revision 2 (2026-09-29): prefer the IPv6 route for the download, see :download.
+rem Revision 3 (2026-09-29): redraw a slow download instead of waiting it out.
 setlocal EnableExtensions
 title Vibe Factory updater
 pushd "%~dp0" || (echo Could not open the folder this script is in. & pause & exit /b 1)
@@ -39,19 +39,27 @@ if exist "%ZIP%" del /q "%ZIP%"
 where curl.exe >nul 2>nul
 if errorlevel 1 goto :download_ps
 
-rem Measured on the owner's line: IPv4 to the release host runs at about 500 KB/s
-rem while IPv6 runs at 15 MB/s. That 30x turns this download from seconds into
-rem three minutes. Plain curl races the two and gives IPv6 only a 200 ms head
-rem start, so which one it picks is a coin toss. Ask for IPv6 explicitly, and fall
-rem back to the default route when there is no IPv6 so other machines still work.
-curl.exe -6 --connect-timeout 10 -L -f --retry 2 -o "%ZIP%" "%URL%"
+rem The release host here gives either about 15 MB/s or about 0.5 MB/s, which is
+rem the difference between six seconds and three minutes, and which one you get is
+rem decided per transfer, not per address: all four of its IPv4 addresses behave
+rem the same and it has no IPv6 at all. So a slow transfer is treated as a failed
+rem one and drawn again. The last attempt takes whatever it can get, so a line
+rem that is genuinely congested still ends with a working build, just a slow one.
+set "TRY=0"
+:trydownload
+set /a TRY+=1
+if %TRY% GTR 3 goto :lasttry
+curl.exe -L -f --retry 2 --speed-limit 2000000 --speed-time 6 -o "%ZIP%" "%URL%"
 if not errorlevel 1 goto :downloaded
-rem A failed attempt leaves a partial file behind, and the next step deletes
-rem everything else in this folder, so a partial file must never be taken for the
-rem build. curl -f plus this errorlevel check is what guarantees that.
+rem A slow or failed attempt leaves a partial file behind. The next step deletes
+rem everything else in this folder, so a partial file must never be mistaken for
+rem the build.
 if exist "%ZIP%" del /q "%ZIP%"
-echo No IPv6 route to the release host, trying over IPv4 instead.
-echo That route is much slower here, so this attempt can take a few minutes.
+echo That attempt was far too slow to wait for. Trying again.
+goto :trydownload
+
+:lasttry
+echo Three slow attempts in a row. Taking this one however long it takes.
 curl.exe -L -f --retry 3 -o "%ZIP%" "%URL%"
 if errorlevel 1 if exist "%ZIP%" del /q "%ZIP%"
 goto :downloaded
