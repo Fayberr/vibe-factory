@@ -33,7 +33,19 @@ Wanted, in his words:
   designated spots. Build the no-chore variant in A1 above, where a patch is a rate bonus and never a
   requirement, or drop the idea entirely. Do not build the required-placement version.
 
-Parked but not rejected: the rest of Part 1. Part 2 below is the larger menu, requested the same day.
+Confirmed 2026-09-29 (second pass), and this is now the clearest direction the game has:
+
+- **I1, science packs and labs.** Plus the framing that matters most: he had already imagined the
+  research or skill tree being paid in **items you manufacture**, not money. So research is a
+  production line: labs eat packs, packs are built from the factory, and the tree is bought with
+  goods. Design progression around that from here on.
+- **I2 and D1, a research tree** rather than a linear tier list, since a tree paid in goods is what
+  makes the choice real.
+- **I7, the chemistry layer**, so fluids are handled differently from items.
+
+Unsure, decide later: everything else in Part 2 and Part 3.
+
+Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger menus.
 
 ---
 
@@ -292,3 +304,92 @@ money. The natural second act is **B9 + I7 + C1 + I9**: oil, fluids, power and h
 turns a late game into a real industry. The natural third act is **II**: robots and trains, which is
 about scale. The world and economy ideas (III and IV) can be layered in any time, and each one is
 independent.
+
+---
+
+# Part 3: more ideas
+
+The third pass, asked for after science packs, the research tree and the chemistry layer were
+confirmed. Leans into those two directions and then into mechanics not yet listed anywhere.
+Effort: (S) small, (M) medium, (L) large, (XL) very large.
+
+## VI. Research you manufacture (the confirmed direction, expanded)
+
+- **R1. Discovery instead of a menu (L).** You do not pick recipes off a list. You feed items into a
+  lab and *discover* what they make, so exploring the recipe space is the gameplay.
+- **R2. A tech needs several different packs at once (M).** Forces breadth: one deep line cannot
+  finish a research, so the whole factory is always part of the answer.
+- **R3. Lab tiers and demanding packs (M).** A better lab eats more packs faster, and the last packs
+  need a cold chain or an orbital lab, so late research needs real infrastructure.
+- **R4. Modules you manufacture and insert (L). This is the big one after I1.** Speed, efficiency and
+  productivity modules are *items*, built from their own chain and inserted into machines. It adds a
+  whole production branch and the deepest optimisation layer in the genre.
+- **R5. Beacons (M).** Area machines that boost everything around them, so dense layouts pay off.
+- **R6. Research by doing (S).** A tech finishes once you have *produced* N of an item. Cheap to build
+  and it makes ordinary production feel like progress.
+- **R7. Mutually exclusive branches (M).** Two paths, you pick one and the other locks until late, so
+  two runs genuinely cannot look the same.
+- **R8. A procedurally generated tech graph (L).** The tree and its dependencies differ per seed, so
+  what you can research first changes every run.
+- **R9. A codex that fills in (S/M).** Every product, recipe and process you discover is recorded, so
+  completing the book is a long-term goal.
+- **R10. License a recipe from a customer (M).** A client you supply well teaches you their product,
+  which ties the contract board to the tree.
+- **R11. Prove a tech by building a line (M).** A research completes only once a working line for it
+  exists, so theory and factory have to meet.
+
+## VII. Chemistry and fluids, deeper
+
+- **K1. Recipe variants by condition (L). This is the most interesting chemistry idea.** The same
+  reactor run hot or cold, or at high or low pressure, yields different products. One machine becomes
+  several processes, and the setting is a real decision.
+- **K2. A distillation tower (M).** One input, several outputs split by cut point, so the tower is a
+  routing puzzle and its outputs must be balanced.
+- **K3. Heat integration (L).** Exothermic reactions give off heat, endothermic ones consume it, so
+  heat becomes a resource to route. It makes the chemistry layer a system.
+- **K4. Fluids in barrels (M). This is chemistry without pipes.** Liquids move as ordinary items in
+  barrels, filled and emptied by machines. Far cheaper than a pipe network, and it keeps the belt
+  game intact.
+- **K5. Mixing and blending (M).** Two liquids in a tank become a third, and the wrong ratio makes
+  waste.
+- **K6. Flow limits and pumps (M).** A fluid's rate falls with distance, so pumps and pipe sizing
+  matter the way belt capacity does.
+- **K7. A reactor with sliders (L).** Temperature and pressure are player set parameters on the
+  building, so the same machine is many recipes depending on how it is tuned.
+- **K8. Waste that must be treated (M).** Processes leak waste to treat, store or vent, and ignoring
+  it costs money or reputation.
+- **K9. Nuclear power (L).** A chain reaction that needs cooling and can overheat, giving the heat
+  network a spectacular reason to exist.
+- **K10. Catalysts that wear out (M).** A catalyst is consumed slowly and must be regenerated, so the
+  loop has to balance itself.
+- **K11. A bottling and packaging chain (S/M).** Fill, ship, empty, with the empty container
+  returning, so containers are a loop rather than a cost.
+
+## VIII. Mechanical depth not yet listed
+
+- **M1. Machine operating modes (M).** A machine runs fast but wasteful, or slow but efficient, so
+  the same building plays two ways and the player sets the policy.
+- **M2. Retooling cost (M).** Switching a recipe costs time or money, so committing to a layout is a
+  real decision and mistakes have weight.
+- **M3. Sockets on machines (M).** A standard interface for modules and attachments, which is what
+  makes R4, R5 and M1 possible without touching every behavior.
+- **M4. Terraforming (M).** Fill water, break cliffs, plant forest, as researched abilities.
+- **M5. Selling designs (M).** A manufactured blueprint or design is itself an export good, which
+  gives the blueprint library a role in the economy.
+- **M6. A manager layer (M).** Hire managers who take over a line's logistics decisions, so the late
+  game becomes supervising a system rather than touching every building.
+- **M7. Machine families (M).** A researched Mk2 Smelter as its own def, so progress shows up as
+  better buildings, not only higher levels.
+- **M8. Shared reactions (M).** Several input machines feeding one reactor, where the recipe needs a
+  ratio across types, so a whole sub-factory is one process.
+
+## Where I would start, given the confirmed taste
+
+1. **I1 + I2 + R2 + R6, research as a product.** Science packs from several chains, a tree paid in
+   goods, and some techs that finish by producing rather than spending. This is the direction he
+   already had in mind, and R6 is cheap enough to prove the feel immediately.
+2. **R4 + M3, modules and sockets.** Once research is a product, modules are the natural next product
+   to research, and they deepen every machine at once.
+3. **K4 first, then K1 and K2, the chemistry layer.** Barrels make fluids real without a pipe
+   network; condition based variants and a distillation tower are what make it feel like chemistry
+   rather than another belt.
