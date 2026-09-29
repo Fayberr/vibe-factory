@@ -38,6 +38,25 @@ public sealed class RouterState
     /// of outputs takes turns on its own (one shared cursor would send every other item to one output).
     /// </summary>
     public long[]? LastPicked { get; set; }
+
+    /// <summary>
+    /// Per port: ticks in a row an item was refused through it. An item it cannot send stops the lane
+    /// behind it, so an output that keeps refusing holds the whole hub up and that is what the status
+    /// and the panel report. A single refusal in busy traffic is not a jam and does not count.
+    /// </summary>
+    [JsonIgnore] public int[] RefusedTicks { get; set; } = Array.Empty<int>();
+
+    /// <summary>Per port: an item was refused through it on the tick now running.</summary>
+    [JsonIgnore] public bool[] RefusedNow { get; set; } = Array.Empty<bool>();
+
+    /// <summary>Ticks in a row an item in the hub could not leave at all, because no connected output takes it.</summary>
+    [JsonIgnore] public int NoOutputTicks { get; set; }
+
+    /// <summary>That happened on the tick now running.</summary>
+    [JsonIgnore] public bool NoOutputNow { get; set; }
+
+    /// <summary>Type of the last item no connection would take, for the status text.</summary>
+    [JsonIgnore] public string? NoOutputItem { get; set; }
 }
 
 /// <summary>An item crossing a hub: entered through <see cref="From"/>, leaving through <see cref="To"/> (-1 = not chosen yet).</summary>
@@ -85,6 +104,21 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
 
     protected override void Tick(TickContext ctx, Entity e, RouterParams p, RouterState s)
     {
+        int ports = e.Def.Ports.Length;
+        if (s.RefusedTicks.Length != ports)
+        {
+            s.RefusedTicks = new int[ports];
+            s.RefusedNow = new bool[ports];
+        }
+        for (int i = 0; i < ports; i++)
+        {
+            s.RefusedTicks[i] = s.RefusedNow[i] ? s.RefusedTicks[i] + 1 : 0;
+            s.RefusedNow[i] = false;
+        }
+        s.NoOutputTicks = s.NoOutputNow ? s.NoOutputTicks + 1 : 0;
+        s.NoOutputNow = false;
+        if (s.NoOutputTicks == 0) s.NoOutputItem = null;
+
         var items = s.Items;
         if (items.Count == 0) return;
         int speed = Speed(ctx, e, p);
@@ -96,7 +130,16 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
             int target = it.Pos + speed;
             if (w > 0) target = Math.Min(target, items[w - 1].Pos - p.Spacing);
 
-            if (it.To < 0 && target >= Length / 2) it.To = PickOutput(ctx, e, s, it.Item.Type);
+            if (it.To < 0 && target >= Length / 2)
+            {
+                it.To = PickOutput(ctx, e, s, it.Item.Type);
+                if (it.To < 0)
+                {
+                    // Nothing connected takes it at all: it waits at the centre and holds up the belt behind.
+                    s.NoOutputNow = true;
+                    s.NoOutputItem = it.Item.Type;
+                }
+            }
             if (it.To < 0) target = Math.Min(target, Length / 2); // nowhere to go yet: wait at the centre
 
             if (w == 0 && target >= Length)
@@ -180,22 +223,39 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         while (start < outs.Count - 1 && outs[start] != it.To) start++;
         string type = it.Item.Type;
         var home = HomeOf(e, s, type);
-        if (home == Group.None) return false; // nothing takes it any more: wait until a filter or belt changes
+        if (home == Group.None)
+        {
+            // Nothing connected takes it any more: wait until a filter or belt changes.
+            s.NoOutputNow = true;
+            return false;
+        }
         var chosen = GroupOf(s, start, type);
-        if ((chosen == home || chosen == Group.Overflow) && ctx.Push(e, it.To, it.Item, overflow)) return true;
+        if ((chosen == home || chosen == Group.Overflow) && TryPush(ctx, e, s, it.To, it.Item, overflow)) return true;
         for (int k = 1; k < outs.Count; k++)
         {
             int idx = (start + k) % outs.Count;
-            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != home || !ctx.Push(e, outs[idx], it.Item, overflow)) continue;
-            return true;
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != home) continue;
+            if (TryPush(ctx, e, s, outs[idx], it.Item, overflow)) return true;
         }
         if (home == Group.Overflow || s.Filters == null) return false;
         for (int k = 1; k < outs.Count; k++)
         {
             int idx = (start + k) % outs.Count;
-            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != Group.Overflow || !ctx.Push(e, outs[idx], it.Item, overflow)) continue;
-            return true;
+            if (!e.Link(outs[idx]).IsConnected || GroupOf(s, idx, type) != Group.Overflow) continue;
+            if (TryPush(ctx, e, s, outs[idx], it.Item, overflow)) return true;
         }
+        return false;
+    }
+
+    /// <summary>
+    /// Send the item out through one port. A refusal is remembered per output: an item that cannot leave
+    /// stops the lane behind it, so an output that keeps refusing is what the panel names when the hub
+    /// looks stuck, and the player can see which belt to look at.
+    /// </summary>
+    private static bool TryPush(TickContext ctx, Entity e, RouterState s, int port, ItemStack item, int overflow)
+    {
+        if (ctx.Push(e, port, item, overflow)) return true;
+        if (port >= 0 && port < s.RefusedNow.Length) s.RefusedNow[port] = true;
         return false;
     }
 
@@ -277,8 +337,47 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         foreach (var it in s.Items) into.Add(new ItemView(it.Item, it.Pos / (float)Length, it.From, it.To));
     }
 
-    protected override EntityStatus GetStatus(Entity e, RouterParams p, RouterState s) =>
-        new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
+    /// <summary>Ticks an output must keep refusing items before the hub calls itself held up (1 second).</summary>
+    public const int JamTicks = 20;
+
+    /// <summary>
+    /// The output that is holding the hub up, as an output number, or -1. Only an output that keeps
+    /// refusing counts: one refusal in busy traffic is not a jam.
+    /// </summary>
+    public static int JammedOutput(Entity e, RouterState s)
+    {
+        var outs = e.Def.OutputPorts;
+        for (int i = 0; i < outs.Count; i++)
+            if (outs[i] < s.RefusedTicks.Length && s.RefusedTicks[outs[i]] >= JamTicks) return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// What is wrong with one output, to hang on its name in the panel: no belt at all, or a belt that
+    /// keeps refusing. Empty when the output is fine, so nothing changes for a hub that is running.
+    /// </summary>
+    public static string OutputNote(Entity e, RouterState s, int output)
+    {
+        if (!e.Link(e.Def.OutputPorts[output]).IsConnected) return " (no belt)";
+        return JammedOutput(e, s) == output ? " (belt full)" : "";
+    }
+
+    /// <summary>
+    /// A hub that cannot pass something says so, because "5 item(s)" on a stopped line reads exactly like
+    /// a busy one. See <see cref="JammedOutput"/>: the point is that a full belt downstream is the reason
+    /// the whole line stopped, and a player should not have to guess that from a frozen picture.
+    /// </summary>
+    protected override EntityStatus GetStatus(Entity e, RouterParams p, RouterState s)
+    {
+        if (JammedOutput(e, s) is var jam && jam >= 0)
+            return new(false, 0, $"{OutputName(e.Def, jam)} blocked");
+        if (s.NoOutputTicks >= JamTicks && s.NoOutputItem is { } stuck)
+        {
+            string name = p.Items.TryGetValue(stuck, out var item) ? item.Name : stuck;
+            return new(false, 0, $"nothing takes {name}");
+        }
+        return new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
+    }
 
     protected override void Describe(Entity e, RouterParams p, RouterState s, List<InfoLine> into)
     {
@@ -289,7 +388,8 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
         into.Add(new InfoLine("Throughput", $"{speed * Simulation.TicksPerSecond / p.Spacing:0.#} items/s"));
         into.Add(new InfoLine("Inside", s.Items.Count.ToString()));
         if (s.Filters is { } f)
-            into.Add(new InfoLine("Sorting", string.Join(" · ", f.Select((rule, i) => $"{OutputName(e.Def, i)}: {RuleName(p, rule)}"))));
+            into.Add(new InfoLine("Sorting", string.Join(" · ", f.Select((rule, i) =>
+                $"{OutputName(e.Def, i)}: {RuleName(p, rule)}{OutputNote(e, s, i)}"))));
     }
 
     /// <summary>How a filter reads to the player: "anything", "overflow" or the item's name.</summary>

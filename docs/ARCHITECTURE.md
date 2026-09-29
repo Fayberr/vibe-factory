@@ -110,6 +110,13 @@ underneath. Lifts and multi-level machines use the same mechanism.
   take any more. Merging is fair: while the preferred input has items waiting, other
   inputs are refused, then the preference rotates. Both are tested with saturated
   inputs. A splitter can also sort, with a filter per output (see Byproducts below).
+  A hub that cannot pass something says so instead of looking busy: once an output has
+  refused items for a full second (`RouterState.RefusedTicks`, `JamTicks`) the status
+  names it ("Left blocked", red lamp) and the panel adds "(belt full)" to its row, or
+  "(no belt)" when a filter sits on an output with nothing attached to it. "5 item(s)"
+  on a frozen hub was indistinguishable from a working one, which cost the owner a
+  session on 2026-09-29: the answer to "why is my plastic not moving" was that the
+  tar belt at the end of the right output had been full for hours.
 - **Shared geometry.** `View/TransportPath` defines every path in building-local
   space: straight, S-curved ramps (smoothstep), quarter-circle curves, and hub
   entry→centre→exit. The simulation positions items with it, and the Godot client
@@ -194,7 +201,10 @@ for this very scenario) and he rejected it on 2026-09-29, because a full byprodu
 nothing and the hub silently accumulated hundreds of items that were nowhere on the map. With no
 filter set `Filters` is null and the old round-robin code path runs, so a plain splitter routes and
 saves exactly as before. The lazy answer to a byproduct is one splitter: set the wanted item on one
-output and overflow on another that runs to a depot.
+output and overflow on another that runs to a depot. Note what "anything" does and does not do: it is
+the default rule of an output, and an item that has an output of its own never falls back to it, so a
+belt set to "anything" is not a spillway for a byproduct whose own belt is full. "overflow" is the
+spillway, and the panel says which output is holding the line up when one is.
 
 `ItemDef.Byproduct` (`"byproduct": true`) marks an item that is made on the side. It sells and
 crafts like any other item, but is never asked for in an order, so dealing with it stays optional.

@@ -348,6 +348,7 @@ public class SplitterFilterTests
         var sim = Sorter();
         Filter(sim, Front, "iron_plate");
         Filter(sim, Right, RouterBehavior.Overflow);
+        sim.Step(1); // the port links are resolved with the first tick, and the panel reports on them
         var hub = sim.World.EntityAt(Hub)!;
         var lines = new List<View.InfoLine>();
         hub.Behavior.Describe(hub, lines);
@@ -384,6 +385,69 @@ public class SplitterFilterTests
         var lines = new List<View.InfoLine>();
         hub.Behavior.Describe(hub, lines);
         Assert.DoesNotContain(lines, l => l.Label == "Held"); // nothing is set aside, so nothing to report
+    }
+
+    // ---- A stuck hub says why: which output, and whether it even has a belt ---------------------
+
+    [Fact]
+    public void A_hub_held_up_by_a_full_belt_names_that_output_instead_of_looking_busy()
+    {
+        var sim = Sorter(left: "belt"); // a one tile dead end fills, then refuses everything
+        Filter(sim, Left, "iron_rod");
+        sim.Step(600);
+
+        var hub = sim.World.EntityAt(Hub)!;
+        var status = hub.Behavior.GetStatus(hub);
+        Assert.False(status.Working, "a hub that cannot pass anything reported itself as working");
+        Assert.Equal("Left blocked", status.Detail); // the output holding the line up, by its panel name
+
+        var lines = new List<View.InfoLine>();
+        hub.Behavior.Describe(hub, lines);
+        Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: anything · Left: Iron Rod (belt full) · Right: anything");
+    }
+
+    [Fact]
+    public void A_hub_that_is_running_reports_no_blocked_output()
+    {
+        var sim = Sorter();
+        Filter(sim, Front, "iron_plate");
+        Filter(sim, Left, "iron_rod");
+        sim.Step(2000);
+
+        var hub = sim.World.EntityAt(Hub)!;
+        Assert.True(sim.Sold("iron_plate") > 0 && sim.Sold("iron_rod") > 0, "the setup did not run at all");
+        Assert.True(hub.Behavior.GetStatus(hub).Working, "a running splitter reported itself as blocked");
+        var lines = new List<View.InfoLine>();
+        hub.Behavior.Describe(hub, lines);
+        Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: Iron Plate · Left: Iron Rod · Right: anything");
+    }
+
+    [Fact]
+    public void A_filter_on_an_output_with_no_belt_is_marked_as_such_and_takes_nothing()
+    {
+        var sim = Sorter(right: null); // nothing connected on the right
+        Filter(sim, Right, "iron_rod");
+        sim.Step(2000);
+
+        var hub = sim.World.EntityAt(Hub)!;
+        var lines = new List<View.InfoLine>();
+        hub.Behavior.Describe(hub, lines);
+        Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: anything · Left: anything · Right: Iron Rod (no belt)");
+        // The row does nothing, so the rods still leave through the outputs that do take anything.
+        Assert.True(sim.Sold("iron_rod") > 0, "the rods never left, so the setup is wrong");
+    }
+
+    [Fact]
+    public void A_hub_that_nothing_can_leave_says_which_item_it_is_holding()
+    {
+        var sim = Sorter(left: null, right: null); // only the front output, filtered to plates
+        Filter(sim, Front, "iron_plate");
+        sim.Step(600);
+
+        var hub = sim.World.EntityAt(Hub)!;
+        var status = hub.Behavior.GetStatus(hub);
+        Assert.False(status.Working);
+        Assert.Equal("nothing takes Iron Rod", status.Detail);
     }
 
     /// <summary>
