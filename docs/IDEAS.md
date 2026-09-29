@@ -30,7 +30,7 @@ Wanted:
   rather than money.
 - **Byproducts** (`B1`), and with it `B2` priority outputs and `B3` filters, the tools that make
   byproducts solvable.
-- **Fluids, handled differently from items** (`B9`, `I7`).
+- **Fluids, handled differently from items**: a pipe network, with pumps and tanks (`B9`, `I7`).
 - **The away report** (`F1`).
 - **Income by product** (new `F8` below): statistics on what actually makes money and what does not.
 
@@ -414,11 +414,12 @@ Effort: (S) small, (M) medium, (L) large, (XL) very large.
 
 ## Where I would start, given the confirmed taste
 
-1. **I1 + I2 + R2 + R6, research as a product.** Science packs from several chains, a tree paid in
-   goods, and some techs that finish by producing rather than spending. This is the intended
-   direction, and R6 is cheap enough to prove the feel immediately.
+1. **I1 + R2 + R6, research as a product.** Science packs from several chains, and some techs that
+   finish by producing rather than spending. This is the intended direction, and R6 is cheap enough
+   to prove the feel immediately. No tech graph yet: `I2` is undecided.
 2. **R4 + M3, modules and sockets.** Once research is a product, modules are the natural next product
    to research, and they deepen every machine at once.
-3. **K4 first, then K1 and K2, the chemistry layer.** Barrels make fluids real without a pipe
-   network; condition based variants and a distillation tower are what make it feel like chemistry
-   rather than another belt.
+3. **B9, the chemistry layer: pipes, pumps and tanks.** That is the wanted version of fluids. Then
+   K1 and K2 (condition based variants, a distillation tower), which are what make it feel like
+   chemistry rather than another belt. `K4`, fluids in barrels, is only an optional cheap on-ramp for
+   a casual player: suggested, never chosen, and not the plan.
