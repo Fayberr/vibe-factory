@@ -109,16 +109,15 @@ public static class TransportPath
     /// <summary>
     /// World position of an item reported by <see cref="IBehavior.CollectItems"/>.
     ///
-    /// The progress is used as reported, with no inset anywhere. 3.8.7 and 3.8.8 shifted the ends of
-    /// every path inwards so that a building would never draw an item on the cell edge it shares with
-    /// its neighbour, but a path's end and the next path's start are the *same* point: a shifted end and
-    /// a shifted start are 2 × the margin apart, so every item visibly hopped (0.24 of a cell against a
-    /// normal step of 0.05) each time it crossed a cell edge, and the whole belt was compressed to 0.76
-    /// of its length ("pairs of two that are closer together", "the spacings ... are messed up", "we need
-    /// a little bit more spacing between items" - 3.8.9 put it back). The one case the inset covered, two
-    /// items waiting on either side of a shared edge, is a static picture in a jammed line and is worth
-    /// less than smooth motion everywhere. A hub no longer needs it at all: an item a hub cannot send
-    /// waits in the middle of the hub, not on the edge. See <c>RouterBehavior.Middle</c>.
+    /// The progress is used exactly as reported: nothing is offset at either end of a path. A path's end
+    /// and the next path's start are the *same* point, so an offset there (3.8.7 and 3.8.8 shifted both
+    /// ends inwards to keep two buildings off the cell edge they share) is a hop on every item that
+    /// crosses it, 0.24 of a cell against a normal step of 0.05, and it compresses the whole path:
+    /// "the items move very weird ... each one jumps a bit", "we need a little bit more spacing between
+    /// items" (Fabian, after 3.8.8). The one case the offset covered, two items waiting on either side of
+    /// a shared edge, is a still picture in a jammed line and is not worth motion that lies. A hub needs
+    /// no offset at all: an item it cannot send waits in the middle of the hub, not on the edge
+    /// (<c>RouterBehavior.Middle</c>).
     /// </summary>
     public static GridPoint ItemPoint(Entity e, PathShape shape, in ItemView v)
     {

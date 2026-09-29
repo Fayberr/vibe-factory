@@ -180,13 +180,12 @@ public class LogisticsTests
         Assert.True(sim.Sold("iron_ore") > 0, "nothing came out of the splitter at all");
     }
 
-    [Fact]
-    public void An_item_left_past_the_middle_by_an_old_save_comes_back_into_the_middle()
+    /// <summary>
+    /// A splitter sorting tar to its right output, whose belt is packed solid, so nothing can leave that way.
+    /// Its front output is left as the test needs it: connected to a free belt, or not connected at all.
+    /// </summary>
+    private static (Simulation Sim, Entity Hub, RouterState Lane) SplitterWithAFullTarBelt()
     {
-        // Before 3.8.9 a hub lane ran on to the cell edge, so a save can hold an item parked out there. It is
-        // drawn on the belt's own first item there, which is exactly the picture that read as "it has already
-        // left". Once the hub has been held up for a second it lays its lane out again, from the middle back
-        // to the entry: the item comes back in, and nothing is dropped.
         var sim = TestUtil.NewSim();
         sim.Place("splitter", 2, 2, 0, Dir.East);
         sim.Place("conveyor", 2, 3, 0, Dir.South); // the right output, packed solid
@@ -196,7 +195,17 @@ public class LogisticsTests
         var right = sim.Belt(2, 3, 0);
         for (int pos = 1000; pos >= 0; pos -= 250)
             right.Items.Add(new BeltItem(sim.World.CreateItem("tar", 1, 1), pos));
-        var lane = (RouterState)hub.State;
+        return (sim, hub, (RouterState)hub.State);
+    }
+
+    [Fact]
+    public void An_item_left_past_the_middle_by_an_old_save_comes_back_into_the_middle()
+    {
+        // Before 3.8.9 a hub lane ran on to the cell edge, so a save can hold an item parked out there. It is
+        // drawn on the belt's own first item there, which is exactly the picture that read as "it has already
+        // left". Once the hub has been held up for a second it lays its lane out again, from the middle back
+        // to the entry: the item comes back in, and nothing is dropped.
+        var (sim, hub, lane) = SplitterWithAFullTarBelt();
         lane.Items.Add(new RouterItem(sim.World.CreateItem("tar", 1, 1), 1000, 0, hub.Def.OutputPorts[2]));
         lane.Items.Add(new RouterItem(sim.World.CreateItem("plastic", 1, 1), 750, 0, -1));
 
@@ -259,20 +268,12 @@ public class LogisticsTests
         // it stays on the right edge of the splitter". The hub's lane now ends at its middle, which is where
         // an item both waits and leaves from, so a refused item never reaches the edge it shares with the
         // belt that is refusing it.
-        var sim = TestUtil.NewSim();
-        sim.Place("splitter", 2, 2, 0, Dir.East);
-        sim.Place("conveyor", 2, 3, 0, Dir.South); // the right output, packed solid
+        var (sim, hub, lane) = SplitterWithAFullTarBelt();
         sim.Place("seller", 3, 2, 0, Dir.East);    // the front output, free
-        var hub = sim.World.EntityAt(new GridPos(2, 2, 0))!;
-        Assert.True(sim.Execute(new SetFilter(hub.Pos, 0, "plastic")).Ok);
-        Assert.True(sim.Execute(new SetFilter(hub.Pos, 2, "tar")).Ok);
         var right = sim.Belt(2, 3, 0);
         var rightEntity = sim.World.EntityAt(new GridPos(2, 3, 0))!;
-        for (int pos = 1000; pos >= 0; pos -= 250)
-            right.Items.Add(new BeltItem(sim.World.CreateItem("tar", 1, 1), pos));
         // The lane as a hub holds it: a tar in the middle that the right belt keeps refusing, and the two
         // plastics the splitter is sorting to the front queued behind it, one spacing apart.
-        var lane = (RouterState)hub.State;
         lane.Items.Add(new RouterItem(sim.World.CreateItem("tar", 1, 1), 500, 0, hub.Def.OutputPorts[2]));
         lane.Items.Add(new RouterItem(sim.World.CreateItem("plastic", 1, 1), 250, 0, -1));
         lane.Items.Add(new RouterItem(sim.World.CreateItem("plastic", 1, 1), 0, 0, -1));
@@ -296,11 +297,13 @@ public class LogisticsTests
     }
 
     [Fact]
-    public void Items_on_a_belt_are_drawn_evenly_spaced_right_up_to_the_ends()
+    public void A_full_belt_is_drawn_evenly_spaced_end_to_end()
     {
-        // Fabian, after 3.8.7: "the spacings of pretty much all items are now messed up, sometimes there are
-        // pairs of two that are closer together". 3.8.7 clipped progress at each end instead of shifting the
-        // whole path inwards, so only the items near an end moved, and they moved towards their neighbour.
+        // The direct guard on drawn spacing: nothing may be offset at either end of a path. 3.8.7 and 3.8.8
+        // moved the ends inwards, which bunched the items near them towards the middle ("the spacings of
+        // pretty much all items are now messed up, sometimes there are pairs of two that are closer
+        // together" - Fabian, after 3.8.7). A path's end and the next path's start are the *same* point, so
+        // no such offset is possible: see Items_move_in_one_even_step_all_the_way_through_a_line.
         var sim = TestUtil.NewSim();
         sim.Place("conveyor", 2, 2, 0, Dir.South);
         var belt = sim.Belt(2, 2, 0);
@@ -312,9 +315,10 @@ public class LogisticsTests
         TransportPath.CollectAll(sim.World, seen);
         var points = seen.Where(s => s.EntityId == entity.Id).Select(s => s.Point.Y).OrderBy(y => y).ToList();
 
-        Assert.Equal(5, points.Count); // one belt: 4 items per cell, packed, plus the one handing over
-        for (int i = 2; i < points.Count; i++)
-            Assert.Equal(points[1] - points[0], points[i] - points[i - 1], 3);
+        Assert.Equal(5, points.Count); // a packed belt tile: 4 spacings over the length, both ends included
+        double gap = points[1] - points[0];
+        for (int i = 1; i < points.Count; i++)
+            Assert.Equal(gap, points[i] - points[i - 1], 3);
     }
 
     [Fact]

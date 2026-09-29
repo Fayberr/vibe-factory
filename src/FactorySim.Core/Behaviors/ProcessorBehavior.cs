@@ -180,9 +180,13 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
         ctx.Emit(new CraftCompleted(ctx.Tick, e.Id, recipe.Id, crafts));
     }
 
+    /// <summary>The items the machine takes: its chosen recipe's, or every recipe's while none is chosen.</summary>
+    private static bool Wants(ProcessorParams p, ProcessorState s, string type) =>
+        (s.Chosen != null && p.IngredientsOf.TryGetValue(s.Chosen, out var wanted) ? wanted : p.Ingredients).Contains(type);
+
     protected override bool TryAccept(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s, ItemStack item, int port, int overflow)
     {
-        if (!(s.Chosen != null && p.IngredientsOf.TryGetValue(s.Chosen, out var wanted) ? wanted : p.Ingredients).Contains(item.Type)) return false;
+        if (!Wants(p, s, item.Type)) return false;
         if (!s.Inputs.TryGetValue(item.Type, out var buf)) s.Inputs[item.Type] = buf = new InputBuffer();
         if (buf.Count >= p.InputCapacity) return false;
         buf.Count += item.Count;
@@ -191,13 +195,14 @@ public sealed class ProcessorBehavior : Behavior<ProcessorParams, ProcessorState
     }
 
     /// <summary>
-    /// A machine takes only what its recipe uses, and only while its buffer for that item has room. Its
-    /// buffer only frees up as it crafts, so a sender asking ahead gets the same answer as asking now:
-    /// this is exact, and a hub feeding a machine can wait in its middle instead of on its edge.
+    /// The same two checks <see cref="TryAccept"/> makes, buffered room excepted: a machine takes only what
+    /// its recipe uses, and only while its buffer for that item has room. The buffer frees up only as it
+    /// crafts, so a sender asking about a later arrival gets the answer for now, which is exact and
+    /// conservative: a hub feeding a machine can wait in its middle instead of on its edge.
     /// </summary>
     protected override bool? WouldAccept(TickContext ctx, Entity e, ProcessorParams p, ProcessorState s, ItemStack item, int port, int inTicks)
     {
-        if (!(s.Chosen != null && p.IngredientsOf.TryGetValue(s.Chosen, out var wanted) ? wanted : p.Ingredients).Contains(item.Type)) return false;
+        if (!Wants(p, s, item.Type)) return false;
         return !s.Inputs.TryGetValue(item.Type, out var buf) || buf.Count < p.InputCapacity;
     }
 
