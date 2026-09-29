@@ -446,6 +446,28 @@ public class SplitterFilterTests
         Assert.Contains(lines, l => l.Label == "Sorting" && l.Value == "Front: Iron Plate (no belt) · Left: Iron Rod · Right: Iron Rod");
     }
 
+    /// <summary>
+    /// Both causes at once: the output set for the plates has no belt, and the belts that do exist are
+    /// full. The belt-less one is reported, because a full belt is visible and an unattached one is not.
+    /// </summary>
+    [Fact]
+    public void A_missing_belt_is_reported_ahead_of_a_full_one()
+    {
+        var sim = Sorter(front: null, left: "belt", right: "belt"); // two dead ends, nothing at the front
+        Filter(sim, Front, "iron_plate");
+        sim.Step(900);
+
+        var hub = sim.World.EntityAt(Hub)!;
+        var status = hub.Behavior.GetStatus(hub);
+        Assert.False(status.Working);
+        Assert.Equal("Front has no belt", status.Detail);
+
+        var lines = new List<View.InfoLine>();
+        hub.Behavior.Describe(hub, lines);
+        Assert.Contains(lines, l => l.Label == "Sorting" && l.Value.Contains("Front: Iron Plate (no belt)"));
+        Assert.Contains(lines, l => l.Label == "Sorting" && l.Value.Contains("(belt full)"));
+    }
+
     [Fact]
     public void A_filter_on_an_output_with_no_belt_is_marked_as_such_and_takes_nothing()
     {

@@ -188,18 +188,20 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     }
 
     /// <summary>
-    /// The output this item needs that has no belt on it, when the hub cannot pass the item because nothing
-    /// connected will take it. The player built the right output and the belt is not attached to it (never
-    /// placed, or facing the wrong way), which otherwise looks exactly like a hub that is simply full.
+    /// The output this item needs that has no belt on it, or -1. A rule can be set on a port with nothing
+    /// attached: never placed, or placed facing the other way, which is no link at all. From the outside
+    /// that looks exactly like a hub whose belt is full, so the hub says which of the two it is. Only a
+    /// group that is set for this item counts, so a plain splitter whose belt is full is never told about
+    /// a belt-less port it never asked for.
     /// </summary>
     private static int MissingOutput(Entity e, RouterState s, string type)
     {
-        if (HomeGroup(e, s, type, connectedOnly: true) != Group.None) return -1; // something connected takes it
-        var group = HomeGroup(e, s, type, connectedOnly: false);
-        if (group == Group.None) return -1; // no output is even set for it: that is a filter problem, not a belt
+        if (s.Filters == null) return -1; // nothing was asked for: a full belt is the thing to report
+        var wanted = HomeGroup(e, s, type, connectedOnly: false);
+        if (wanted == Group.None) return -1; // no output is set for this item at all: a filter problem
         var outs = e.Def.OutputPorts;
         for (int i = 0; i < outs.Count; i++)
-            if (!e.Link(outs[i]).IsConnected && GroupOf(s, i, type) == group) return i;
+            if (GroupOf(s, i, type) == wanted && !e.Link(outs[i]).IsConnected) return i;
         return -1;
     }
 
@@ -394,18 +396,23 @@ public sealed class RouterBehavior : Behavior<RouterParams, RouterState>
     {
         int jam = JammedOutput(e, s);
         bool nothingTakes = s.NoOutputTicks >= JamTicks && s.NoOutputItem != null;
-        string? type = nothingTakes ? s.NoOutputItem : s.Items.Count > 0 ? s.Items[0].Item.Type : null;
-        if (type != null && (jam >= 0 || nothingTakes))
+        if (jam < 0 && !nothingTakes)
+            return new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
+
+        // A belt that is not attached is the one cause a player cannot see, so it is named first, for the
+        // item stuck at the exit and for the one stuck in the middle with no output at all.
+        string? front = s.Items.Count > 0 ? s.Items[0].Item.Type : null;
+        foreach (string? type in new[] { front, nothingTakes ? s.NoOutputItem : null })
         {
-            // A belt that is not attached is the most useful thing to say first: it is the one cause the
-            // player cannot see, and a full belt looks the same from the outside.
+            if (type == null) continue;
             if (MissingOutput(e, s, type) is var missing && missing >= 0)
                 return new(false, 0, $"{OutputName(e.Def, missing)} has no belt");
-            if (jam >= 0) return new(false, 0, $"{OutputName(e.Def, jam)} blocked");
-            string name = p.Items.TryGetValue(type, out var item) ? item.Name : type;
-            return new(false, 0, $"nothing takes {name}");
         }
-        return new(s.Items.Count > 0, 0, s.Items.Count == 0 ? "empty" : $"{s.Items.Count} item(s)");
+        if (jam >= 0) return new(false, 0, $"{OutputName(e.Def, jam)} blocked");
+
+        string stuck = (nothingTakes ? s.NoOutputItem : front) ?? "?";
+        string name = p.Items.TryGetValue(stuck, out var item) ? item.Name : stuck;
+        return new(false, 0, $"nothing takes {name}");
     }
 
     protected override void Describe(Entity e, RouterParams p, RouterState s, List<InfoLine> into)
