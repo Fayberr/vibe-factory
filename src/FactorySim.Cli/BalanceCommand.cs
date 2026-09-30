@@ -320,7 +320,7 @@ public static class BalanceCommand
     }
 
     /// <summary>Plain-text table; a header starting with '>' right-aligns its column.</summary>
-    private sealed class Table
+    public sealed class Table
     {
         private readonly string[] _headers;
         private readonly bool[] _right;
@@ -333,6 +333,7 @@ public static class BalanceCommand
         }
 
         public void Add(params string[] cells) => _rows.Add(cells);
+        public bool HasRows => _rows.Count > 0;
 
         public override string ToString()
         {

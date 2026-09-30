@@ -10,6 +10,7 @@ using FactorySim.Samples;
 //   dotnet run --project src/FactorySim.Cli              → demo walkthrough
 //   dotnet run --project src/FactorySim.Cli -- bench 200 → throughput benchmark with 200 lines
 //   dotnet run --project src/FactorySim.Cli -- balance   → balance report (see BalanceCommand)
+//   dotnet run --project src/FactorySim.Cli -- inspect save.json → report over a real save
 
 var content = ContentRegistry.LoadDefault();
 var mode = args.Length > 0 ? args[0] : "demo";
@@ -24,8 +25,10 @@ switch (mode)
         break;
     case "balance":
         return BalanceCommand.Run(args[1..]);
+    case "inspect":
+        return InspectCommand.Run(args[1..]);
     default:
-        Console.WriteLine("usage: FactorySim.Cli [demo | bench <lines> | balance ...]");
+        Console.WriteLine("usage: FactorySim.Cli [demo | bench <lines> | balance ... | inspect <save.json>]");
         return 1;
 }
 return 0;

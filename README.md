@@ -62,6 +62,7 @@ dotnet run --project src/FactorySim.Cli       # headless demo: ASCII layers, sta
 dotnet run --project "src/FactorySim.Cli" -- balance        # economy report over the content file
 dotnet run --project "src/FactorySim.Cli" -- balance item robot  # what one robot needs, ore to depot
 dotnet run --project "src/FactorySim.Cli" -- balance land   # what each ring of plots costs and when you can afford it
+dotnet run --project "src/FactorySim.Cli" -- inspect save.json   # live report over a real save
 ```
 
 **Balance tool.** `balance` is a calculator over `base.json`: `balance tiers` estimates how long
@@ -71,6 +72,11 @@ cost, payback), and `balance land` prices the map's plots against income (which 
 each ring, and how many minutes of income it is). Options: `--level N` (every building at level N), `--polish none|products|all`,
 `--tier N` (what is unlocked), `--pack extra.json` (repeatable). It reads content only, so it can
 check a balance change before it ships.
+
+**Save inspector.** `inspect <save.json>` loads through the game's save system, runs the loaded
+factory for one measured minute without changing the file, then reports its tier, money, buildings
+by type and level, product sale rates and income, persistent waiting reasons, and every locked
+tier's remaining cash, lifetime earnings and deliveries.
 
 **Download (Windows):** the newest build is always the
 [latest release](https://github.com/Fayberr/vibe-factory/releases/latest), direct link:

@@ -55,6 +55,10 @@ on how much land is owned. `Land.Buyable()` lists what can be bought, cheapest f
 routing only runs over owned cells. `LandPacing` (Balance) prices the rings against income for
 `balance land`.
 
+The CLI's `inspect <save.json>` command uses `SaveSystem.Deserialize`, then advances only the
+in-memory copy for 60 seconds. It derives product rates from real sales and uses the same
+`IdleSampler` as offline catch-up for waiting reasons. It never writes the inspected save.
+
 The saved land (`LandSave`: plot size and owned plots, save version 2) is restored plot by plot.
 Loading never drops a building: a plot under any saved building is owned, and a map too small
 for an old save grows to fit it. Version 1 saves (before plots) own every plot their old

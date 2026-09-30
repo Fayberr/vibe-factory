@@ -90,6 +90,8 @@ against it instead of guessed:
 - `balance item <name> [rate]` breaks down one production line: machines per step, ores per
   second, belt load, build cost, payback time.
 - Options: `--level N`, `--polish none|products|all`, `--tier N`, `--pack extra.json`.
+- Since 4.8.0, `inspect <save.json>` measures a loaded factory for one minute and reports its
+  buildings, product rates and income, waiting reasons, and remaining tier requirements.
 
 `src/FactorySim.Core/Balance/` holds it (recipe book, production chains, tier pacing); the
 numbers are tested against the simulation, not just the content file.
