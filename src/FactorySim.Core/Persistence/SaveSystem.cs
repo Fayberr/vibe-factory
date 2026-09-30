@@ -31,6 +31,9 @@ public sealed class SaveData
     public ContractBoard Contracts { get; set; } = new();
     public List<string> Milestones { get; set; } = new();
     public Dictionary<string, RateMilestoneState> RateMilestones { get; set; } = new();
+
+    /// <summary>Production targets, items per minute per item id (missing in saves from before targets).</summary>
+    public Dictionary<string, double>? Targets { get; set; }
     public List<EntitySave> Entities { get; set; } = new();
 }
 
@@ -88,6 +91,7 @@ public static class SaveSystem
         Contracts = world.Contracts,
         Milestones = world.Milestones.OrderBy(id => id, StringComparer.Ordinal).ToList(),
         RateMilestones = world.RateMilestones.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
+        Targets = world.Targets.Count == 0 ? null : world.Targets.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
         Entities = world.Entities.OrderBy(e => e.Id).Select(e => new EntitySave
         {
             Id = e.Id,
@@ -122,6 +126,8 @@ public static class SaveSystem
             Milestones = data.Milestones.ToHashSet(),
             RateMilestones = (data.RateMilestones ?? new()).Where(kv => content.Milestones.Any(m => m.Id == kv.Key && m.Kind == "produced_rate"))
                 .ToDictionary(kv => kv.Key, kv => kv.Value),
+            // A target for an item this game no longer has is dropped.
+            Targets = (data.Targets ?? new()).Where(kv => content.Items.ContainsKey(kv.Key) && kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value),
         };
         RestoreLand(world, data, content);
 

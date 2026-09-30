@@ -57,6 +57,9 @@ public sealed class World
     /// <summary>Contracts and milestones run (off in scripted tests that check exact money).</summary>
     public bool Goals { get; set; } = true;
 
+    /// <summary>Production targets (idea F7): items made per minute the player wants to keep up, per item id. See <see cref="ProductionTargets"/>.</summary>
+    public Dictionary<string, double> Targets { get; set; } = new();
+
     public ContractBoard Contracts { get; internal set; } = new();
 
     /// <summary>Ids of reached milestones.</summary>

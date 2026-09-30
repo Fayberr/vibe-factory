@@ -156,6 +156,8 @@ public sealed class EditHistory
                 return world.EntityAt(sf.Cell) is { } hub
                     ? One(new SetFilter(hub.Pos, sf.Output, hub.Behavior.Filters(hub) is { } now && sf.Output >= 0 && sf.Output < now.Count ? now[sf.Output] : null))
                     : null;
+            case SetTarget t:
+                return One(new SetTarget(t.Item, world.Targets.TryGetValue(t.Item, out double was) ? was : null));
             default:
                 return null; // research, tiers and unknown commands are not undoable
         }

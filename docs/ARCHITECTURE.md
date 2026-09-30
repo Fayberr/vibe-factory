@@ -645,6 +645,20 @@ empty categories; Enter picks the first visible unlocked tile. The camera and th
 keys while the box has focus. To remove it: the search members of `BuildMenu` and the
 `--build-search` smoke flag.
 
+**Production targets** (idea F7, `Simulation/ProductionTargets`, `UI/TargetsPanel`): a target is
+an items-a-minute number per item in `World.Targets`, saved as `SaveData.Targets` and changed only
+by the `SetTarget` command (a null rate removes it), which `EditHistory` inverts to the old value.
+`StatsTracker` keeps a 60 s ring buffer of items made per item, next to the income buckets, and
+`ProductionTargets.Read` compares its average with the target: `Measuring` for the first
+`MeasureSeconds`, then `Met` or `Under`. `AlertLog.ObserveTargets` raises one `TargetMissed` entry
+once a target has been under for `TargetSeconds` without a break, and resolves it when the target is
+met again or removed. The client window rebuilds its rows only when the set of targets changes and
+updates the numbers and bars each refresh. To remove targets: `ProductionTargets.cs`,
+`TargetTests.cs`, `SetTarget` and its lines in `Simulation.Execute` and `EditHistory`,
+`World.Targets`, `SaveData.Targets`, the target part of `Alerts.cs`, `TargetsPanel.cs`, the window,
+key and badge in `Hud`, the `targets` keybind, the `Target` icon, the Targets button in
+`AlertPanel`, and the `--targets` smoke flag.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

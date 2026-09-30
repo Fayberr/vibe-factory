@@ -98,6 +98,7 @@ public sealed partial class Simulation
             SetBuildingLevels c => SetLevels(c),
             SelectRecipe c => Choose(c),
             SetFilter c => Filter(c),
+            SetTarget c => ProductionTargets.Set(World, c),
             RerollContract c => Reroll(c),
             UnlockTier => Unlock(),
             BuyPlot c => BuyLand(c),

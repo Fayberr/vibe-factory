@@ -130,6 +130,14 @@ public partial class Main : Node3D
                 // The Alerts window (the demo factory rarely stops; this shows the empty state).
                 hud.AlertWindow.Visible = true;
             }
+            if (arg == "--targets")
+            {
+                // The Targets window with three targets on the demo factory: likely met, under, and nothing made.
+                foreach (var (item, rate) in new[] { ("iron_ingot", 5.0), ("iron_plate", 600.0), ("steel", 30.0) })
+                    if (!host.Execute(new SetTarget(item, rate)).Ok) GD.Print($"TARGETS: could not set {item}");
+                hud.TargetsWindow.Visible = true;
+                GetTree().CreateTimer(Math.Max(0.5, wait - 0.5)).Timeout += () => GD.Print($"TARGETS: {string.Join(" | ", hud.Targets.RateLines)}");
+            }
             if (arg == "--history")
             {
                 // The History window (the demo factory fills it after half a minute; use --wait=40).

@@ -50,8 +50,32 @@ public sealed class StatsTracker
         return EarnedBucketsByItem[item] = new BigNum[WindowSeconds];
     }
 
-    public void RecordProduced(string item, long count) =>
+    /// <summary>
+    /// Items made per second per item, ring buffers aligned with <see cref="EarnedBuckets"/>, for production
+    /// targets (idea F7). Missing in old saves, which then measure from the load.
+    /// </summary>
+    public Dictionary<string, long[]> ProducedBucketsByItem { get; set; } = new();
+
+    public void RecordProduced(string item, long count)
+    {
         Produced[item] = Produced.GetValueOrDefault(item) + count;
+        if (!ProducedBucketsByItem.TryGetValue(item, out var buckets) || buckets?.Length != WindowSeconds)
+            ProducedBucketsByItem[item] = buckets = new long[WindowSeconds];
+        buckets[BucketIndex] += count;
+    }
+
+    /// <summary>Completed seconds that the rates average over (at most the window less the second in progress).</summary>
+    public int MeasuredSeconds => Math.Min(FilledBuckets, WindowSeconds - 1);
+
+    /// <summary>Items of one kind made per second, averaged like <see cref="IncomePerSecond"/>; zero if none were made.</summary>
+    public double ProducedPerSecondOf(string item, int seconds = WindowSeconds)
+    {
+        int n = Math.Min(seconds, MeasuredSeconds);
+        if (n <= 0 || !ProducedBucketsByItem.TryGetValue(item, out var buckets) || buckets?.Length != WindowSeconds) return 0;
+        long sum = 0;
+        for (int k = 1; k <= n; k++) sum += buckets[(BucketIndex - k + WindowSeconds) % WindowSeconds];
+        return sum / (double)n;
+    }
 
     /// <summary>Called by the simulation after each tick.</summary>
     internal void EndTick(long tick)
@@ -61,6 +85,8 @@ public sealed class StatsTracker
         EarnedBuckets[BucketIndex] = BigNum.Zero;
         foreach (var buckets in EarnedBucketsByItem.Values)
             if (buckets?.Length == WindowSeconds) buckets[BucketIndex] = BigNum.Zero;
+        foreach (var buckets in ProducedBucketsByItem.Values)
+            if (buckets?.Length == WindowSeconds) buckets[BucketIndex] = 0;
         FilledBuckets = Math.Min(FilledBuckets + 1, WindowSeconds);
     }
 

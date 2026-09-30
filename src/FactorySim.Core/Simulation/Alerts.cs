@@ -16,6 +16,9 @@ public enum AlertKind
 
     /// <summary>An order ran out of time.</summary>
     OrderExpired,
+
+    /// <summary>A production target (idea F7) stayed under for <see cref="AlertLog.TargetSeconds"/>.</summary>
+    TargetMissed,
 }
 
 /// <summary>One entry in the <see cref="AlertLog"/>.</summary>
@@ -36,6 +39,9 @@ public sealed class Alert
 
     /// <summary>The order, for the order kinds.</summary>
     public Contract? Order { get; init; }
+
+    /// <summary>The item, for <see cref="AlertKind.TargetMissed"/>.</summary>
+    public string Item { get; init; } = "";
 
     /// <summary>Every building the alert is about; <see cref="Resolved"/> once all of them work again.</summary>
     public HashSet<int> Buildings { get; } = new();
@@ -75,11 +81,16 @@ public sealed class AlertLog
     /// <summary>A building that recovered is not reported again for this long.</summary>
     public const int RepeatSeconds = 120;
 
+    /// <summary>A production target is reported once it has been under for this long without a break.</summary>
+    public const int TargetSeconds = 60;
+
     private readonly List<Alert> _entries = new();
     private readonly Dictionary<int, long> _lastWorked = new();
     private readonly HashSet<int> _flagged = new();
     private readonly Dictionary<int, long> _lastAlerted = new();
     private readonly HashSet<int> _warnedOrders = new();
+    private readonly Dictionary<string, long> _underSince = new();
+    private readonly HashSet<string> _missedTargets = new();
     private int _nextId = 1;
     private long _lastTick = long.MinValue;
 
@@ -115,6 +126,8 @@ public sealed class AlertLog
         _flagged.Clear();
         _lastAlerted.Clear();
         _warnedOrders.Clear();
+        _underSince.Clear();
+        _missedTargets.Clear();
         _lastTick = long.MinValue;
     }
 
@@ -125,6 +138,7 @@ public sealed class AlertLog
         _lastTick = world.Tick;
         ObserveBuildings(world);
         ObserveOrders(world);
+        ObserveTargets(world);
     }
 
     public void OnEvent(SimEvent ev)
@@ -207,6 +221,49 @@ public sealed class AlertLog
             Add(new Alert { Id = _nextId++, Tick = world.Tick, Kind = AlertKind.OrderEnding, Order = c });
         }
         _warnedOrders.RemoveWhere(id => world.Contracts.Open.All(c => c.Id != id));
+    }
+
+    /// <summary>
+    /// A target under for <see cref="TargetSeconds"/> raises one entry, resolved once the target is met again
+    /// or removed. To remove: this method, its call, the two fields it uses and <see cref="AlertKind.TargetMissed"/>.
+    /// </summary>
+    private void ObserveTargets(World world)
+    {
+        long now = world.Tick, wait = TargetSeconds * (long)Simulation.TicksPerSecond;
+        foreach (var r in ProductionTargets.ReadAll(world))
+        {
+            if (r.Status == TargetStatus.Met)
+            {
+                _underSince.Remove(r.Item);
+                if (_missedTargets.Remove(r.Item)) ResolveTarget(r.Item);
+            }
+            if (r.Status != TargetStatus.Under) continue;
+            if (!_underSince.TryGetValue(r.Item, out long since)) _underSince[r.Item] = since = now;
+            if (now - since < wait || !_missedTargets.Add(r.Item)) continue;
+            Add(new Alert
+            {
+                Id = _nextId++,
+                Tick = now,
+                Kind = AlertKind.TargetMissed,
+                Item = r.Item,
+                Detail = $"{ProductionTargets.Format(r.PerMinute)} of {ProductionTargets.Format(r.Target)} a minute",
+            });
+        }
+        foreach (string item in _underSince.Keys.Where(i => !world.Targets.ContainsKey(i)).ToList()) _underSince.Remove(item);
+        foreach (string item in _missedTargets.Where(i => !world.Targets.ContainsKey(i)).ToList())
+        {
+            _missedTargets.Remove(item);
+            ResolveTarget(item);
+        }
+    }
+
+    private void ResolveTarget(string item)
+    {
+        foreach (var a in _entries.Where(a => a.Kind == AlertKind.TargetMissed && a.Item == item && !a.Resolved))
+        {
+            a.Resolved = true;
+            Version++;
+        }
     }
 
     private void Add(Alert alert)

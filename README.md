@@ -138,7 +138,7 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `Ctrl+A` | Select all |
 | `Esc` / right-click | Cancel the tool, then clear the selection |
 | `WASD`, MMB drag · RMB drag · wheel | Pan · orbit · zoom toward the cursor |
-| `P` · `O` · `L` · `I` · `K` · `H` · `T` · `N` · `G` · `F1` | Progress (tiers, limits, goals) · orders · research (from Workshop) · statistics · bottlenecks · planner · history · alerts · game menu · help. Windows can be open together and stay open until you close them (the same key, or ×); drag them by the title bar |
+| `P` · `O` · `L` · `I` · `K` · `H` · `T` · `N` · `Y` · `G` · `F1` | Progress (tiers, limits, goals) · orders · research (from Workshop) · statistics · bottlenecks · planner · history · alerts · targets · game menu · help. Windows can be open together and stay open until you close them (the same key, or ×); drag them by the title bar |
 | `J` | Mark every building that keeps waiting with a pin: yellow waits for input, red cannot get rid of its output |
 | `Space` | Pause or resume the factory (you can keep building while it is paused) |
 | `,` · `.` | Slower, faster: ×0.5, ×1, ×2, ×4, ×8, ×16 (also the − and + on the factory card) |
@@ -239,6 +239,10 @@ their choice.
 - **Signs.** A Sign ($10, under Signs in the build menu) shows a line of text floating above it, up
   to 40 characters. Select one to write on it in the Manage window; select several to write the same
   text on all. Undo, copy and paste, blueprints and saves keep the text.
+- **Production targets.** The Targets window (`Y`) sets goals like "60 iron ingots a minute" and
+  shows how the factory is doing against each, measured over the last minute. − and + move a target
+  in round steps. A target under for a minute shows up in Alerts, and the sidebar button counts the
+  targets that are short right now.
 - **Build menu search.** The build menu (`B`) has a search box that matches a building's name,
   category and description and the items it makes or uses, so "wire" lists every building that
   makes or takes wire. Enter builds the first unlocked match; closing the menu clears the search.
@@ -298,7 +302,7 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # --away=seconds (simulates that long offline and shows the away report), --bottlenecks (opens
 # Bottlenecks with the world pins on), --planner[=item] (opens the Planner), --history (opens History;
 # add --wait=65 for a line), --alerts (opens Alerts), --run-until=tier|money|minutes
-# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --tutorial (an empty factory at the tutorial's
+# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --targets (the Targets window with three targets set), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).

@@ -54,6 +54,12 @@ public sealed record SelectRecipe(GridPos Cell, string? Recipe) : Command;
 /// </summary>
 public sealed record SetFilter(GridPos Cell, int Output, string? Filter) : Command;
 
+/// <summary>
+/// Sets the production target for <paramref name="Item"/> in items per minute (idea F7), or removes it
+/// with null. See <see cref="ProductionTargets"/>.
+/// </summary>
+public sealed record SetTarget(string Item, double? PerMinute) : Command;
+
 /// <summary>Swaps an open contract for a new one, for a fee (a tenth of its reward).</summary>
 public sealed record RerollContract(int ContractId) : Command;
 

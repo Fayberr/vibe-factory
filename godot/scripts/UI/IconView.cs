@@ -33,6 +33,7 @@ public enum Icon
     Chain,
     Graph,
     Bell,
+    Target,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -231,6 +232,12 @@ public partial class IconView : Control
                 // A bell: a dome over a flared rim, a clapper under it.
                 Poly(12, 3.5f, 15.5f, 5.5f, 17, 10, 17.5f, 15, 20, 17.5f, 4, 17.5f, 6.5f, 15, 7, 10, 8.5f, 5.5f);
                 L(10, 20.5f, 14, 20.5f, 2.2f);
+                break;
+            case Icon.Target:
+                // A target: two rings round a centre dot.
+                Arc(12, 12, 8.5f, 0, Mathf.Tau, 2f);
+                Arc(12, 12, 4.8f, 0, Mathf.Tau, 2f);
+                DrawCircle(P(12, 12), 1.8f * s, _color);
                 break;
             case Icon.Graph:
                 // Axes with a rising line across them.

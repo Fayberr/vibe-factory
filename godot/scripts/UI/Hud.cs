@@ -47,7 +47,7 @@ public partial class Hud : CanvasLayer
     private HudWindow _buyWindow = null!;
     private Label _buyText = null!;
     private PlotId _buyPlot;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!, _plannerWindow = null!, _historyWindow = null!, _alertWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!, _plannerWindow = null!, _historyWindow = null!, _alertWindow = null!, _targetsWindow = null!;
     private OrdersPanel _orders = null!;
     private ResearchPanel _research = null!;
     private AwayReportPanel _away = null!;
@@ -56,6 +56,8 @@ public partial class Hud : CanvasLayer
     private HistoryPanel _history = null!;
     private AlertPanel _alerts = null!;
     private Label _alertBadge = null!;
+    private TargetsPanel _targets = null!;
+    private Label _targetsBadge = null!;
     private bool _pinsShown;
     private Button _researchButton = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
@@ -97,6 +99,8 @@ public partial class Hud : CanvasLayer
     public PlannerPanel Planner => _planner;
     public HudWindow HistoryWindow => _historyWindow;
     public HudWindow AlertWindow => _alertWindow;
+    public HudWindow TargetsWindow => _targetsWindow;
+    public TargetsPanel Targets => _targets;
 
     public void Init(SimHost host, BuildController tools, Thumbnails thumbs)
     {
@@ -232,7 +236,10 @@ public partial class Hud : CanvasLayer
 
     private void BuildSideBar()
     {
-        var col = new VBoxContainer();
+        // A grid, not a column: KeepSideClear gives it a second column when one would run into the factory card.
+        var col = _side = new GridContainer { Columns = 1 };
+        col.AddThemeConstantOverride("h_separation", SideGap);
+        col.AddThemeConstantOverride("v_separation", SideGap);
         col.AddChild(Keyed(Ui.IconButton(Icon.Build, "", ToggleBuildMenu, 44), () => $"Build menu ({K("build_menu")})"));
         _progressButton = Keyed(Ui.IconButton(Icon.Progress, "", () => ToggleWindow(_progressWindow), 44), () => $"Progress: tiers, build limits and goals ({K("progress")})");
         col.AddChild(_progressButton);
@@ -254,10 +261,46 @@ public partial class Hud : CanvasLayer
         _alertBadge.Visible = false;
         alerts.AddChild(_alertBadge);
         col.AddChild(alerts);
+        var targets = Keyed(Ui.IconButton(Icon.Target, "", () => ToggleWindow(_targetsWindow), 44), () => $"Targets: items a minute to aim for ({K("targets")})");
+        _targetsBadge = Ui.Label("", 11, UiTheme.Text);
+        _targetsBadge.AddThemeFontOverride("font", UiTheme.Bold);
+        _targetsBadge.AddThemeColorOverride("font_outline_color", Palette.Waiting);
+        _targetsBadge.AddThemeConstantOverride("outline_size", 7);
+        _targetsBadge.Position = new Vector2(30, 2);
+        _targetsBadge.Visible = false;
+        _targetsBadge.TooltipText = "Targets under right now";
+        targets.AddChild(_targetsBadge);
+        col.AddChild(targets);
         col.AddChild(Keyed(Ui.IconButton(Icon.Game, "", () => ToggleWindow(_gameWindow), 44), () => $"Game: save, speed, settings ({K("game_menu")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Help, "", () => _help.Visible = !_help.Visible, 44), () => $"Controls ({K("help")})"));
-        _root.AddChild(Ui.Anchor(Ui.Panel(col), 0, 0.5f, 12, 0, Control.GrowDirection.End, Control.GrowDirection.Both));
+        _sidePanel = Ui.Panel(col);
+        _root.AddChild(Ui.Anchor(_sidePanel, 0, 0.5f, 12, 0, Control.GrowDirection.End, Control.GrowDirection.Both));
     }
+
+    private const int SideGap = 6, SideButton = 44;
+    private GridContainer _side = null!;
+    private Control _sidePanel = null!;
+
+    /// <summary>
+    /// Two sidebar columns when one, centred on the left edge, would reach down into the factory card
+    /// (short windows, large interface, or just many windows). Worked out from the button count rather
+    /// than the current size, so it does not flip back and forth.
+    /// </summary>
+    private void KeepSideClear()
+    {
+        int buttons = _side.GetChildren().OfType<Control>().Count(c => c.Visible);
+        float padding = _sidePanel.Size.Y - _side.Size.Y;
+        float oneColumn = buttons * SideButton + (buttons - 1) * SideGap + padding;
+        int columns = (_root.Size.Y + oneColumn) / 2 <= _card.Position.Y - 8 ? 1 : 2;
+        if (_side.Columns != columns)
+        {
+            _side.Columns = columns;
+            _sidePanel.Size = Vector2.Zero; // shrink back to the new minimum; the anchor re-centres it
+        }
+    }
+
+    /// <summary>Where windows open: just right of the sidebar.</summary>
+    private float WindowLeft => _sidePanel.Position.X + _sidePanel.Size.X + 12;
 
     private void BuildFactoryCard()
     {
@@ -417,10 +460,16 @@ public partial class Hud : CanvasLayer
         _historyWindow.Body.AddChild(_history.Root);
         AddWindow(_historyWindow);
 
-        _alerts = new AlertPanel(id => _tools.ShowEntity(id), () => { if (!_ordersWindow.Visible) ToggleWindow(_ordersWindow); });
+        _alerts = new AlertPanel(id => _tools.ShowEntity(id), () => { if (!_ordersWindow.Visible) ToggleWindow(_ordersWindow); },
+            () => { if (!_targetsWindow.Visible) ToggleWindow(_targetsWindow); });
         _alertWindow = new HudWindow("Alerts", Icon.Bell, 460) { EscCloses = false };
         _alertWindow.Body.AddChild(_alerts.Root);
         AddWindow(_alertWindow);
+
+        _targets = new TargetsPanel(command => _host.History.Execute(command), text => _toasts.Show(this, text));
+        _targetsWindow = new HudWindow("Targets", Icon.Target, 440) { EscCloses = false };
+        _targetsWindow.Body.AddChild(_targets.Root);
+        AddWindow(_targetsWindow);
 
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
@@ -543,20 +592,22 @@ public partial class Hud : CanvasLayer
         if (w.Placed) return;
         w.Placed = true;
         var screen = _root.GetViewportRect().Size;
+        float left = WindowLeft;
         w.Fit();
         w.Root.Position = w == _manage.Window
             ? new Vector2(screen.X - w.Root.CustomMinimumSize.X - 12, 70)
             : w == _tutorial.Window ? new Vector2(screen.X - w.Root.Size.X - 12, screen.Y - w.Root.Size.Y - 128)
-            : w == _progressWindow ? new Vector2(84, 70)
-            : w == _statsWindow ? new Vector2(84 + 350, 70)
-            : w == _ordersWindow ? new Vector2(84 + 350 + 320, 70)
-            : w == _researchWindow ? new Vector2(84 + 350, 70)
-            : w == _awayWindow ? new Vector2(84, 70) // clear of the toasts at the top centre
-            : w == _bottleneckWindow ? new Vector2(84 + 350, 70)
-            : w == _plannerWindow ? new Vector2(84 + 350, 70)
-            : w == _historyWindow ? new Vector2(84 + 350, 70)
-            : w == _alertWindow ? new Vector2(84 + 350, 70)
-            : new Vector2(84 + 350 + 310, 70);
+            : w == _progressWindow ? new Vector2(left, 70)
+            : w == _statsWindow ? new Vector2(left + 350, 70)
+            : w == _ordersWindow ? new Vector2(left + 350 + 320, 70)
+            : w == _researchWindow ? new Vector2(left + 350, 70)
+            : w == _awayWindow ? new Vector2(left, 70) // clear of the toasts at the top centre
+            : w == _bottleneckWindow ? new Vector2(left + 350, 70)
+            : w == _plannerWindow ? new Vector2(left + 350, 70)
+            : w == _historyWindow ? new Vector2(left + 350, 70)
+            : w == _alertWindow ? new Vector2(left + 350, 70)
+            : w == _targetsWindow ? new Vector2(left + 350, 70)
+            : new Vector2(left + 350 + 310, 70);
         w.Fit();
     }
 
@@ -602,7 +653,7 @@ public partial class Hud : CanvasLayer
             ("Wheel", "Zoom to cursor"), (K("progress"), "Progress: tiers, limits, goals"),
             (K("orders"), "Orders"), (K("research"), "Research"), (K("stats"), "Statistics"),
             (K("bottlenecks"), "Bottlenecks"), (K("diagnostics"), "Mark waiting buildings"),
-            (K("planner"), "Planner"), (K("history"), "History"), (K("alerts"), "Alerts"),
+            (K("planner"), "Planner"), (K("history"), "History"), (K("alerts"), "Alerts"), (K("targets"), "Targets"),
             (K("pause"), "Pause the factory"), ($"{K("slower")} {K("faster")}", "Slower, faster"), (K("game_menu"), "Game menu"),
             (K("help"), "This help"),
             ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
@@ -800,6 +851,9 @@ public partial class Hud : CanvasLayer
             case var _ when Keybinds.Is(key, "alerts"):
                 ToggleWindow(_alertWindow);
                 break;
+            case var _ when Keybinds.Is(key, "targets"):
+                ToggleWindow(_targetsWindow);
+                break;
             case var _ when Keybinds.Is(key, "history"):
                 ToggleWindow(_historyWindow);
                 break;
@@ -906,6 +960,7 @@ public partial class Hud : CanvasLayer
     {
         if (_host?.Sim == null) return;
         KeepBottomClear();
+        KeepSideClear();
         _fps.Visible = Settings.ShowFps;
         if (Settings.ShowFps) _fps.Text = $"{Engine.GetFramesPerSecond():0} FPS";
         UpdateCursorTip();
@@ -938,7 +993,11 @@ public partial class Hud : CanvasLayer
         int unseen = _host.Alerts.Unseen;
         _alertBadge.Visible = unseen > 0;
         _alertBadge.Text = unseen > 9 ? "9+" : unseen.ToString();
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow, _plannerWindow, _historyWindow, _alertWindow })
+        if (_targetsWindow.Visible) _targets.Refresh(_host.Sim, _thumbs);
+        int under = TargetsPanel.UnderCount(world);
+        _targetsBadge.Visible = under > 0;
+        _targetsBadge.Text = under.ToString();
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow, _plannerWindow, _historyWindow, _alertWindow, _targetsWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;

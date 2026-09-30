@@ -174,6 +174,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   *Built in 4.11.0* (roadmap step 12): key J pins every building that keeps waiting.
 - **F6. A throughput view (M).** Show belts near capacity and mergers as gates.
 - **F7. Self set targets (S/M).** "Keep 200 circuits in stock", with an indicator when you are under.
+  *Built in 4.18.0* (roadmap step 19): as rates (items a minute), in the Targets window, with an alert.
 - **F8. Income by product (S).** A ranked list of which products actually
   earn: income per second per item over the last few minutes, lifetime earned per item, and each
   one's share of total income, so it is obvious that circuits are 60% of the money and crates are 2%.

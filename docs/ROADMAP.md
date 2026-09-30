@@ -507,6 +507,16 @@ against the building's name, category, description, and the names of the items i
 use (or the ore a drill mines). Enter builds the first unlocked match, and closing the menu clears
 the search. It lives entirely in the client's `BuildMenu`.
 
+### 19. Production targets (done)
+
+Idea F7. The Targets window (`Y`) holds up to 12 targets of the form "60 iron ingots a minute".
+Each row shows what the factory made over the last minute, a bar, and − and + that move the target
+through round steps. A new target starts one step above today's rate, so it is something to work
+towards. A target that stays under for a minute raises an entry in Alerts, and the sidebar button
+counts the targets that are under right now. Targets are saved and every change can be undone.
+The idea's "keep 200 in stock" did not fit a factory that sells everything at depots, so a target
+is a rate, not a stock. Details: "Production targets" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

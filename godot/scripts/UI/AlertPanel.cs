@@ -21,18 +21,20 @@ public sealed class AlertPanel
     private readonly VBoxContainer _list = new();
     private readonly Action<int> _show;
     private readonly Action _orders;
+    private readonly Action _targets;
     private readonly List<(TextureRect Rect, string Key)> _pictures = new();
     private string _shown = "";
 
-    public AlertPanel(Action<int> show, Action orders)
+    public AlertPanel(Action<int> show, Action orders, Action targets)
     {
         _show = show;
         _orders = orders;
+        _targets = targets;
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", 0);
 
         var head = new HBoxContainer();
-        var intro = Ui.Label($"Machines that stopped for {AlertLog.StoppedSeconds} seconds or more, and orders running out.", 12, UiTheme.Muted);
+        var intro = Ui.Label($"Machines that stopped for {AlertLog.StoppedSeconds} seconds or more, orders running out, and targets missed for a minute.", 12, UiTheme.Muted);
         intro.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         intro.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         intro.CustomMinimumSize = new Vector2(300, 0);
@@ -87,6 +89,7 @@ public sealed class AlertPanel
         AlertKind.Stopped or AlertKind.Jammed => $"{Subject(alert, content)} {(alert.Kind == AlertKind.Jammed ? "jammed" : "stopped")}" +
                                                  (alert.Detail.Length > 0 ? $": {alert.Detail}" : ""),
         AlertKind.OrderEnding => $"Order ending soon: {Goods(alert.Order, content)}",
+        AlertKind.TargetMissed => $"Below target: {ItemName(alert.Item, content)}, {alert.Detail}",
         _ => $"Order ran out of time: {Goods(alert.Order, content)}",
     };
 
@@ -96,6 +99,8 @@ public sealed class AlertPanel
         return alert.Count == 1 ? name : $"{alert.Count}× {name}";
     }
 
+    private static string ItemName(string item, ContentRegistry content) => content.Items.TryGetValue(item, out var def) ? def.Name : item;
+
     private static string Goods(Contract? order, ContentRegistry content) => order == null ? "" :
         string.Join(", ", order.Lines().Select(l => $"{l.Delivered}/{l.Quantity} {(content.Items.TryGetValue(l.Item, out var item) ? item.Name : l.Item)}"));
 
@@ -104,7 +109,8 @@ public sealed class AlertPanel
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
         bool building = alert.Kind is AlertKind.Stopped or AlertKind.Jammed;
-        row.AddChild(Picture(building ? alert.Building : "item:" + (alert.Order?.Item ?? ""), 36));
+        bool target = alert.Kind == AlertKind.TargetMissed;
+        row.AddChild(Picture(building ? alert.Building : "item:" + (target ? alert.Item : alert.Order?.Item ?? ""), 36));
 
         var text = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         text.AddThemeConstantOverride("separation", 1);
@@ -113,6 +119,7 @@ public sealed class AlertPanel
             AlertKind.Stopped => $"{Subject(alert, content)} stopped",
             AlertKind.Jammed => $"{Subject(alert, content)} jammed",
             AlertKind.OrderEnding => "Order ending soon",
+            AlertKind.TargetMissed => $"Below target: {ItemName(alert.Item, content)}",
             _ => "Order ran out of time",
         };
         var name = Ui.Label(title, 15, alert.Resolved ? UiTheme.Muted : UiTheme.Text);
@@ -121,23 +128,24 @@ public sealed class AlertPanel
 
         string detail = building
             ? (alert.Detail.Length > 0 ? char.ToUpperInvariant(alert.Detail[0]) + alert.Detail[1..] : "Waiting")
+            : target ? alert.Detail
             : Goods(alert.Order, content);
         Color color = alert.Resolved ? Palette.Ok
             : alert.Kind == AlertKind.Jammed || alert.Kind == AlertKind.OrderExpired ? Palette.Danger
             : Palette.Waiting;
         string ago = SimHost.FormatDuration(Math.Max(0, now - alert.Tick) / (double)Simulation.TicksPerSecond);
-        string state = !alert.Resolved ? "" : building ? ", running again" : ", delivered";
+        string state = !alert.Resolved ? "" : building ? ", running again" : target ? ", met or removed" : ", delivered";
         var line = Ui.Label($"{detail}{state} · {ago} ago", 13, color);
         line.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         line.CustomMinimumSize = new Vector2(220, 0);
         text.AddChild(line);
         row.AddChild(text);
 
-        if (building || alert.Kind == AlertKind.OrderEnding)
+        if (building || target || alert.Kind == AlertKind.OrderEnding)
         {
             var go = new Button
             {
-                Text = building ? "Show" : "Orders",
+                Text = building ? "Show" : target ? "Targets" : "Orders",
                 ThemeTypeVariation = "FlatButton",
                 FocusMode = Control.FocusModeEnum.None,
                 CustomMinimumSize = new Vector2(64, 34),
@@ -145,8 +153,8 @@ public sealed class AlertPanel
             };
             go.AddThemeFontSizeOverride("font_size", 13);
             int id = alert.ExampleId;
-            go.TooltipText = building ? "Select it and move the camera there" : "Open the orders";
-            go.Pressed += building ? () => _show(id) : _orders;
+            go.TooltipText = building ? "Select it and move the camera there" : target ? "Open the targets" : "Open the orders";
+            go.Pressed += building ? () => _show(id) : target ? _targets : _orders;
             row.AddChild(go);
         }
 
