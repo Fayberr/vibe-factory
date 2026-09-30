@@ -95,6 +95,11 @@
     // Delete every entry marked "Research slice 2" and remove pack_2 from the Science Bench to drop it.
     { "id": "science_2",    "name": "Advanced Science Pack", "baseValue": 0, "science": true, "meta": { "color": "#43c6e8", "shape": "flask" } },
 
+    // Industrial exports (content drop, 4.7.0): optional mid-game products from existing parts.
+    // Delete every entry marked "Industrial exports" to remove the drop.
+    { "id": "toolkit",      "name": "Industrial Toolkit", "baseValue": 0,            "meta": { "color": "#e8a84c", "shape": "toolkit" } },
+    { "id": "industrial_pump", "name": "Industrial Pump", "baseValue": 0,            "meta": { "color": "#4eb6c8", "shape": "pump" } },
+
     // Consumer goods (content drop, 4.3.0): an optional side line with one product a tier, built from the
     // parts the main line already makes, so each tier has a second thing worth selling. Its parts feed
     // each other: chairs and tires go into cars, phones into airliners; lanterns are only sold. To remove
@@ -157,6 +162,11 @@
 
     // Research slice 2 (4.4.0). Half the parts' value keeps this pack from becoming a depot product.
     { "id": "pack_2", "inputs": [ { "item": "steel", "count": 1 }, { "item": "gear", "count": 1 }, { "item": "screw", "count": 2 } ], "outputs": [ { "item": "science_2", "count": 1 } ], "ticks": 60, "valueMultiplier": 0.5 },
+
+    // Industrial exports (content drop, 4.7.0): sellable side products that give rods, screws,
+    // gears and cables another use without changing any existing machine's automatic choices.
+    { "id": "make_toolkit", "inputs": [ { "item": "gear", "count": 2 }, { "item": "iron_rod", "count": 2 }, { "item": "screw", "count": 4 } ], "outputs": [ { "item": "toolkit", "count": 1 } ], "ticks": 50, "valueMultiplier": 2.0 },
+    { "id": "make_industrial_pump", "inputs": [ { "item": "frame", "count": 1 }, { "item": "cable", "count": 2 }, { "item": "steel", "count": 2 } ], "outputs": [ { "item": "industrial_pump", "count": 1 } ], "ticks": 70, "valueMultiplier": 2.0 },
 
     // Consumer goods. Chairs use the logs that sit idle until crates; lanterns the coal (through steel)
     // that sits idle until steel is needed; phones and cars are a second product beside motors and robots;
@@ -452,6 +462,23 @@
       "meta": { "model": "launchpad", "accent": "#77c8ff", "glyph": "p", "description": "Fits a satellite with 2 circuit boards and 2 rocket fuel for a deep-space mission." }
     },
 
+    // ---- Industrial exports (content drop, 4.7.0) -------------------------------------------
+    // Dedicated machines keep the products optional and leave existing automatic recipe lists unchanged.
+    {
+      "id": "tool_works", "name": "Tool Works", "behavior": "processor", "cost": 2500, "category": "crafting", "tier": 2,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_toolkit" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#e8a84c", "glyph": "k", "description": "Packs 2 gears, 2 iron rods and 4 screws into an industrial toolkit for export." }
+    },
+    {
+      "id": "pump_works", "name": "Pump Works", "behavior": "processor", "cost": 2.5e4, "category": "crafting", "tier": 3,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_industrial_pump" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#4eb6c8", "glyph": "u", "description": "Builds an industrial pump from a frame, 2 cables and 2 steel beams for export." }
+    },
+
     // ---- Consumer goods (content drop, 4.3.0) ----------------------------------------------
     // One machine a tier for the side line; each makes only its own product, so none of them changes
     // how an existing machine on automatic picks its recipe or what it takes off a belt.
@@ -581,6 +608,8 @@
     { "id": "contract_10",  "name": "Reliable supplier", "description": "Complete 10 orders.",                    "kind": "contracts", "target": 10,     "reward": 5000 },
     { "id": "level_10",     "name": "Fine tuned",        "description": "Upgrade a building to level 10.",        "kind": "level",     "target": 10,     "reward": 8000 },
     { "id": "gears_100",   "name": "Cogs turning",      "description": "Produce 100 gears.",                     "kind": "produced",  "item": "gear", "target": 100, "reward": 6000 },
+    // Industrial exports (content drop, 4.7.0): delete with the two products, recipes and machines.
+    { "id": "toolkits_25", "name": "Ready for work",    "description": "Produce 25 industrial toolkits.",        "kind": "produced",  "item": "toolkit", "target": 25, "reward": 8000 },
     // Consumer goods
     { "id": "lanterns_50",  "name": "Lights on",         "description": "Produce 50 lanterns.",                   "kind": "produced",  "item": "lantern", "target": 50, "reward": 4000 },
     { "id": "steel_100",    "name": "Steel works",       "description": "Produce 100 steel beams.",               "kind": "produced",  "item": "steel", "target": 100, "reward": 5000 },
@@ -593,6 +622,8 @@
     { "id": "earn_1m",      "name": "Millionaire",       "description": "Earn $1,000,000 in total.",              "kind": "earned",    "target": 1e6,    "reward": 150000 },
     { "id": "circuit_100",  "name": "Chip maker",        "description": "Produce 100 circuits.",                  "kind": "produced",  "item": "circuit", "target": 100, "reward": 100000 },
     { "id": "battery_50",  "name": "Fully charged",     "description": "Produce 50 batteries.",                  "kind": "produced",  "item": "battery", "target": 50, "reward": 200000 },
+    // Industrial exports (content drop, 4.7.0): delete with the two products, recipes and machines.
+    { "id": "industrial_pump_1", "name": "Primed",       "description": "Produce your first industrial pump.",    "kind": "produced",  "item": "industrial_pump", "target": 1, "reward": 100000 },
     // Consumer goods
     { "id": "phone_1",      "name": "Hello?",            "description": "Produce your first phone.",              "kind": "produced",  "item": "phone", "target": 1, "reward": 250000 },
     { "id": "contract_50",  "name": "Trusted partner",   "description": "Complete 50 orders.",                    "kind": "contracts", "target": 50,     "reward": 400000 },

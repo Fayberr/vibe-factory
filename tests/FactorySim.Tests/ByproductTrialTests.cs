@@ -221,7 +221,7 @@ public class ByproductTrialTests
         Assert.False(without.Items.ContainsKey("tar"));
         var used = without.Recipes.Values.SelectMany(r => r.Inputs).Select(i => i.Item).ToHashSet();
         Assert.Equal(new[] { "space_probe" }, without.Items.Keys.Where(id => !used.Contains(id) && !without.Items[id].Science
-                                                                          && !ConsumerGoodsTests.Items.Contains(id)));
+            && !ConsumerGoodsTests.Items.Contains(id) && !MidGameExportsTests.Items.Contains(id)));
     }
 
     [Fact]

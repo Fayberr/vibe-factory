@@ -62,10 +62,11 @@ public class RecipeTreeTests
     [Fact]
     public void Only_the_final_product_is_a_dead_end()
     {
-        // Research packs end in a lab, not a recipe, and the consumer goods side line ends in goods that are
-        // only sold (ConsumerGoodsTests), so both are dead ends by design. The main line has one.
+        // Research packs end in a lab, not a recipe. Consumer goods and industrial exports end in goods
+        // that are only sold, so those are dead ends by design. The main line has one.
         var used = UsedIn();
-        var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science && !ConsumerGoodsTests.Items.Contains(id)).ToList();
+        var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science
+            && !ConsumerGoodsTests.Items.Contains(id) && !MidGameExportsTests.Items.Contains(id)).ToList();
         Assert.Equal(new[] { "space_probe" }, deadEnds);
     }
 

@@ -196,7 +196,8 @@ underneath. Lifts and multi-level machines use the same mechanism.
   Manage window shows it, and a test checks that each tier's best product is worth at
   least double the last. Every ore is worth $1, so an item's value is the work in it.
 - **Recipe tree.** `base.json` holds one connected tree: shared parts feed many recipes and
-  only the final main-line product (the deep-space probe) is sold and used in nothing. Tests walk the tree to
+  only the final main-line product (the deep-space probe) is sold and used in nothing. Optional
+  consumer goods and industrial exports are deliberate sell-only leaves. Tests walk the tree to
   check that: no recipe cycle, no dead end, one late product pulls every raw resource
   through the factory, and every machine's `inputCapacity` can hold the inputs of all its
   recipes (`ProcessorBehavior.Bind` refuses one that cannot, which would idle the machine).
@@ -301,6 +302,18 @@ Every entry is marked "Deep-space probes" in `base.json`. To remove the incremen
 recipe, building and goal, delete `tests/FactorySim.Tests/DeepSpaceProbeTests.cs`, remove the
 `space_probe` item mesh case, and restore the two main recipe-tree test expectations from
 `space_probe` to `satellite`. The removal test proves all earlier content and item values are unchanged.
+
+### Industrial exports
+
+The 4.7.0 content drop adds two optional mid-game products. Industry's Tool Works packs gears,
+iron rods and screws into industrial toolkits. Petrochemicals' Pump Works turns a frame, cables
+and steel into an industrial pump. Each product has a dedicated machine, so no existing machine's
+automatic recipe list changes, and neither product is a tier delivery.
+
+Every entry is marked "Industrial exports" in `base.json`. To remove the drop, delete the two items,
+recipes, machines and goals, delete `tests/FactorySim.Tests/MidGameExportsTests.cs`, remove the
+`toolkit` and `pump` item mesh cases, and remove `MidGameExportsTests.Items` from the two recipe-tree
+dead-end filters. The removal test proves all earlier content and item values are unchanged.
 
 ### Research
 

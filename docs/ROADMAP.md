@@ -208,6 +208,25 @@ machine and goal), delete `DeepSpaceProbeTests.cs`, remove the `space_probe` mes
 the recipe-tree dead-end expectations to `satellite`. The removal test proves every previous item,
 recipe, building, tier, goal, upgrade and item value remains unchanged.
 
+**Fourth drop: industrial exports (4.7.0).** Two optional sell-only products add mid-game uses for
+parts with relatively few destinations. At Industry, the Tool Works packs two gears, two iron rods
+and four screws into an industrial toolkit. At Petrochemicals, the Pump Works combines a frame, two
+cables and two steel beams into an industrial pump. Both have dedicated machines, so existing
+automatic recipe choices and every tier delivery stay unchanged.
+
+At level 1 the eight tier incomes before the drop were $8, $60.2, $247.6, $1.04K, $4.79K, $18.61K,
+$41.41K and $105.03K per second, with a whole-run estimate of 1d 6h. After the drop they are $8,
+$60.2, $253.2, $1.04K, $4.79K, $18.61K, $41.41K and $105.03K. Industry rises 2.3%, later displayed
+tiers and the whole-run estimate are unchanged. The optimiser uses toolkits for 32% of Industry's
+income. Pumps remain a profitable buildable alternative rather than displacing the stronger
+Petrochemicals optimum.
+
+To remove the drop, delete every `base.json` entry marked "Industrial exports" (two items, recipes,
+machines and goals), delete `MidGameExportsTests.cs`, remove the `toolkit` and `pump` mesh cases, and
+remove their deliberate dead-end exclusions from `RecipeTreeTests.cs` and `ByproductTrialTests.cs`.
+The removal test proves every previous item, recipe, building, tier, goal, upgrade and item value
+remains unchanged.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:
