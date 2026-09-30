@@ -120,6 +120,11 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = false;
                 hud.ResearchWindow.Visible = true;
             }
+            if (arg == "--alerts")
+            {
+                // The Alerts window (the demo factory rarely stops; this shows the empty state).
+                hud.AlertWindow.Visible = true;
+            }
             if (arg == "--history")
             {
                 // The History window (the demo factory fills it after half a minute; use --wait=40).

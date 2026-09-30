@@ -167,7 +167,8 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   fly there. It is the question every player asks, and `EntityStatus` already computes the inputs.
   *Built in 4.11.0* (roadmap step 12): the Bottlenecks window, key K.
 - **F4. Alerts (S/M).** A dismissible log of jams, low power, full depots and contract deadlines,
-  with a fly-to.
+  with a fly-to. *Built in 4.15.0* (roadmap step 15): the Alerts window, key N, for stopped and
+  jammed machines and ending and expired orders.
 - **F5. The diagnostics overlay (S).** One hotkey lights up every machine that is not working,
   coloured by reason. The cheapest large win here, because the data already exists.
   *Built in 4.11.0* (roadmap step 12): key J pins every building that keeps waiting.

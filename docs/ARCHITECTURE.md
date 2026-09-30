@@ -602,6 +602,18 @@ so it is saved with it, and a save without it loads with empty series. To remove
 files, the `History` property and its call in `Simulation.Step`, the window and the `history` key
 in `Hud`/`Keybinds`, the `Graph` icon, and `HistoryTests.cs`.
 
+**Alerts** (idea F4, `UI/AlertPanel` over `Simulation/Alerts`): `AlertLog` sits next to the
+`BottleneckTracker` in `SimHost`, which calls `Observe` after advancing the simulation (it looks at
+most once per sampling stride) and `OnEvent` for every event, and `Reset` when the world is
+replaced. Per building it remembers the last tick it was working; one that worked before and has
+not worked for `StoppedSeconds` is flagged, grouped with others of its type and reason from the
+same look into one `Alert`, and unflagged once it works again (which resolves the entry once all of
+its buildings are unflagged). Open orders are warned about once when `OrderWarningShare` of their
+time is left; `ContractExpired` adds an entry and `ContractCompleted` resolves the warning. Nothing
+is saved. To remove it: `Alerts.cs`, `AlertTests.cs`, the `Alerts` property and its three calls in
+`SimHost`, `AlertPanel` with its window, badge, toast and the `alerts` key in `Hud`/`Keybinds`, and
+the `Bell` icon.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

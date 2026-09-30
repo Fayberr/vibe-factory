@@ -71,6 +71,9 @@ public partial class SimHost : Node
     /// <summary>What kept buildings waiting over the last half minute (the Bottlenecks window and overlay). Read only.</summary>
     public BottleneckTracker Bottlenecks { get; } = new();
 
+    /// <summary>Stopped machines and ending orders (idea F4; see <see cref="AlertLog"/>).</summary>
+    public AlertLog Alerts { get; } = new();
+
     /// <summary>Raised for every simulation event, after the frame's ticks ran.</summary>
     public event Action<SimEvent>? EventRaised;
 
@@ -114,10 +117,15 @@ public partial class SimHost : Node
         int ticks = Paused ? 0 : Sim.Advance(delta * TimeScale, maxTicks: 20 * TimeScale);
 
         Sim.Events.Drain(_events);
-        foreach (var ev in _events) EventRaised?.Invoke(ev);
+        foreach (var ev in _events)
+        {
+            Alerts.OnEvent(ev);
+            EventRaised?.Invoke(ev);
+        }
         if (ticks > 0)
         {
             Bottlenecks.Observe(Sim.World);
+            Alerts.Observe(Sim.World);
             TicksAdvanced?.Invoke(ticks);
         }
 
@@ -156,6 +164,7 @@ public partial class SimHost : Node
         Paused = false;
         _sinceSave = 0;
         Bottlenecks.Reset();
+        Alerts.Reset();
         WorldReplaced?.Invoke();
     }
 

@@ -468,6 +468,19 @@ catch-up only partly simulates) shows as one long step at the right average. The
 are the two intervals and capacities in `HistoryLog`. Details: "History graphs" in the architecture
 notes.
 
+### 15. Alerts (done)
+
+Idea F4. Things that go wrong while you look elsewhere raise a toast and an entry in the Alerts
+window (key N, with an unseen count on its sidebar button): a machine that was running and then did
+nothing at all for 30 seconds (stopped for input, or jammed with nowhere to put its output), an
+order with a fifth of its time left, and an order that ran out. A slow, underfed machine is the
+Bottlenecks window's business, not an alert, and a machine that never ran yet (a line still being
+built) raises nothing. Machines of one type that stop together make one entry, one that recovers
+and stops again within two minutes is not reported twice, and entries mark themselves resolved when
+the machines run again or the order is delivered. Nothing is saved. The numbers to tune are the
+constants in `AlertLog`. Low power and full depots from the idea do not apply: there is no power,
+and depots sell everything. Details: "Alerts" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

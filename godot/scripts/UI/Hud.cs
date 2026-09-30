@@ -48,13 +48,15 @@ public partial class Hud : CanvasLayer
     private HudWindow _buyWindow = null!;
     private Label _buyText = null!;
     private PlotId _buyPlot;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!, _plannerWindow = null!, _historyWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!, _plannerWindow = null!, _historyWindow = null!, _alertWindow = null!;
     private OrdersPanel _orders = null!;
     private ResearchPanel _research = null!;
     private AwayReportPanel _away = null!;
     private BottleneckPanel _bottlenecks = null!;
     private PlannerPanel _planner = null!;
     private HistoryPanel _history = null!;
+    private AlertPanel _alerts = null!;
+    private Label _alertBadge = null!;
     private bool _pinsShown;
     private Button _researchButton = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
@@ -93,6 +95,7 @@ public partial class Hud : CanvasLayer
     public HudWindow PlannerWindow => _plannerWindow;
     public PlannerPanel Planner => _planner;
     public HudWindow HistoryWindow => _historyWindow;
+    public HudWindow AlertWindow => _alertWindow;
 
     public void Init(SimHost host, BuildController tools, Thumbnails thumbs)
     {
@@ -102,6 +105,12 @@ public partial class Hud : CanvasLayer
         host.Notice += text => _toasts.Show(this, text);
         host.WorldReplaced += OnWorldReplaced;
         host.CameBack += OnCameBack;
+        host.Alerts.Raised += alert =>
+        {
+            // Expired orders already have their own toast (below).
+            if (alert.Kind != AlertKind.OrderExpired && !_alertWindow.Visible && Settings.ShowNotifications)
+                _toasts.Show(this, $"{AlertPanel.Headline(alert, host.Content)} ({K("alerts")})");
+        };
         host.EventRaised += ev =>
         {
             if (ev is EntityPlaced or EntityRemoved) _slotsDirty = true; // build limits changed
@@ -235,6 +244,15 @@ public partial class Hud : CanvasLayer
         col.AddChild(Keyed(Ui.IconButton(Icon.Gauge, "", () => ToggleWindow(_bottleneckWindow), 44), () => $"Bottlenecks: what keeps buildings waiting ({K("bottlenecks")})\n{K("diagnostics")} marks them in the world"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Chain, "", () => ToggleWindow(_plannerWindow), 44), () => $"Planner: what a production line needs ({K("planner")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Graph, "", () => ToggleWindow(_historyWindow), 44), () => $"History: money, income and output over time ({K("history")})"));
+        var alerts = Keyed(Ui.IconButton(Icon.Bell, "", () => ToggleWindow(_alertWindow), 44), () => $"Alerts: stopped machines and ending orders ({K("alerts")})");
+        _alertBadge = Ui.Label("", 11, UiTheme.Text);
+        _alertBadge.AddThemeFontOverride("font", UiTheme.Bold);
+        _alertBadge.AddThemeColorOverride("font_outline_color", Palette.Danger);
+        _alertBadge.AddThemeConstantOverride("outline_size", 7);
+        _alertBadge.Position = new Vector2(30, 2);
+        _alertBadge.Visible = false;
+        alerts.AddChild(_alertBadge);
+        col.AddChild(alerts);
         col.AddChild(Keyed(Ui.IconButton(Icon.Game, "", () => ToggleWindow(_gameWindow), 44), () => $"Game: save, speed, settings ({K("game_menu")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Help, "", () => _help.Visible = !_help.Visible, 44), () => $"Controls ({K("help")})"));
         _root.AddChild(Ui.Anchor(Ui.Panel(col), 0, 0.5f, 12, 0, Control.GrowDirection.End, Control.GrowDirection.Both));
@@ -395,6 +413,10 @@ public partial class Hud : CanvasLayer
         _historyWindow.Body.AddChild(_history.Root);
         AddWindow(_historyWindow);
 
+        _alerts = new AlertPanel(id => _tools.ShowEntity(id), () => { if (!_ordersWindow.Visible) ToggleWindow(_ordersWindow); });
+        _alertWindow = new HudWindow("Alerts", Icon.Bell, 460) { EscCloses = false };
+        _alertWindow.Body.AddChild(_alerts.Root);
+        AddWindow(_alertWindow);
 
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
@@ -529,6 +551,7 @@ public partial class Hud : CanvasLayer
             : w == _bottleneckWindow ? new Vector2(84 + 350, 70)
             : w == _plannerWindow ? new Vector2(84 + 350, 70)
             : w == _historyWindow ? new Vector2(84 + 350, 70)
+            : w == _alertWindow ? new Vector2(84 + 350, 70)
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
@@ -575,7 +598,7 @@ public partial class Hud : CanvasLayer
             ("Wheel", "Zoom to cursor"), (K("progress"), "Progress: tiers, limits, goals"),
             (K("orders"), "Orders"), (K("research"), "Research"), (K("stats"), "Statistics"),
             (K("bottlenecks"), "Bottlenecks"), (K("diagnostics"), "Mark waiting buildings"),
-            (K("planner"), "Planner"), (K("history"), "History"),
+            (K("planner"), "Planner"), (K("history"), "History"), (K("alerts"), "Alerts"),
             (K("pause"), "Pause the factory"), (K("game_menu"), "Game menu"),
             (K("help"), "This help"),
             ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
@@ -769,6 +792,9 @@ public partial class Hud : CanvasLayer
                 _toasts.Show(this, _bottlenecks.OverlayOn ? "Waiting buildings marked: yellow wait for input, red cannot get rid of their output" : "Marks off");
                 _refresh = 0;
                 break;
+            case var _ when Keybinds.Is(key, "alerts"):
+                ToggleWindow(_alertWindow);
+                break;
             case var _ when Keybinds.Is(key, "history"):
                 ToggleWindow(_historyWindow);
                 break;
@@ -895,7 +921,11 @@ public partial class Hud : CanvasLayer
         _pinsShown = _bottlenecks.OverlayOn;
         if (_plannerWindow.Visible) _planner.Refresh(_host.Sim, _thumbs);
         if (_historyWindow.Visible) _history.Refresh(_host.Sim, _thumbs);
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow, _plannerWindow, _historyWindow })
+        if (_alertWindow.Visible) _alerts.Refresh(_host.Sim, _host.Alerts, _thumbs);
+        int unseen = _host.Alerts.Unseen;
+        _alertBadge.Visible = unseen > 0;
+        _alertBadge.Text = unseen > 9 ? "9+" : unseen.ToString();
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow, _plannerWindow, _historyWindow, _alertWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;
