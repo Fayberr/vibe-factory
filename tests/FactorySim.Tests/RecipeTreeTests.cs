@@ -66,7 +66,7 @@ public class RecipeTreeTests
         // that are only sold, so those are dead ends by design. The main line has one.
         var used = UsedIn();
         var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science
-            && !ConsumerGoodsTests.Items.Contains(id) && !MidGameExportsTests.Items.Contains(id)).ToList();
+            && !ConsumerGoodsTests.Items.Contains(id) && !MidGameExportsTests.Items.Contains(id) && !HomeAppliancesTests.Items.Contains(id)).ToList();
         Assert.Equal(new[] { "space_probe", "orbital_station" }, deadEnds); // probes are sold, stations end the Orbital tier
     }
 

@@ -337,6 +337,22 @@ recipes, machines and goals, delete `tests/FactorySim.Tests/MidGameExportsTests.
 `toolkit` and `pump` item mesh cases, and remove `MidGameExportsTests.Items` from the two recipe-tree
 dead-end filters. The removal test proves all earlier content and item values are unchanged.
 
+### Home appliances
+
+The 4.24.0 content drop is a second side line like the consumer goods: an electric kettle (Kettle Works,
+Petrochemicals: steel, cable, 2 plastic), a television (TV Plant, Electronics: 2 glass, 2 circuits, 4
+plastic), a washing machine (Appliance Plant, Robotics: a motor, 4 steel, 4 iron plates) and an e-bike
+(Bike Works, Aerospace: 2 aluminium, 2 motors, 2 batteries). Each machine has only its own recipe, the
+inputs are main-line parts only (never a consumer good or an export, so the drops stay independent),
+and nothing uses an appliance. Each is worth less per item than its tier's main product, so the balance
+tool's optimum barely changes (Aerospace rises from $41.41K to $41.61K a second through televisions).
+Four goals come with it.
+
+Every entry is marked "Home appliances" in `base.json`. To remove it, delete those entries (four items,
+recipes, buildings and goals), the appliance words in four tier descriptions, the four item mesh cases
+(`kettle`, `tv`, `washer`, `bike`), `HomeAppliancesTests.cs` and its exclusion in the two dead-end
+filters. The removal test proves every other item value is unchanged and no tier earns less.
+
 ### Research
 
 Research sits beside the tiers and never gates them: nothing a tier needs is bought with it, so a

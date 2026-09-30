@@ -40,6 +40,8 @@ public static class ItemMeshes
         "solar_panel" => 0.02f,
         "module" => 0.07f,
         "station" => 0.045f,
+        // Home appliances (4.24.0): built up from the belt deck.
+        "kettle" or "tv" or "washer" or "bike" => 0.01f,
         _ => 0.11f,
     };
 
@@ -212,6 +214,27 @@ public static class ItemMeshes
                 foreach (float z in new[] { -0.08f, 0.08f })
                     mb.Box(mat, new Vector3(0, 0, z), new Vector3(0.12f, 0.006f, 0.045f), 0.001f);
                 break;
+            // Home appliances (4.24.0): delete these four cases with the line.
+            case "kettle":
+                Kettle(mb, mat);
+                break;
+            case "tv":
+                // A flat screen on a foot, facing across the belt, with the glass a step proud of the bezel.
+                mb.Box(mat, new Vector3(0, 0.006f, 0), new Vector3(0.05f, 0.012f, 0.08f), 0.003f);
+                mb.Box(mat, new Vector3(0, 0.027f, 0), new Vector3(0.014f, 0.03f, 0.014f), 0.002f);
+                mb.Box(mat, new Vector3(0, 0.095f, 0), new Vector3(0.02f, 0.1f, 0.17f), 0.004f);
+                mb.Box(mat, new Vector3(0.011f, 0.095f, 0), new Vector3(0.003f, 0.086f, 0.156f), 0.001f);
+                break;
+            case "washer":
+                // A white cube with a round door on the front and a control strip above it.
+                mb.Box(mat, new Vector3(0, 0.075f, 0), new Vector3(0.14f, 0.15f, 0.14f), 0.01f);
+                LyingCylinder(mb, mat, new Vector3(0.072f, 0.065f, 0), 0.046f, 0.008f, 16);
+                LyingCylinder(mb, mat, new Vector3(0.076f, 0.065f, 0), 0.034f, 0.006f, 16);
+                mb.Box(mat, new Vector3(0.071f, 0.13f, 0), new Vector3(0.006f, 0.018f, 0.11f), 0.002f);
+                break;
+            case "bike":
+                Bike(mb, mat);
+                break;
             default:
                 mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.18f, 0.18f), 0.03f);
                 break;
@@ -347,6 +370,42 @@ public static class ItemMeshes
         }
         Prism(mb, m, new[] { new Vector2(-0.09f, 0.012f), new Vector2(-0.058f, 0.012f),
                              new Vector2(-0.078f, 0.062f), new Vector2(-0.09f, 0.062f) }, -0.003f, 0.003f);
+    }
+
+    /// <summary>Electric kettle: a tapering body on a base plate, a lid knob, a spout ahead and a handle behind.</summary>
+    private static void Kettle(MeshBuilder mb, Material m)
+    {
+        mb.Cylinder(m, Vector3.Zero, 0.06f, 0.012f, 12);
+        mb.Cylinder(m, new Vector3(0, 0.012f, 0), 0.052f, 0.1f, 14, topRadius: 0.042f, smooth: true);
+        mb.Cylinder(m, new Vector3(0, 0.112f, 0), 0.03f, 0.008f, 12);
+        mb.Cylinder(m, new Vector3(0, 0.12f, 0), 0.01f, 0.012f, 8);
+        mb.Beam(m, new Vector3(0.04f, 0.085f, 0), new Vector3(0.078f, 0.11f, 0), 0.016f);
+        mb.Beam(m, new Vector3(-0.045f, 0.03f, 0), new Vector3(-0.075f, 0.05f, 0), 0.014f);
+        mb.Beam(m, new Vector3(-0.075f, 0.05f, 0), new Vector3(-0.07f, 0.095f, 0), 0.014f);
+        mb.Beam(m, new Vector3(-0.07f, 0.095f, 0), new Vector3(-0.04f, 0.105f, 0), 0.014f);
+    }
+
+    /// <summary>E-bike rolling along the belt: two wheels, a diamond frame with a battery on the down tube, a saddle and bars.</summary>
+    private static void Bike(MeshBuilder mb, Material m)
+    {
+        const float r = 0.036f;
+        var rear = new Vector3(-0.052f, r, 0);
+        var front = new Vector3(0.052f, r, 0);
+        Wheel(mb, m, rear, r, 0.01f, 14);
+        Wheel(mb, m, front, r, 0.01f, 14);
+        var seat = new Vector3(-0.022f, 0.09f, 0);
+        var head = new Vector3(0.04f, 0.095f, 0);
+        var crank = new Vector3(-0.004f, 0.034f, 0);
+        mb.Beam(m, rear, seat, 0.008f);
+        mb.Beam(m, rear, crank, 0.008f);
+        mb.Beam(m, crank, seat, 0.009f);
+        mb.Beam(m, seat, head, 0.009f);
+        mb.Beam(m, crank, head, 0.012f);
+        mb.Beam(m, head, front, 0.008f);
+        mb.Box(m, new Vector3(0.018f, 0.06f, 0), new Vector3(0.036f, 0.02f, 0.022f), 0.004f);
+        mb.Box(m, seat + new Vector3(-0.004f, 0.012f, 0), new Vector3(0.034f, 0.008f, 0.016f), 0.003f);
+        mb.Beam(m, head, head + new Vector3(-0.004f, 0.022f, 0), 0.007f);
+        mb.Beam(m, head + new Vector3(-0.004f, 0.022f, -0.03f), head + new Vector3(-0.004f, 0.022f, 0.03f), 0.007f);
     }
 
     /// <summary>Little toy car: body, cabin and four wheels.</summary>

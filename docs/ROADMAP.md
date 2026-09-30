@@ -302,6 +302,23 @@ tier just unlocked next to older parts, so an order pulls from the whole factory
 in `balance tiers`, so pacing is unchanged. Remove: delete the `contractBundles` entries marked "Tier
 orders" and `TierOrdersTests.cs`.
 
+**Ninth drop: home appliances (4.24.0).** A second side line built like the consumer goods: one
+product and one machine a tier, main-line parts only, each only sold.
+
+| Tier | Good | Machine | Made from | Worth |
+|---|---|---|---|---|
+| Petrochemicals | Electric Kettle | Kettle Works | steel beam, cable, 2 plastic | $56 |
+| Electronics | Television | TV Plant | 2 glass, 2 circuit boards, 4 plastic | $321 |
+| Robotics | Washing Machine | Appliance Plant | motor, 4 steel beams, 4 iron plates | $2.65K |
+| Aerospace | E-Bike | Bike Works | 2 aluminium, 2 motors, 2 batteries | $7.32K |
+
+Measuring it showed why a short-chain product never wins the optimum: from Petrochemicals on the
+depots are the limit, so the best factory sells whatever is worth most per item, and that is always
+the deep main-line product. Raising the multipliers to 4 or 5 did not change that. So appliances are
+deliberately the lesser choice: variety, a place for spare parts, four goals (100 kettles, first TV,
+washing machine and e-bike). `balance tiers` is unchanged except Aerospace, $41.41K to $41.61K a
+second. Remove: see "Home appliances" in the architecture notes.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

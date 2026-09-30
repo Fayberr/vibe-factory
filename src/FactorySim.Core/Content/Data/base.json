@@ -33,13 +33,13 @@
     { "name": "Workshop",       "description": "Copper, wood, chairs, presses and polishers.",                    "cost": 500,   "requiredEarnings": 750 },
     { "name": "Industry",       "description": "Coal, steel, sand, glass, gears, screws, crates and lanterns.",   "cost": 6000,  "requiredEarnings": 1e4,
       "deliver": [ { "item": "iron_plate", "count": 150 }, { "item": "copper_wire", "count": 150 } ] },
-    { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys and export terminals.", "cost": 8e4,   "requiredEarnings": 1.5e5,
+    { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys, kettles and export terminals.", "cost": 8e4,   "requiredEarnings": 1.5e5,
       "deliver": [ { "item": "steel", "count": 150 }, { "item": "crate", "count": 60 } ] },
-    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry and bulk machines.", "cost": 1e6,   "requiredEarnings": 2e6,
+    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry, televisions and bulk machines.", "cost": 1e6,   "requiredEarnings": 2e6,
       "deliver": [ { "item": "toy", "count": 80 }, { "item": "frame", "count": 60 } ] },
-    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, and cars.",           "cost": 1.5e7, "requiredEarnings": 3e7,
+    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, cars and washing machines.",           "cost": 1.5e7, "requiredEarnings": 3e7,
       "deliver": [ { "item": "motor", "count": 60 }, { "item": "jewelry", "count": 40 } ] },
-    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones and airliners.",                       "cost": 1.2e8, "requiredEarnings": 2.5e8,
+    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones, airliners and e-bikes.",                       "cost": 1.2e8, "requiredEarnings": 2.5e8,
       "deliver": [ { "item": "robot", "count": 40 } ] },
     { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 2e9,   "requiredEarnings": 4e9,
       "deliver": [ { "item": "drone", "count": 30 } ] },
@@ -120,7 +120,15 @@
     { "id": "tire",         "name": "Tire",         "baseValue": 0,               "meta": { "color": "#3a3a42", "shape": "tire" } },
     { "id": "phone",        "name": "Phone",        "baseValue": 0,               "meta": { "color": "#4a6cf0", "shape": "phone" } },
     { "id": "car",          "name": "Car",          "baseValue": 0,               "meta": { "color": "#3fa7d6", "shape": "car" } },
-    { "id": "airliner",     "name": "Airliner",     "baseValue": 0,               "meta": { "color": "#eef3f8", "shape": "plane" } }
+    { "id": "airliner",     "name": "Airliner",     "baseValue": 0,               "meta": { "color": "#eef3f8", "shape": "plane" } },
+
+    // Home appliances (content drop, 4.24.0): a second side line, one product and one machine a tier from
+    // Petrochemicals to Aerospace, from main-line parts only. Each is only sold. Delete every entry marked
+    // "Home appliances" (items, recipes, buildings, goals) to remove it; nothing else refers to them.
+    { "id": "kettle",       "name": "Electric Kettle", "baseValue": 0,            "meta": { "color": "#e9eef2", "shape": "kettle" } },
+    { "id": "television",   "name": "Television",   "baseValue": 0,               "meta": { "color": "#2a2f3a", "shape": "tv" } },
+    { "id": "washing_machine", "name": "Washing Machine", "baseValue": 0,         "meta": { "color": "#f4f6f8", "shape": "washer" } },
+    { "id": "ebike",        "name": "E-Bike",       "baseValue": 0,               "meta": { "color": "#2fbf8f", "shape": "bike" } }
   ],
 
   "recipes": [
@@ -197,6 +205,16 @@
     { "id": "make_phone", "inputs": [ { "item": "circuit", "count": 1 }, { "item": "battery", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "phone", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
     { "id": "make_car", "inputs": [ { "item": "motor", "count": 2 }, { "item": "tire", "count": 4 }, { "item": "chair", "count": 2 } ], "outputs": [ { "item": "car", "count": 1 } ], "ticks": 80, "valueMultiplier": 5.5 },
     { "id": "make_airliner", "inputs": [ { "item": "frame", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "phone", "count": 2 } ], "outputs": [ { "item": "airliner", "count": 1 } ], "ticks": 120, "valueMultiplier": 5.5 },
+
+    // Home appliances (4.24.0). Kettles give cable a first use outside batteries and pumps, televisions put
+    // glass and circuits into a mid-price good, washing machines are the cheap use of a motor next to cars
+    // and robots, and e-bikes the second use of aluminium and a third of batteries. Each is worth less per item
+    // and pays back slower than its tier's main product, so where depots are the limit (`balance tiers`) the
+    // main line still wins: appliances are variety and a place for spare parts, never a better way to play.
+    { "id": "make_kettle", "inputs": [ { "item": "steel", "count": 1 }, { "item": "cable", "count": 1 }, { "item": "plastic", "count": 2 } ], "outputs": [ { "item": "kettle", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 },
+    { "id": "make_television", "inputs": [ { "item": "glass", "count": 2 }, { "item": "circuit", "count": 2 }, { "item": "plastic", "count": 4 } ], "outputs": [ { "item": "television", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
+    { "id": "make_washing_machine", "inputs": [ { "item": "motor", "count": 1 }, { "item": "steel", "count": 4 }, { "item": "iron_plate", "count": 4 } ], "outputs": [ { "item": "washing_machine", "count": 1 } ], "ticks": 60, "valueMultiplier": 3 },
+    { "id": "make_ebike", "inputs": [ { "item": "aluminium", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "ebike", "count": 1 } ], "ticks": 80, "valueMultiplier": 3.5 },
 
     // Bulk machines (idea B11, content drop 4.22.0): delete every entry marked "Bulk machines" to remove them.
     // Twice the input and output of the plain recipe in 1.5 times the time, at the same value multiplier, so
@@ -590,6 +608,37 @@
       "meta": { "model": "launchpad", "accent": "#eef3f8", "glyph": "v", "description": "Builds an airliner from 2 frames, 2 motors and 2 phones. Consumer goods: the end of the line, as good as drones." }
     },
 
+    // ---- Home appliances (content drop, 4.24.0) ---------------------------------------------
+    // One machine a tier, each with only its own recipe, like the consumer goods line.
+    {
+      "id": "kettle_works", "name": "Kettle Works", "behavior": "processor", "cost": 1e4, "category": "crafting", "tier": 3,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_kettle" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#9fb4c4", "glyph": "k", "description": "Builds an electric kettle from a steel beam, a cable and 2 plastic. Home appliances: a cheap extra that sells well." }
+    },
+    {
+      "id": "tv_plant", "name": "TV Plant", "behavior": "processor", "cost": 1.5e5, "category": "crafting", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_television" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#5a7bd6", "glyph": "v", "description": "Builds a television from 2 glass, 2 circuit boards and 4 plastic. Home appliances." }
+    },
+    {
+      "id": "appliance_plant", "name": "Appliance Plant", "behavior": "processor", "cost": 1e6, "category": "crafting", "tier": 5,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_washing_machine" ], "inputCapacity": 12, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#cfd8e0", "glyph": "W", "description": "Builds a washing machine from a motor, 4 steel beams and 4 iron plates. Home appliances: a use for motors that needs no robot line." }
+    },
+    {
+      "id": "bike_works", "name": "Bike Works", "behavior": "processor", "cost": 3e7, "category": "crafting", "tier": 6,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_ebike" ], "inputCapacity": 12, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#2fbf8f", "glyph": "e", "description": "Builds an e-bike from 2 aluminium, 2 motors and 2 batteries. Home appliances: light, electric and easy to sell." }
+    },
+
     // ---- Economy -------------------------------------------------------------------------
     {
       "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 50, "category": "economy", "tier": 0,
@@ -739,6 +788,8 @@
     { "id": "toy_1",        "name": "Playtime",          "description": "Produce your first toy.",                "kind": "produced",  "item": "toy", "target": 1, "reward": 20000 },
     // Consumer goods
     { "id": "tires_100",    "name": "Rolling",           "description": "Produce 100 tires.",                     "kind": "produced",  "item": "tire", "target": 100, "reward": 25000 },
+    // Home appliances (4.24.0)
+    { "id": "kettles_100",  "name": "Tea time",          "description": "Produce 100 electric kettles.",          "kind": "produced",  "item": "kettle", "target": 100, "reward": 20000 },
     { "id": "frames_50",   "name": "Framework",         "description": "Produce 50 frames.",                     "kind": "produced",  "item": "frame", "target": 50, "reward": 30000 },
     { "id": "sold_10k",     "name": "Mass market",       "description": "Sell 10,000 items.",                     "kind": "sold",      "target": 1e4,    "reward": 40000 },
     { "id": "earn_1m",      "name": "Millionaire",       "description": "Earn $1,000,000 in total.",              "kind": "earned",    "target": 1e6,    "reward": 150000 },
@@ -748,15 +799,21 @@
     { "id": "industrial_pump_1", "name": "Primed",       "description": "Produce your first industrial pump.",    "kind": "produced",  "item": "industrial_pump", "target": 1, "reward": 100000 },
     // Consumer goods
     { "id": "phone_1",      "name": "Hello?",            "description": "Produce your first phone.",              "kind": "produced",  "item": "phone", "target": 1, "reward": 250000 },
+    // Home appliances (4.24.0)
+    { "id": "television_1", "name": "Prime time",        "description": "Produce your first television.",         "kind": "produced",  "item": "television", "target": 1, "reward": 200000 },
     { "id": "contract_50",  "name": "Trusted partner",   "description": "Complete 50 orders.",                    "kind": "contracts", "target": 50,     "reward": 400000 },
     { "id": "level_25",     "name": "Maxed out",         "description": "Upgrade a building to level 25.",        "kind": "level",     "target": 25,     "reward": 1e6 },
     { "id": "robot_1",      "name": "It's alive",        "description": "Produce your first robot.",              "kind": "produced",  "item": "robot", "target": 1, "reward": 2e6 },
     // Consumer goods
     { "id": "car_1",        "name": "Road trip",         "description": "Produce your first car.",                "kind": "produced",  "item": "car", "target": 1, "reward": 3e6 },
+    // Home appliances (4.24.0)
+    { "id": "washing_machine_1", "name": "Spin cycle",    "description": "Produce your first washing machine.",    "kind": "produced",  "item": "washing_machine", "target": 1, "reward": 2.5e6 },
     { "id": "earn_100m",    "name": "Tycoon",            "description": "Earn $100 million in total.",            "kind": "earned",    "target": 1e8,    "reward": 1.5e7 },
     { "id": "drone_1",      "name": "Liftoff",           "description": "Produce your first drone.",              "kind": "produced",  "item": "drone", "target": 1, "reward": 5e7 },
     // Consumer goods
     { "id": "airliner_1",   "name": "Wheels up",         "description": "Produce your first airliner.",           "kind": "produced",  "item": "airliner", "target": 1, "reward": 8e7 },
+    // Home appliances (4.24.0)
+    { "id": "ebike_1",      "name": "Pedal power",       "description": "Produce your first e-bike.",             "kind": "produced",  "item": "ebike", "target": 1, "reward": 6e7 },
     { "id": "sold_1m",      "name": "World market",      "description": "Sell a million items.",                  "kind": "sold",      "target": 1e6,    "reward": 2e8 },
     { "id": "earn_10b",     "name": "Mogul",             "description": "Earn $10 billion in total.",             "kind": "earned",    "target": 1e10,   "reward": 1.5e9 },
     { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },
