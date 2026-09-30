@@ -55,6 +55,7 @@ public sealed partial class Simulation
         World.Stats.EndTick(World.Tick);
         World.Stats.History.EndTick(World, World.Tick);
         if (World.Goals && World.Tick % TicksPerSecond == 0) UpdateGoals();
+        if (World.Tick % TicksPerSecond == 0) World.Stats.Records.Observe(World, World.Tick);
         World.Tick++;
     }
 
@@ -345,6 +346,7 @@ public sealed partial class Simulation
         var tier = Content.Tiers[next];
         if (!World.Sandbox) World.Money -= tier.Cost;
         World.UnlockedTier = next;
+        World.Stats.Records.TierReached(next, World.Tick);
         if (Events.Enabled) Events.Add(new TierUnlocked(World.Tick, next, tier.Name));
         return CommandResult.Success();
     }

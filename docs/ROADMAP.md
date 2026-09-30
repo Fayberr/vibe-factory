@@ -534,6 +534,14 @@ hovered building when nothing is selected. Only buildings of the same kind chang
 one undo step. The Manage window has the same as two buttons, and the paste button says how many
 buildings it would change. Details: "Copy settings" in the architecture notes.
 
+### 22. Statistics page (done)
+
+Idea G6. The Statistics window gains records and totals: factory time, the best income over a full
+minute, the most money and the most buildings, each with when it was set, the time each tier was
+reached, and a table of every item made or sold with both counts. Records are saved; a save from
+before this starts them fresh, and tiers reached before it read "reached". Details: "Personal
+records" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

@@ -680,6 +680,15 @@ remove it: `SettingsCopy.cs`, `SettingsCopyTests.cs`, `CopySettings`/`PasteSetti
 Ctrl+Shift keys in `BuildController`, the settings row of `ManageWindow` with its three constructor
 arguments, the help line in `Hud`, and the `--paste-settings` smoke flag.
 
+**Personal records** (idea G6, `World/PersonalRecords`): a small class on `StatsTracker.Records`, so it
+is saved with the stats and an old save loads it empty. `Simulation.Step` calls `Observe` once a
+simulated second (best 60 s income, only once a full minute is measured; most money; most buildings)
+and `Unlock` calls `TierReached`. Nothing reads it during a tick, so it cannot change the
+simulation. The client's `RecordsSection` shows it in the Statistics window, which also gained a
+made/sold table from the existing `Produced` and `Sold` totals. To remove it: `PersonalRecords.cs`,
+`RecordsTests.cs`, the property and its two calls, `RecordsSection.cs` with its lines in
+`StatsPanel`, and the `--records` smoke flag.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

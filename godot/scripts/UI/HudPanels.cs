@@ -611,13 +611,19 @@ public sealed class StatsPanel
     private readonly GridContainer _byItem = new() { Columns = Columns };
     private readonly Label _byItemEmpty = Ui.Label("", 13, UiTheme.Muted);
     private readonly Label _idle = Ui.Label("", 12, UiTheme.Muted);
-    private readonly Label _sold = Ui.Label("", 14);
+    private readonly GridContainer _totals = new() { Columns = 3 }; // product, made, sold
+    private readonly Label _totalsEmpty = Ui.Label("Nothing made yet.", 13, UiTheme.Muted);
+
+    /// <summary>Best income, most money, tier times (idea G6).</summary>
+    public readonly RecordsSection Records = new();
 
     public StatsPanel()
     {
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 6);
         box.AddChild(_text);
+        box.AddChild(new HSeparator());
+        box.AddChild(Records.Root);
         box.AddChild(new HSeparator());
         var title = Ui.Label($"Income by product ({StatsTracker.WindowSeconds} s)", 14);
         title.AddThemeFontOverride("font", UiTheme.Bold);
@@ -633,7 +639,16 @@ public sealed class StatsPanel
         _idle.CustomMinimumSize = new Vector2(250, 0);
         box.AddChild(_idle);
         box.AddChild(new HSeparator());
-        box.AddChild(_sold);
+        var totalsTitle = Ui.Label("Totals", 14);
+        totalsTitle.AddThemeFontOverride("font", UiTheme.Bold);
+        box.AddChild(totalsTitle);
+        _totals.AddThemeConstantOverride("h_separation", 12);
+        _totals.AddThemeConstantOverride("v_separation", 2);
+        _totals.AddChild(Cell("Product", UiTheme.Muted, right: false, 12));
+        _totals.AddChild(Cell("Made", UiTheme.Muted, right: true, 12));
+        _totals.AddChild(Cell("Sold", UiTheme.Muted, right: true, 12));
+        box.AddChild(_totals);
+        box.AddChild(_totalsEmpty);
         Root = Ui.Pad(box, 14, 12);
     }
 
@@ -690,11 +705,33 @@ public sealed class StatsPanel
         _idle.Visible = idle.Count > 0;
         _idle.Text = $"Made, but earning nothing: {string.Join(", ", idle)}";
 
-        var sold = new List<string> { "Sold" };
-        foreach (var (item, count) in s.Sold.OrderByDescending(kv => kv.Value))
-            sold.Add($"  {Ui.ItemName(world.Content, item)}: {count}");
-        _sold.Text = string.Join("\n", sold);
+        // Every item made or sold so far, most made first (idea G6).
+        var totals = s.Produced.Keys.Union(s.Sold.Keys)
+            .OrderByDescending(i => s.Produced.GetValueOrDefault(i)).ThenBy(i => i, StringComparer.Ordinal).ToList();
+        int totalCells = 3 * (totals.Count + 1);
+        while (_totals.GetChildCount() < totalCells)
+        {
+            _totals.AddChild(Cell("", UiTheme.Text, right: false));
+            _totals.AddChild(Cell("", UiTheme.Text, right: true));
+            _totals.AddChild(Cell("", UiTheme.Muted, right: true));
+        }
+        for (int i = 0; i < totals.Count; i++)
+        {
+            string item = totals[i];
+            int at = 3 * (i + 1);
+            ((Label)_totals.GetChild(at)).Text = Ui.ItemName(world.Content, item);
+            ((Label)_totals.GetChild(at + 1)).Text = Count(s.Produced.GetValueOrDefault(item));
+            ((Label)_totals.GetChild(at + 2)).Text = Count(s.Sold.GetValueOrDefault(item));
+        }
+        for (int i = 0; i < _totals.GetChildCount(); i++)
+            ((Control)_totals.GetChild(i)).Visible = i < totalCells;
+        _totals.Visible = totals.Count > 0;
+        _totalsEmpty.Visible = totals.Count == 0;
+        Records.Refresh(world);
     }
+
+    /// <summary>A count with thousands separators, and the short form once it gets long.</summary>
+    private static string Count(long n) => n < 1_000_000 ? n.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture) : ((BigNum)n).Format();
 
     /// <summary>"42.5%", and "<0.1%" for a product that earns something but rounds away.</summary>
     private static string Percent(double share) =>

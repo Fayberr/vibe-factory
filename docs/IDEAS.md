@@ -202,6 +202,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
 - **G5. Photo mode and timelapse (S/M).** Hide the UI, orbit freely, and export the factory growing
   from `EditHistory`.
 - **G6. A statistics page (S).** Totals per item, playtime, tiers and personal records.
+  *Built in 4.21.0* (roadmap step 22): records and a made/sold table in the Statistics window.
 
 ## H. Convenience that removes friction
 

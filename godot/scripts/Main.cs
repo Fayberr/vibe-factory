@@ -126,6 +126,12 @@ public partial class Main : Node3D
                 // Starts a "Run until" (tier, money or minutes); the smoke's tick count shows it ran fast.
                 host.StartFastForward(arg["--run-until=".Length..] switch { "tier" => RunUntil.NextTier, "money" => RunUntil.MoneyDoubled, _ => RunUntil.TenMinutes });
             }
+            if (arg == "--records")
+            {
+                // The Statistics window with its records (idea G6); prints them near the end of the wait.
+                hud.StatsWindow.Visible = true;
+                GetTree().CreateTimer(Math.Max(0.5, wait - 0.5)).Timeout += () => GD.Print($"RECORDS: {string.Join(" | ", hud.Stats.Records.Lines())}");
+            }
             if (arg == "--alerts")
             {
                 // The Alerts window (the demo factory rarely stops; this shows the empty state).

@@ -91,6 +91,7 @@ public partial class Hud : CanvasLayer
     public Action? QuitToMenu { get; set; }
     public HudWindow ProgressWindow => _progressWindow;
     public HudWindow StatsWindow => _statsWindow;
+    public StatsPanel Stats => _stats;
     public HudWindow OrdersWindow => _ordersWindow;
     public HudWindow ResearchWindow => _researchWindow;
     public HudWindow BottleneckWindow => _bottleneckWindow;

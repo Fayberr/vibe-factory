@@ -35,6 +35,9 @@ public sealed class StatsTracker
     /// <summary>Money, income and production over the last hour and day, for the History graphs. Missing in old saves.</summary>
     public HistoryLog History { get; set; } = new();
 
+    /// <summary>Best income, most money and buildings, tier times (idea G6).</summary>
+    public PersonalRecords Records { get; set; } = new();
+
     public void RecordSale(string item, long count, BigNum value)
     {
         TotalEarned += value;
