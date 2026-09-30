@@ -202,8 +202,10 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
 ## H. Convenience that removes friction
 
 - **H1. Run until (S).** Fast forward until a building finishes, a tier unlocks, or money hits a
-  target.
+  target. *Built in 4.16.0* (roadmap step 16): until the next tier is ready, money doubles or ten
+  minutes pass, stopping early when a machine stops.
 - **H2. A finer speed control (S).** A slider from x0.5 to x10 instead of fixed steps.
+  *Built in 4.16.0* (roadmap step 16) as steps: ×0.5 to ×16 on the factory card, keys `,` and `.`.
 - **H3. Copy settings between machines (S).** Paste a recipe to a whole selection.
 - **H4. Mass upgrade a line (S).** Partly exists through the upgrade tool.
 - **H5. Search and filter in the build menu (S).**

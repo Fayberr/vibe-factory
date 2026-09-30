@@ -456,7 +456,7 @@ public partial class WorldView : Node3D
         FlushDirty();
         float dt = (float)delta;
 
-        Shaders.Deck.SetShaderParameter("speed", 2f * (float)World.Stat(StatIds.ConveyorSpeed) * _host.TimeScale);
+        Shaders.Deck.SetShaderParameter("speed", 2f * (float)World.Stat(StatIds.ConveyorSpeed) * (float)_host.TimeScale);
         DrawItems(_host.Sim.Alpha);
 
         foreach (var v in _visuals.Values)
@@ -471,7 +471,7 @@ public partial class WorldView : Node3D
                 v.Working = status.Working;
                 rig.SetStatus(Ui.StatusColor(status));
             }
-            if (rig.Animated && rig.Root.Visible) rig.Animate(dt * _host.TimeScale, v.Working);
+            if (rig.Animated && rig.Root.Visible) rig.Animate(dt * (float)_host.TimeScale, v.Working);
         }
 
         BobMarkers(dt);

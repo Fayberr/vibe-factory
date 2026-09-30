@@ -614,6 +614,16 @@ is saved. To remove it: `Alerts.cs`, `AlertTests.cs`, the `Alerts` property and 
 `SimHost`, `AlertPanel` with its window, badge, toast and the `alerts` key in `Hud`/`Keybinds`, and
 the `Bell` icon.
 
+**Speed and Run until** (ideas H1 and H2, `UI/SpeedControls` over `Simulation/FastForward`):
+`SimHost.TimeScale` is a double (the steps are in `SpeedControls.Speeds`). While `SimHost.Running`
+holds a `FastForward`, `_Process` skips `Advance` and steps the simulation a second at a time until
+12 ms of the frame are spent, observing bottlenecks and alerts after each second and asking
+`FastForward.Check` whether to stop; a `Stopped` or `Jammed` alert stops it too. `FastForward.Start`
+refuses a goal that is already met or cannot be (every tier unlocked), and `Check` gives up after
+`LimitSeconds`. To remove it: `SpeedControls` and its row on the factory card, the `slower` and
+`faster` keys, the fast-forward members of `SimHost`, `FastForward.cs` and `FastForwardTests.cs`.
+`Simulation.NextTierBlocker` stays, since the unlock command uses it.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

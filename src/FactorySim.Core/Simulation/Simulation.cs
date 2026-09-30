@@ -318,24 +318,31 @@ public sealed partial class Simulation
         return CommandResult.Success(plan.Select(p => p.Entity.Id).ToList());
     }
 
-    private CommandResult Unlock()
+    /// <summary>What stops the next tier from being unlocked right now, or null when it can be.</summary>
+    public string? NextTierBlocker()
     {
         int next = World.UnlockedTier + 1;
-        if (next >= Content.Tiers.Count) return CommandResult.Fail("Every tier is already unlocked");
+        if (next >= Content.Tiers.Count) return "Every tier is already unlocked";
+        if (World.Sandbox) return null;
         var tier = Content.Tiers[next];
-        if (!World.Sandbox)
+        if (World.Stats.TotalEarned < tier.RequiredEarnings)
+            return $"Earn {tier.RequiredEarnings.Format()} in total first ({World.Stats.TotalEarned.Format()} so far)";
+        foreach (var need in tier.Deliver)
         {
-            if (World.Stats.TotalEarned < tier.RequiredEarnings)
-                return CommandResult.Fail($"Earn {tier.RequiredEarnings.Format()} in total first ({World.Stats.TotalEarned.Format()} so far)");
-            foreach (var need in tier.Deliver)
-            {
-                long sold = TierDef.SoldOf(World.Stats, need);
-                if (sold < need.Count)
-                    return CommandResult.Fail($"Sell {need.Count} {Content.Items[need.Item].Name} first ({sold} so far)");
-            }
-            if (World.Money < tier.Cost) return CommandResult.Fail($"Need {tier.Cost.Format()} (have {World.Money.Format()})");
-            World.Money -= tier.Cost;
+            long sold = TierDef.SoldOf(World.Stats, need);
+            if (sold < need.Count)
+                return $"Sell {need.Count} {Content.Items[need.Item].Name} first ({sold} so far)";
         }
+        if (World.Money < tier.Cost) return $"Need {tier.Cost.Format()} (have {World.Money.Format()})";
+        return null;
+    }
+
+    private CommandResult Unlock()
+    {
+        if (NextTierBlocker() is { } blocker) return CommandResult.Fail(blocker);
+        int next = World.UnlockedTier + 1;
+        var tier = Content.Tiers[next];
+        if (!World.Sandbox) World.Money -= tier.Cost;
         World.UnlockedTier = next;
         if (Events.Enabled) Events.Add(new TierUnlocked(World.Tick, next, tier.Name));
         return CommandResult.Success();

@@ -481,6 +481,16 @@ the machines run again or the order is delivered. Nothing is saved. The numbers 
 constants in `AlertLog`. Low power and full depots from the idea do not apply: there is no power,
 and depots sell everything. Details: "Alerts" in the architecture notes.
 
+### 16. Speed steps and Run until (done)
+
+Ideas H1 and H2. The factory card has a speed row: − and + (keys `,` and `.`) step through ×0.5,
+×1, ×2, ×4, ×8 and ×16, and **Run until…** runs the simulation as fast as the computer allows
+(about 12 ms of simulation per frame, so the game stays responsive) until the next tier can be
+unlocked, money doubles, or ten minutes pass. A machine that stops (an alert) ends it early, and it
+gives up after an hour of game time, saying what the next tier still needs. The goals and the limit
+live in `FastForward` in the core. The tier check the unlock command makes is now one method,
+`Simulation.NextTierBlocker`, shared by both. Details: "Speed and Run until" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

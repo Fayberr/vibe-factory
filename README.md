@@ -141,6 +141,7 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `P` · `O` · `L` · `I` · `K` · `H` · `T` · `N` · `G` · `F1` | Progress (tiers, limits, goals) · orders · research (from Workshop) · statistics · bottlenecks · planner · history · alerts · game menu · help. Windows can be open together and stay open until you close them (the same key, or ×); drag them by the title bar |
 | `J` | Mark every building that keeps waiting with a pin: yellow waits for input, red cannot get rid of its output |
 | `Space` | Pause or resume the factory (you can keep building while it is paused) |
+| `,` · `.` | Slower, faster: ×0.5, ×1, ×2, ×4, ×8, ×16 (also the − and + on the factory card) |
 | `Esc` | Cancels the tool, then clears the selection, then opens the pause menu (resume, save, settings, quit to the title screen or to the desktop). Open windows stay open |
 
 **Heights.** Everything is built at the current build height, shown on the ladder next
@@ -231,6 +232,10 @@ their choice.
   Alerts window (`N`, with a count on its button), each with a Show or Orders button. Machines of
   one type that stop together make one entry, and entries mark themselves resolved once the
   machines run again or the order is delivered.
+- **Speed and Run until.** The factory card has − and + for the game speed (×0.5 to ×16) and
+  **Run until…**, which runs as fast as the computer allows until the next tier can be unlocked,
+  money doubles or ten minutes pass. A machine that stops ends it early, and it gives up after an
+  hour of game time with the reason (for a tier that needs goods nothing makes yet).
 - **Raw resources sell for 25%, and every ore is worth the same $1.** An item is worth the
   work in it: what went in times the recipe's multiplier, so processing is what pays, and a
   newer tier builds on the old chains instead of replacing them. Parts feed many recipes
@@ -286,7 +291,8 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # --orders (opens Progress and Orders), --research (unlocks Workshop and opens Research),
 # --away=seconds (simulates that long offline and shows the away report), --bottlenecks (opens
 # Bottlenecks with the world pins on), --planner[=item] (opens the Planner), --history (opens History;
-# add --wait=65 for a line), --alerts (opens Alerts), --tutorial (an empty factory at the tutorial's
+# add --wait=65 for a line), --alerts (opens Alerts), --run-until=tier|money|minutes
+# (starts a Run until), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).

@@ -46,6 +46,8 @@ public static class Keybinds
         new("game_menu", "Game menu", Key.G, "Windows"),
         new("help", "Help", Key.F1, "Windows"),
         new("pause", "Pause the factory", Key.Space, "Windows"),
+        new("slower", "Slower", Key.Comma, "Windows"),
+        new("faster", "Faster", Key.Period, "Windows"),
     };
 
     private static readonly Dictionary<string, Key> Keys = All.ToDictionary(a => a.Id, a => a.Default);

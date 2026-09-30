@@ -120,6 +120,11 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = false;
                 hud.ResearchWindow.Visible = true;
             }
+            if (arg.StartsWith("--run-until="))
+            {
+                // Starts a "Run until" (tier, money or minutes); the smoke's tick count shows it ran fast.
+                host.StartFastForward(arg["--run-until=".Length..] switch { "tier" => RunUntil.NextTier, "money" => RunUntil.MoneyDoubled, _ => RunUntil.TenMinutes });
+            }
             if (arg == "--alerts")
             {
                 // The Alerts window (the demo factory rarely stops; this shows the empty state).

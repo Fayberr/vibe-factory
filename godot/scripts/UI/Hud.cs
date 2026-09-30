@@ -19,7 +19,6 @@ public partial class Hud : CanvasLayer
     private const string HotbarPath = "user://hotbar.json";
     private static readonly string[] DefaultHotbar =
         { "conveyor", "splitter", "merger", "ramp_up", "ramp_down", "iron_miner", "smelter", "polisher", "seller", "copper_miner" };
-    private static readonly int[] Speeds = { 1, 4, 16 };
 
     private SimHost _host = null!;
     private BuildController _tools = null!;
@@ -68,6 +67,7 @@ public partial class Hud : CanvasLayer
     private PanelContainer _help = null!;
     private Toasts _toasts = null!;
     private Button _speedButton = null!;
+    private SpeedControls _speed = null!;
     private CheckButton _sandbox = null!;
     private double _refresh;
 
@@ -273,6 +273,8 @@ public partial class Hud : CanvasLayer
         body.AddChild(_goal);
         _goalBar = new ProgressBar { CustomMinimumSize = new Vector2(0, 6), ShowPercentage = false, MaxValue = 1 };
         body.AddChild(_goalBar);
+        _speed = new SpeedControls(() => _host);
+        body.AddChild(Ui.Pad(_speed.Root, 0, 4));
         var panel = Ui.Panel(body);
         panel.CustomMinimumSize = new Vector2(240, 0);
         _card = panel;
@@ -599,7 +601,7 @@ public partial class Hud : CanvasLayer
             (K("orders"), "Orders"), (K("research"), "Research"), (K("stats"), "Statistics"),
             (K("bottlenecks"), "Bottlenecks"), (K("diagnostics"), "Mark waiting buildings"),
             (K("planner"), "Planner"), (K("history"), "History"), (K("alerts"), "Alerts"),
-            (K("pause"), "Pause the factory"), (K("game_menu"), "Game menu"),
+            (K("pause"), "Pause the factory"), ($"{K("slower")} {K("faster")}", "Slower, faster"), (K("game_menu"), "Game menu"),
             (K("help"), "This help"),
             ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
             ("Click building", "Manage: upgrade, recipe"), ("Drag title bar", "Move a window"),
@@ -749,9 +751,10 @@ public partial class Hud : CanvasLayer
 
     private void CycleSpeed()
     {
-        int i = Array.IndexOf(Speeds, _host.TimeScale);
-        _host.TimeScale = Speeds[(i + 1) % Speeds.Length];
-        _speedButton.Text = $"Speed ×{_host.TimeScale}";
+        var speeds = SpeedControls.Speeds;
+        int i = Array.IndexOf(speeds, _host.TimeScale);
+        _host.TimeScale = speeds[(i + 1) % speeds.Length];
+        _speed.Refresh();
     }
 
     // ---- Input ------------------------------------------------------------------
@@ -815,6 +818,12 @@ public partial class Hud : CanvasLayer
                 break;
             case var _ when Keybinds.Is(key, "pause"):
                 TogglePause();
+                break;
+            case var _ when Keybinds.Is(key, "slower"):
+                _speed.Step(-1);
+                break;
+            case var _ when Keybinds.Is(key, "faster"):
+                _speed.Step(1);
                 break;
             case Key.Escape:
                 if (_help.Visible) _help.Visible = false;
@@ -907,6 +916,8 @@ public partial class Hud : CanvasLayer
         var world = _host.Sim.World;
         _money.Text = "$ " + world.Money.Format();
         _income.Text = $"+${world.Stats.IncomePerSecond(10).Format()}/s";
+        _speed.Refresh();
+        _speedButton.Text = $"Speed {SpeedControls.Format(_host.TimeScale)}";
         _manage.Show(_host.Sim, _tools.SelectedEntities().ToList(), _thumbs);
         if (_progressWindow.Visible) _progress.Refresh(_host.Sim);
         if (_statsWindow.Visible) _stats.Refresh(world);

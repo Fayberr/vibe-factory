@@ -60,7 +60,14 @@ public partial class SimHost : Node
     public double PlaySeconds { get; private set; }
 
     /// <summary>Simulation speed multiplier (1 = real time).</summary>
-    public int TimeScale { get; set; } = 1;
+    public double TimeScale { get; set; } = 1;
+
+    /// <summary>A "Run until" in progress (ideas H1; see <see cref="FastForward"/>), or null.</summary>
+    public FastForward? Running { get; private set; }
+
+    /// <summary>Real time a fast-forward may spend simulating per frame, so the game stays responsive.</summary>
+    private const double FastForwardBudgetMs = 12;
+    private string? _stopRunning;
 
     /// <summary>When true the simulation doesn't advance (building still works).</summary>
     public bool Paused { get; set; }
@@ -92,6 +99,16 @@ public partial class SimHost : Node
     /// <summary>Something the player tried didn't work (for the error sound).</summary>
     public event Action? Failed;
 
+    public SimHost()
+    {
+        // A machine that stops ends a fast-forward: that is when the player wants the controls back.
+        Alerts.Raised += alert =>
+        {
+            if (Running != null && alert.Kind is AlertKind.Stopped or AlertKind.Jammed)
+                _stopRunning = $"Stopped early. {AlertPanel.Headline(alert, Content)}";
+        };
+    }
+
     /// <summary>Loads content. Call after listeners are wired, before any game starts.</summary>
     public void Init()
     {
@@ -114,7 +131,7 @@ public partial class SimHost : Node
     public override void _Process(double delta)
     {
         if (Sim == null) return;
-        int ticks = Paused ? 0 : Sim.Advance(delta * TimeScale, maxTicks: 20 * TimeScale);
+        int ticks = Paused ? 0 : Running != null ? RunFast() : Sim.Advance(delta * TimeScale, maxTicks: Math.Max(1, (int)Math.Ceiling(20 * TimeScale)));
 
         Sim.Events.Drain(_events);
         foreach (var ev in _events)
@@ -150,6 +167,39 @@ public partial class SimHost : Node
 
     public void Notify(string text) => Notice?.Invoke(text);
 
+    /// <summary>Starts a "Run until", or says why there is nothing to run for.</summary>
+    public void StartFastForward(RunUntil goal)
+    {
+        Running = FastForward.Start(Sim, goal, out var reason);
+        _stopRunning = null;
+        if (Running == null) Notify(reason ?? "Nothing to run for");
+        else Paused = false;
+    }
+
+    public void StopFastForward(string why)
+    {
+        if (Running == null) return;
+        Running = null;
+        Notify(why);
+    }
+
+    /// <summary>Simulates a second at a time until the frame's budget is spent or the run ends.</summary>
+    private int RunFast()
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        int ticks = 0;
+        while (Running != null && clock.Elapsed.TotalMilliseconds < FastForwardBudgetMs)
+        {
+            Sim.Step(Simulation.TicksPerSecond);
+            ticks += Simulation.TicksPerSecond;
+            Bottlenecks.Observe(Sim.World);
+            Alerts.Observe(Sim.World);
+            if (_stopRunning != null) StopFastForward(_stopRunning);
+            else if (Running?.Check(Sim) is { } done) StopFastForward(done);
+        }
+        return ticks;
+    }
+
     public void Fail(string text)
     {
         Notice?.Invoke(text);
@@ -165,6 +215,7 @@ public partial class SimHost : Node
         _sinceSave = 0;
         Bottlenecks.Reset();
         Alerts.Reset();
+        Running = null;
         WorldReplaced?.Invoke();
     }
 
