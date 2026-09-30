@@ -167,6 +167,7 @@ underneath. Lifts and multi-level machines use the same mechanism.
 | `conveyor` | transport | Belts, ramps and in-line effects. |
 | `router` | transport | Splitters and mergers (see above). |
 | `lab` | sink | Takes science packs off a belt and banks one per `interval` × level speed into `World.Science` (see "Research"). Refuses only while it holds `capacity` packs. |
+| `discarder` | sink | Accepts and destroys every item immediately, pays nothing, and tracks discarded units and value for its inspector. |
 
 ### Economy, upgrades, stats
 
@@ -276,6 +277,18 @@ blocks marked "Byproduct trial"; then delete
 building: a machine set to a removed recipe runs automatically, a filter for tar is cleared, an order
 for tar is dropped (each with a load warning), and tar already on a belt still sells at a depot.
 The filters, overflow and the `byproduct` flag are general and stay.
+
+### Disposal
+
+`DiscarderBehavior` is the general no-payout sink. It accepts every item immediately, creates no
+sale or delivery event, and keeps only lifetime units and plain item value destroyed for the
+building inspector. It has no throughput tuning of its own, so the belt feeding it remains the
+limit. The 4.5.0 content drop uses it for one Petrochemicals building, the Incinerator. Its $1,000
+purchase is the small disposal cost; sending the same item to a depot is always economically better.
+
+To remove the increment, delete the one `base.json` building entry marked "Incinerator" and delete
+`tests/FactorySim.Tests/IncineratorTests.cs`. The registered behavior can stay dormant for external
+content packs. No item, recipe, tier, goal or balance value refers to the building.
 
 ### Research
 

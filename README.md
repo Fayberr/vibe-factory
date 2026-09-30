@@ -166,6 +166,9 @@ their choice.
   cars (Robotics) and airliners (Aerospace). They are built from parts the main line already
   makes, use resources that would otherwise sit idle, and feed each other: chairs and tires go
   into cars, phones into airliners.
+- **Incinerator.** Petrochemicals unlocks a cheap one-input sink that destroys any solid item and
+  pays nothing. It is the simple escape valve for an unwanted byproduct; use a depot instead when
+  the sale matters.
 - **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
   before the deadline for about twice its value on top of the normal sale. Orders ask
   for things you can already make, sized to your current income, and newer products are
@@ -198,6 +201,9 @@ their choice.
   (plates, rods, screws and gears go into crates, frames, toys, motors and robots), and the
   old dead ends are ingredients now: crates pack toys, toys are robot bodies, jewelry goes
   into satellites. A robot is worth thousands of iron ore.
+- **Disposal is optional and earns nothing.** The Incinerator destroys anything fed into it, so a
+  surplus can keep flowing without becoming a source of money. It does not change recipe values,
+  tier income or the balance tool's pacing estimates.
 - **The Polisher pays at the depot.** An in-line machine that multiplies the value of what
   passes it by 1.5, once per item, paid only when the item is sold. Machines value their
   inputs at the plain rate, so polishing an ingredient is wasted: put it right before the

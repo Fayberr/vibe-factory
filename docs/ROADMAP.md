@@ -181,6 +181,18 @@ To remove the drop, delete every `base.json` entry marked "Consumer goods" (6 it
 6 machines, 6 goals), put the tier descriptions back and delete `ConsumerGoodsTests.cs`; a test
 checks that every other item keeps its value and tier without it. The item models can stay.
 
+**Second drop: incinerator (4.5.0).** Petrochemicals unlocks a $1,000 one-input Incinerator that
+destroys every item it receives and pays nothing. It is the shallow escape valve for byproduct
+lines: route wanted goods onward and send overflow here when selling the waste is not desired.
+The `discarder` behavior is general, accepts any item immediately, and records only the units and
+value destroyed for the inspector. The existing forge model supplies its look, so the drop needs no
+new asset. It adds no recipes or products and leaves every tier income and the whole-run estimate
+unchanged.
+
+To remove the drop, delete the single `base.json` entry marked "Incinerator" and delete
+`IncineratorTests.cs`; the dormant general behavior may stay for content packs. The removal test
+proves every previous item, recipe, building, tier, goal, upgrade and item value remains unchanged.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:
@@ -286,7 +298,7 @@ A recipe can make two things from one craft, and a splitter can sort a mixed bel
 anything, one item, or the overflow (what the other outputs do not take or refuse because they are
 full). A full output stops the splitter rather than the hub storing the surplus, which is his call of
 2026-09-29 (see the Router entry in ARCHITECTURE.md). The lazy way out is one splitter with the
-wanted item on one output and overflow into a depot; no sink building. Filters are a `SetFilter`
+wanted item on one output and overflow into a depot or the Incinerator. Filters are a `SetFilter`
 command: undoable, saved, kept by blueprints.
 
 The content is a trial, to see if it is liked: an Oil Refinery can crack crude oil into plastic and

@@ -504,6 +504,14 @@
       "params": { "multiplier": 2 },
       "meta": { "model": "depot", "accent": "#f2c14e", "glyph": "%", "description": "Sells at double the market price, through one input (the blue side), from the edge of the map like a market depot." }
     },
+    // Incinerator (content drop, 4.5.0): delete this one entry to remove the solid-item sink.
+    {
+      "id": "incinerator", "name": "Incinerator", "behavior": "discarder", "cost": 1000, "category": "economy", "tier": 3,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" } ],
+      "upgrade": { "maxLevel": 1 },
+      "meta": { "model": "forge", "accent": "#d96b32", "glyph": "X", "description": "Destroys every solid item fed into its input and pays nothing. Use it as a cheap escape valve for unwanted byproducts; a depot is better when you want the money." }
+    },
 
     // ---- Research trial ------------------------------------------------------------------
     // A bench makes packs, a lab banks them (one every 4 seconds at level 1), the Research window spends

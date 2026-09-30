@@ -85,7 +85,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   byproducts solvable and unlocks overflow designs.
 - **B3. Filters on splitters (S).** "Iron left, copper right." Separates a mixed belt, which is the
   most requested logistics tool in the genre.
-- **B4. A sink building (data).** An incinerator for solid items or a flare stack for gases, which
+- **B4. A sink building (done in 4.5.0).** An incinerator for solid items or a flare stack for gases, which
   destroys whatever it is fed for a small cost. This is the escape valve that makes B1 safe: feed the
   unwanted output in and the line keeps running instead of jamming. Worth knowing that the depot
   already sells anything it is given, so anything sellable has a simpler answer and the sink is only
