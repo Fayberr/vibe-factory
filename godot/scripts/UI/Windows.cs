@@ -264,6 +264,15 @@ public sealed class ManageWindow
     private string _signShown = "";
     private string? _signSelectionKey;
 
+    // "Why it waits" (idea H6): see StopExplainer. To remove: these fields, the section in the constructor,
+    // ShowWhy and its call, and the waiting parameter of Show.
+    private readonly VBoxContainer _whyBox = new();
+    private readonly Label _whyHeadline = Ui.Label("", 15);
+    private readonly VBoxContainer _whyLines = new();
+    private string _whyShown = "";
+    private int _whyEntity;
+    private long _whyLastWorked;
+
     private readonly GridContainer _info = new() { Columns = 2 };
     private readonly Control _infoSection;
     private readonly List<InfoLine> _lines = new();
@@ -322,6 +331,21 @@ public sealed class ManageWindow
         _deleteButton.Pressed += () => _delete();
         actions.AddChild(_deleteButton);
         body.AddChild(actions);
+
+        // Why a building waits and what to do about it (idea H6).
+        _whyBox.AddThemeConstantOverride("separation", 0);
+        _whyBox.AddChild(new HSeparator());
+        var why = new VBoxContainer();
+        why.AddThemeConstantOverride("separation", 4);
+        _whyHeadline.AddThemeFontOverride("font", UiTheme.Bold);
+        _whyHeadline.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _whyHeadline.CustomMinimumSize = new Vector2(330, 0);
+        why.AddChild(_whyHeadline);
+        _whyLines.AddThemeConstantOverride("separation", 3);
+        why.AddChild(_whyLines);
+        _whyBox.AddChild(Ui.Pad(why, 14, 8));
+        _whyBox.Visible = false;
+        body.AddChild(_whyBox);
 
         // What it produces: choice grid, then the chosen item's details.
         _produceTitle.AddThemeFontOverride("font", UiTheme.Bold);
@@ -415,7 +439,8 @@ public sealed class ManageWindow
 
     public Button UpgradeButton => _upgradeButton;
 
-    public void Show(Simulation sim, IReadOnlyList<Entity> selection, Thumbnails thumbs)
+    /// <param name="waiting">Buildings that kept waiting lately and why (the Bottlenecks window's view), for "Why it waits".</param>
+    public void Show(Simulation sim, IReadOnlyList<Entity> selection, Thumbnails thumbs, IReadOnlyDictionary<int, IdleReason>? waiting = null)
     {
         Window.Visible = selection.Count > 0;
         // A stale popup must not linger over whatever is shown next.
@@ -444,6 +469,7 @@ public sealed class ManageWindow
 
         if (selection.Count == 1) ShowOne(sim, first, thumbs);
         else ShowMany(world, selection, thumbs, sameKind);
+        ShowWhy(world, selection.Count == 1 ? first : null, waiting);
 
         // Production choice for machines (several of one kind are set together).
         bool processor = sameKind && first.Def.Params is ProcessorParams;
@@ -470,6 +496,51 @@ public sealed class ManageWindow
         ShowInfo();
         Window.Fit();
     }
+
+    /// <summary>The "Why it waits" headline and lines, or null when hidden. For scripted tests.</summary>
+    public string? WhyText => _whyBox.Visible ? _whyShown : null;
+
+    /// <summary>
+    /// Explains one building that keeps waiting: the Bottlenecks view when it has one, else a building that
+    /// has not worked for <see cref="WhyAfterSeconds"/> while selected. Never a machine between two items.
+    /// </summary>
+    private void ShowWhy(World world, Entity? e, IReadOnlyDictionary<int, IdleReason>? waiting)
+    {
+        StopExplanation? explanation = null;
+        if (e != null)
+        {
+            if (e.Id != _whyEntity)
+            {
+                _whyEntity = e.Id;
+                _whyLastWorked = world.Tick; // give a new selection a moment before calling it stopped
+            }
+            var status = e.Behavior.GetStatus(e);
+            if (status.Working) _whyLastWorked = world.Tick;
+            IdleReason? reason = waiting != null && waiting.TryGetValue(e.Id, out var r) ? r
+                : !status.Working && world.Tick - _whyLastWorked >= WhyAfterSeconds * Simulation.TicksPerSecond ? status.Idle
+                : null;
+            if (reason is { } known && known != IdleReason.None) explanation = StopExplainer.Explain(world, e, known);
+        }
+
+        _whyBox.Visible = explanation != null;
+        if (explanation == null) return;
+        string key = explanation.Headline + "\n" + string.Join("\n", explanation.Lines);
+        if (key == _whyShown) return;
+        _whyShown = key;
+        _whyHeadline.Text = explanation.Headline;
+        _whyHeadline.AddThemeColorOverride("font_color", explanation.Headline.StartsWith("Output", StringComparison.Ordinal) ? Palette.Danger : Palette.Waiting);
+        foreach (var child in _whyLines.GetChildren()) child.QueueFree();
+        foreach (string line in explanation.Lines)
+        {
+            var label = Ui.Label(line, 13, UiTheme.Muted);
+            label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            label.CustomMinimumSize = new Vector2(330, 0);
+            _whyLines.AddChild(label);
+        }
+    }
+
+    /// <summary>A selected building that has not worked for this long gets explained even before Bottlenecks notices.</summary>
+    private const int WhyAfterSeconds = 2;
 
     /// <summary>The sign text box for scripted tests.</summary>
     public LineEdit SignText => _signText;

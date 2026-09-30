@@ -975,7 +975,7 @@ public partial class Hud : CanvasLayer
         _income.Text = $"+${world.Stats.IncomePerSecond(10).Format()}/s";
         _speed.Refresh();
         _speedButton.Text = $"Speed {SpeedControls.Format(_host.TimeScale)}";
-        _manage.Show(_host.Sim, _tools.SelectedEntities().ToList(), _thumbs);
+        _manage.Show(_host.Sim, _tools.SelectedEntities().ToList(), _thumbs, _host.Bottlenecks.Waiting(_host.Sim.World));
         if (_progressWindow.Visible) _progress.Refresh(_host.Sim);
         if (_statsWindow.Visible) _stats.Refresh(world);
         if (_ordersWindow.Visible) _orders.Refresh(_host.Sim, _thumbs);

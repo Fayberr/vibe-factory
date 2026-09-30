@@ -659,6 +659,17 @@ updates the numbers and bars each refresh. To remove targets: `ProductionTargets
 key and badge in `Hud`, the `targets` keybind, the `Target` icon, the Targets button in
 `AlertPanel`, and the `--targets` smoke flag.
 
+**Why it waits** (idea H6, `View/StopExplainer`): `Explain(world, entity, reason)` turns a waiting
+building into a headline and a few lines. It reads the machine's state directly (processor inputs
+and outputs, a drill's held bundle, a lab's packs) instead of adding a behavior hook, and looks up
+the makers and users of an item from the content's processor recipes, drills and labs, counting
+what the world has built and how much of it runs. The optional `reason` lets a caller explain a
+longer view than this instant: the Manage window passes the `BottleneckTracker`'s reason, or the
+instant status once a selected building has not worked for 2 s, so a machine between two items is
+never explained. To remove it: `StopExplainer.cs`, `StopExplainerTests.cs`, the "Why it waits"
+fields, section and `ShowWhy` in `ManageWindow`, the `waiting` argument of `ManageWindow.Show`, and
+the `--why` smoke flag.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

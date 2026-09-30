@@ -517,6 +517,15 @@ counts the targets that are under right now. Targets are saved and every change 
 The idea's "keep 200 in stock" did not fit a factory that sells everything at depots, so a target
 is a rate, not a stock. Details: "Production targets" in the architecture notes.
 
+### 20. Why it waits (done)
+
+Idea H6. When one selected building keeps waiting, the Manage window says why and what to do:
+the input it lacks and which buildings make it, how many of those you have and whether they run
+("Made by Iron Drill (you have 2, all running)"), that you have none yet, or the tier that unlocks
+them. For a full output it names the stuck item and what could take it: a depot or the machines
+that use it. It follows the Bottlenecks window's 30 s view, so a machine on an underfed line does
+not flicker in and out between two items. Details: "Why it waits" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

@@ -189,6 +189,20 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = sandbox;
                 if (placed.Ok) tools.Selection.Add(placed.EntityId);
             }
+            if (arg.StartsWith("--why="))
+            {
+                // --why=x,y: an unfed smelter set to iron on the demo layout's cell (x, y), built for free and
+                // selected, so the Manage window explains why it waits.
+                var xy = System.Array.ConvertAll(arg["--why=".Length..].Split(','), int.Parse);
+                var at = FactorySim.Samples.DemoLayout.CellOf(host.Sim, xy[0], xy[1]);
+                bool sandbox = host.Sim.World.Sandbox;
+                host.Sim.World.Sandbox = true;
+                var placed = host.Execute(new PlaceBuilding("smelter", at, Dir.South));
+                host.Sim.World.Sandbox = sandbox;
+                host.Execute(new SelectRecipe(at, "smelt_iron"));
+                if (placed.Ok) tools.Selection.Add(placed.EntityId);
+                GetTree().CreateTimer(Math.Max(0.5, wait - 0.5)).Timeout += () => GD.Print($"WHY: {hud.Manage.WhyText?.Replace('\n', '|') ?? "(hidden)"}");
+            }
             if (arg.StartsWith("--select="))
             {
                 // --select=x,y: open the Manage window for the building on that cell.

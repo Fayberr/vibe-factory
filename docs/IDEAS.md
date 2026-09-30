@@ -216,6 +216,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   *Built in 4.17.0* (roadmap step 18): matches names, descriptions and the items made or used.
 - **H6. A real "why is this stopped" explainer (S).** Name the missing input in the inspector, and
   where it could come from.
+  *Built in 4.19.0* (roadmap step 20): "Why it waits" in the Manage window.
 
 ---
 

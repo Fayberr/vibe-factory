@@ -243,6 +243,9 @@ their choice.
   shows how the factory is doing against each, measured over the last minute. − and + move a target
   in round steps. A target under for a minute shows up in Alerts, and the sidebar button counts the
   targets that are short right now.
+- **Why it waits.** Select a building that keeps waiting and the Manage window says why: the
+  input it lacks and which buildings make it (how many you have and whether they run, or the tier
+  that unlocks them), or, for a full output, what could take the stuck item.
 - **Build menu search.** The build menu (`B`) has a search box that matches a building's name,
   category and description and the items it makes or uses, so "wire" lists every building that
   makes or takes wire. Enter builds the first unlocked match; closing the menu clears the search.
@@ -302,7 +305,7 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # --away=seconds (simulates that long offline and shows the away report), --bottlenecks (opens
 # Bottlenecks with the world pins on), --planner[=item] (opens the Planner), --history (opens History;
 # add --wait=65 for a line), --alerts (opens Alerts), --run-until=tier|money|minutes
-# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --targets (the Targets window with three targets set), --tutorial (an empty factory at the tutorial's
+# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --targets (the Targets window with three targets set), --why=x,y (an unfed smelter on the demo layout's cell x,y, selected), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).
