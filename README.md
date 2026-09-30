@@ -247,6 +247,8 @@ their choice.
 - **Why it waits.** Select a building that keeps waiting and the Manage window says why: the
   input it lacks and which buildings make it (how many you have and whether they run, or the tier
   that unlocks them), or, for a full output, what could take the stuck item.
+- **Bulk machines.** The Electronics tier adds a Bulk Smelter, Bulk Press and Bulk Forge: twice the
+  input and output in 1.5 times the time, so a third more per machine at the same item value.
 - **Records.** The Statistics window shows factory time, your best income, most money and most
   buildings (and when), when each tier was reached, and how many of every item were made and sold.
 - **Copy settings.** `Ctrl+Shift+C` over a machine copies what it makes, a splitter's filters or a

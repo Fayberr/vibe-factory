@@ -102,6 +102,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   barrel". The largest idea on this page.
 - **B10. Catalyst loops (M).** Something consumed and regenerated, so the loop has to balance.
 - **B11. Bulk recipes (data).** Twice the input in 1.5 times the time, for late game throughput.
+  *Built in 4.22.0* (roadmap step 23): as three Electronics-tier machines, Bulk Smelter, Press and Forge.
 - **B12. Quality variants (M).** A recipe that can output a graded item worth more.
 
 ## C. Things to manage (operational depth)

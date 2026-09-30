@@ -35,7 +35,7 @@
       "deliver": [ { "item": "iron_plate", "count": 150 }, { "item": "copper_wire", "count": 150 } ] },
     { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys and export terminals.", "cost": 8e4,   "requiredEarnings": 1.5e5,
       "deliver": [ { "item": "steel", "count": 150 }, { "item": "crate", "count": 60 } ] },
-    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones and jewelry.",          "cost": 1e6,   "requiredEarnings": 2e6,
+    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry and bulk machines.", "cost": 1e6,   "requiredEarnings": 2e6,
       "deliver": [ { "item": "toy", "count": 80 }, { "item": "frame", "count": 60 } ] },
     { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, and cars.",           "cost": 1.5e7, "requiredEarnings": 3e7,
       "deliver": [ { "item": "motor", "count": 60 }, { "item": "jewelry", "count": 40 } ] },
@@ -196,7 +196,17 @@
     { "id": "make_tire", "inputs": [ { "item": "plastic", "count": 3 }, { "item": "steel", "count": 1 } ], "outputs": [ { "item": "tire", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.2 },
     { "id": "make_phone", "inputs": [ { "item": "circuit", "count": 1 }, { "item": "battery", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "phone", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
     { "id": "make_car", "inputs": [ { "item": "motor", "count": 2 }, { "item": "tire", "count": 4 }, { "item": "chair", "count": 2 } ], "outputs": [ { "item": "car", "count": 1 } ], "ticks": 80, "valueMultiplier": 5.5 },
-    { "id": "make_airliner", "inputs": [ { "item": "frame", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "phone", "count": 2 } ], "outputs": [ { "item": "airliner", "count": 1 } ], "ticks": 120, "valueMultiplier": 5.5 }
+    { "id": "make_airliner", "inputs": [ { "item": "frame", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "phone", "count": 2 } ], "outputs": [ { "item": "airliner", "count": 1 } ], "ticks": 120, "valueMultiplier": 5.5 },
+
+    // Bulk machines (idea B11, content drop 4.22.0): delete every entry marked "Bulk machines" to remove them.
+    // Twice the input and output of the plain recipe in 1.5 times the time, at the same value multiplier, so
+    // an item is worth the same whichever machine made it; a bulk machine is a third faster, not richer.
+    { "id": "bulk_smelt_iron", "inputs": [ { "item": "iron_ore", "count": 2 } ], "outputs": [ { "item": "iron_ingot", "count": 2 } ], "ticks": 24, "valueMultiplier": 2 },
+    { "id": "bulk_smelt_copper", "inputs": [ { "item": "copper_ore", "count": 2 } ], "outputs": [ { "item": "copper_ingot", "count": 2 } ], "ticks": 24, "valueMultiplier": 2 },
+    { "id": "bulk_smelt_gold", "inputs": [ { "item": "gold_ore", "count": 2 } ], "outputs": [ { "item": "gold_ingot", "count": 2 } ], "ticks": 36, "valueMultiplier": 2.5 },
+    { "id": "bulk_press_plate", "inputs": [ { "item": "iron_ingot", "count": 2 } ], "outputs": [ { "item": "iron_plate", "count": 2 } ], "ticks": 24, "valueMultiplier": 2 },
+    { "id": "bulk_draw_wire", "inputs": [ { "item": "copper_ingot", "count": 2 } ], "outputs": [ { "item": "copper_wire", "count": 4 } ], "ticks": 24, "valueMultiplier": 2 },
+    { "id": "bulk_forge_steel", "inputs": [ { "item": "iron_ingot", "count": 2 }, { "item": "coal", "count": 2 } ], "outputs": [ { "item": "steel", "count": 2 } ], "ticks": 45, "valueMultiplier": 2.5 }
   ],
 
   "buildings": [
@@ -632,6 +642,30 @@
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" } ],
       "params": { "interval": 80, "capacity": 10 },
       "meta": { "model": "lab", "accent": "#8f7cff", "glyph": "L", "description": "Studies science packs, one every 4 seconds, and banks them. Spend the bank in the Research window on permanent bonuses. Optional: nothing in the game needs research." }
+    },
+
+    // ---- Bulk machines (idea B11, content drop 4.22.0) -----------------------------------------
+    // Late versions of the smelter, press and blast furnace: same items, a third more per machine, bigger buffers.
+    {
+      "id": "bulk_smelter", "name": "Bulk Smelter", "behavior": "processor", "cost": 8e4, "category": "processing", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "bulk_smelt_iron", "bulk_smelt_copper", "bulk_smelt_gold" ], "inputCapacity": 16, "outputCapacity": 16 },
+      "meta": { "model": "furnace", "accent": "#d9481c", "glyph": "S", "description": "Smelts ore 2 at a time: a third faster than a Smelter, same ingots, same value." }
+    },
+    {
+      "id": "bulk_press", "name": "Bulk Press", "behavior": "processor", "cost": 1e5, "category": "processing", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "bulk_press_plate", "bulk_draw_wire" ], "inputCapacity": 16, "outputCapacity": 16 },
+      "meta": { "model": "press", "accent": "#3f6fd6", "glyph": "R", "description": "Presses plates and draws wire 2 ingots at a time: a third faster than a Press." }
+    },
+    {
+      "id": "bulk_forge", "name": "Bulk Forge", "behavior": "processor", "cost": 1.5e5, "category": "processing", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "bulk_forge_steel" ], "inputCapacity": 16, "outputCapacity": 16 },
+      "meta": { "model": "forge", "accent": "#e0401c", "glyph": "B", "description": "Forges steel from 2 iron ingots and 2 coal at a time: a third faster than a Blast Furnace." }
     }
   ],
 

@@ -542,6 +542,16 @@ reached, and a table of every item made or sold with both counts. Records are sa
 before this starts them fresh, and tiers reached before it read "reached". Details: "Personal
 records" in the architecture notes.
 
+### 23. Bulk machines (done)
+
+Idea B11, as content. A Bulk Smelter, Bulk Press and Bulk Forge arrive with the Electronics tier.
+Each runs twice the plain recipe's input and output in 1.5 times the time, at the same value
+multiplier: a third more per machine, and an item is worth the same whichever machine made it. They
+are separate buildings rather than extra recipes on the old ones, so a Smelter never has a strictly
+better choice sitting next to its plain one and nothing needs a per-recipe unlock. They drop onto an
+existing machine like any other machine. Remove them by deleting the base.json entries marked "Bulk
+machines" (see `BulkMachinesTests`).
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it
