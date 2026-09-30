@@ -40,6 +40,7 @@ public sealed class ContentRegistry
 
     /// <summary>Long-term goals in declaration order.</summary>
     public IReadOnlyList<MilestoneDef> Milestones { get; }
+    public IReadOnlyList<ContractBundleDef> ContractBundles { get; }
 
     /// <summary>Money a new game starts with.</summary>
     public BigNum StartingMoney { get; }
@@ -55,10 +56,12 @@ public sealed class ContentRegistry
         List<UpgradeDef> upgrades,
         List<TierDef> tiers,
         List<MilestoneDef> milestones,
+        List<ContractBundleDef> contractBundles,
         BigNum startingMoney,
         MapDef map)
     {
         Milestones = milestones;
+        ContractBundles = contractBundles;
         Map = map;
         StartingMoney = startingMoney;
         Behaviors = behaviors;
@@ -103,6 +106,7 @@ public sealed class ContentRegistry
         var upgrades = new OrderedById<UpgradeDef>(x => x.Id);
         var tiers = new List<TierDef>();
         var milestones = new OrderedById<MilestoneDef>(x => x.Id);
+        var contractBundles = new OrderedById<ContractBundleDef>(x => x.Id);
         BigNum startingMoney = 0;
         var map = new MapDef();
         foreach (var pack in packs)
@@ -119,9 +123,10 @@ public sealed class ContentRegistry
             pack.Recipes.ForEach(recipes.Put);
             pack.Upgrades.ForEach(upgrades.Put);
             pack.Milestones.ForEach(milestones.Put);
+            pack.ContractBundles.ForEach(contractBundles.Put);
         }
 
-        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List, startingMoney, map);
+        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List, contractBundles.List, startingMoney, map);
         registry.Validate();
         return registry;
     }
@@ -154,6 +159,22 @@ public sealed class ContentRegistry
             if (m.Building != null && !Buildings.ContainsKey(m.Building)) throw new ContentException($"Milestone '{m.Id}': unknown building '{m.Building}'.");
             if (m.Kind == "produced_rate" && (m.Item == null || m.Rate <= 0 || m.Target <= 0))
                 throw new ContentException($"Milestone '{m.Id}': produced_rate needs an item, rate > 0 and target > 0.");
+        }
+
+        foreach (var bundle in ContractBundles)
+        {
+            if (bundle.Tier < 0 || bundle.Tier >= Tiers.Count)
+                throw new ContentException($"Contract bundle '{bundle.Id}': tier {bundle.Tier} does not exist (tiers 0..{Tiers.Count - 1}).");
+            if (bundle.Items.Length < 2) throw new ContentException($"Contract bundle '{bundle.Id}' needs at least two items.");
+            if (bundle.Items.Select(x => x.Item).Distinct().Count() != bundle.Items.Length)
+                throw new ContentException($"Contract bundle '{bundle.Id}' has duplicate items.");
+            if (bundle.RewardMultiplier <= 0 || bundle.RewardMultiplier > 1)
+                throw new ContentException($"Contract bundle '{bundle.Id}': rewardMultiplier must be above 0 and at most 1.");
+            foreach (var item in bundle.Items)
+            {
+                if (!Items.ContainsKey(item.Item)) throw new ContentException($"Contract bundle '{bundle.Id}': unknown item '{item.Item}'.");
+                if (item.Count <= 0) throw new ContentException($"Contract bundle '{bundle.Id}': counts must be > 0.");
+            }
         }
 
         foreach (var u in Upgrades.Values)

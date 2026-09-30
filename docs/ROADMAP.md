@@ -245,6 +245,22 @@ delete `SustainedProductionGoalTests.cs`; the dormant generic goal kind may stay
 that milestone discards its unreferenced running sample. The removal test proves every previous item,
 recipe, building, tier, goal, upgrade and item value remains unchanged.
 
+**Sixth drop: mixed-goods customer order (4.10.0).** A general `contractBundles` definition lets one
+order request several goods in fixed ratios under one deadline and payout. The first bundle is Workshop
+supplies: two iron plates, two copper wire and one plank per batch. It is drawn only at Workshop, where
+all three goods are available, and uses the ordinary order's 45 to 90 seconds of current-income sizing
+and 6 to 12 minute deadline. It pays 75% of the requested goods' base content value. The goods still
+sell normally, so the bonus
+does not overpay their value. Existing single-good contracts and old saves keep their original fields.
+
+The order system does not affect `balance tiers`: the eight level-1 incomes remain $8, $60.2, $253.2,
+$1.04K, $4.79K, $18.61K, $41.41K and $105.03K per second, and the whole run remains 1d 6h.
+
+To remove the drop, delete the single `contractBundles` entry marked "Mixed customer order" from
+`base.json` and delete `MixedGoodsOrderTests.cs`; the dormant general multi-line contract support may
+stay. The removal test proves every previous item, recipe, building, tier, goal, upgrade and item value
+remains unchanged.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

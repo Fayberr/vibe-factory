@@ -181,11 +181,13 @@ their choice.
 - **Industrial exports.** Industry and Petrochemicals add dedicated Tool Works and Pump Works.
   Their optional toolkits and pumps turn rods, screws, gears, cables and frames into sellable
   equipment without changing a tier gate or any existing machine's automatic recipes.
-- **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
-  before the deadline for about twice its value on top of the normal sale. Orders ask
+- **Orders.** Customers post up to three orders (`O`): deliver one product, or a data-driven
+  mix of several goods, before one deadline for one bonus on top of the normal sale. Orders ask
   for things you can already make, sized to your current income, and newer products are
   asked for more often. Small parts (screws, rods) are only offered while income is small
-  enough that an order stays a sane number of units. Don't like one? Swap it for a small fee.
+  enough that an order stays a sane number of units. The optional Workshop supplies order combines
+  iron plates, copper wire and planks, and pays 75% of their base content value. Don't like one?
+  Swap it for a small fee.
 - **Goals.** 39 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   a sustained steel production challenge, first robot, first car, first satellite, first
   deep-space probe, a trillion earned...), each with a cash reward. The Progress window shows

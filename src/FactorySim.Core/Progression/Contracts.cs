@@ -7,13 +7,30 @@ public sealed class Contract
     public string Item { get; set; } = "";
     public long Quantity { get; set; }
     public long Delivered { get; set; }
+    /// <summary>Optional content bundle id. Empty for the original single-good orders.</summary>
+    public string Bundle { get; set; } = "";
+    /// <summary>Further goods requested by the same order. The original fields remain the first line for old saves.</summary>
+    public List<ContractLine> Additional { get; set; } = new();
     public long OfferedAtTick { get; set; }
     public long ExpiresAtTick { get; set; }
 
     /// <summary>Paid on completion, on top of what the items sell for.</summary>
     public BigNum Reward { get; set; }
 
-    public bool IsComplete => Delivered >= Quantity;
+    public bool IsComplete => Delivered >= Quantity && Additional.All(x => x.Delivered >= x.Quantity);
+
+    public IEnumerable<ContractLine> Lines()
+    {
+        yield return new ContractLine { Item = Item, Quantity = Quantity, Delivered = Delivered };
+        foreach (var line in Additional) yield return line;
+    }
+}
+
+public sealed class ContractLine
+{
+    public string Item { get; set; } = "";
+    public long Quantity { get; set; }
+    public long Delivered { get; set; }
 }
 
 /// <summary>The open orders and contract history of a world (saved with it).</summary>

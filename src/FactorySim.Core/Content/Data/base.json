@@ -591,6 +591,11 @@
     { "id": "research_machines_advanced", "name": "Advanced machine speed", "description": "Every machine works another 10% faster per level.",      "tier": 2, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 3, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_2", "count": 10 } ] }
   ],
 
+  // Mixed customer order (content drop, 4.10.0): delete this entry to remove the drop.
+  "contractBundles": [
+    { "id": "workshop_supplies", "name": "Workshop supplies", "tier": 1, "items": [ { "item": "iron_plate", "count": 2 }, { "item": "copper_wire", "count": 2 }, { "item": "plank", "count": 1 } ], "rewardMultiplier": 0.75 }
+  ],
+
   // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, produced_rate, built,
   // level, contracts, tier (see MilestoneDef).
   "milestones": [

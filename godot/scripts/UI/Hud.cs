@@ -96,17 +96,17 @@ public partial class Hud : CanvasLayer
         host.EventRaised += ev =>
         {
             if (ev is EntityPlaced or EntityRemoved) _slotsDirty = true; // build limits changed
-            string Item(string id) => host.Content.Items[id].Name;
+            string ContractGoods(Contract contract) => string.Join(", ", contract.Lines().Select(line => $"{line.Quantity} {host.Content.Items[line.Item].Name}"));
             switch (ev)
             {
                 case ContractOffered o when !_ordersWindow.Visible:
-                    if (Settings.ShowNotifications) _toasts.Show(this, $"New order: {o.Contract.Quantity} {Item(o.Contract.Item)} for +${o.Contract.Reward.Format()} ({K("orders")})");
+                    if (Settings.ShowNotifications) _toasts.Show(this, $"New order: {ContractGoods(o.Contract)} for +${o.Contract.Reward.Format()} ({K("orders")})");
                     return;
                 case ContractCompleted c when Settings.ShowNotifications:
-                    _toasts.Show(this, $"Order complete: {c.Contract.Quantity} {Item(c.Contract.Item)}, +${c.Contract.Reward.Format()}");
+                    _toasts.Show(this, $"Order complete: {ContractGoods(c.Contract)}, +${c.Contract.Reward.Format()}");
                     return;
                 case ContractExpired x when Settings.ShowNotifications:
-                    _toasts.Show(this, $"Order for {Item(x.Contract.Item)} ran out of time");
+                    _toasts.Show(this, $"Order for {ContractGoods(x.Contract)} ran out of time");
                     return;
                 case MilestoneReached m when Settings.ShowNotifications:
                     _toasts.Show(this, $"Goal reached: {m.Name}, +${m.Reward.Format()}");

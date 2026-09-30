@@ -93,13 +93,18 @@ public sealed partial class Simulation
         }
     }
 
-    /// <summary>Sold items count toward the open order for that item.</summary>
+    /// <summary>Sold items count toward the oldest open order that still needs that item.</summary>
     internal void Deliver(string item, long count)
     {
         var board = World.Contracts;
-        var c = board.Open.Find(x => x.Item == item);
+        var c = board.Open.Find(x => (x.Item == item && x.Delivered < x.Quantity) || x.Additional.Any(line => line.Item == item && line.Delivered < line.Quantity));
         if (c == null) return;
-        c.Delivered = Math.Min(c.Quantity, c.Delivered + count);
+        if (c.Item == item) c.Delivered = Math.Min(c.Quantity, c.Delivered + count);
+        else
+        {
+            var line = c.Additional.Find(x => x.Item == item)!;
+            line.Delivered = Math.Min(line.Quantity, line.Delivered + count);
+        }
         if (!c.IsComplete) return;
         board.Open.Remove(c);
         board.Completed++;
@@ -133,12 +138,25 @@ public sealed partial class Simulation
             .ToList();
         if (candidates.Count == 0) return null;
 
+        var bundles = Content.ContractBundles
+            .Where(b => b.Tier == World.UnlockedTier)
+            .Where(b => board.Open.TrueForAll(c => c.Bundle != b.Id && b.Items.All(x => c.Lines().All(line => line.Item != x.Item))))
+            .OrderBy(b => b.Id, StringComparer.Ordinal)
+            .ToList();
+
         // A minute and a half of income is the biggest an order gets; keep the items it would not overshoot.
         var sane = candidates.Where(c => income * 90 / c.Value.Value <= NiceSteps[^1]).ToList();
         candidates = sane.Count > 0 ? sane : new() { candidates.OrderByDescending(c => c.Value.Value).First() };
 
         double Weight(int tier) => tier == World.UnlockedTier ? 3 : tier == World.UnlockedTier - 1 ? 2 : 1;
-        double pick = World.Rng.NextDouble() * candidates.Sum(c => Weight(c.Value.Tier));
+        double singleWeight = candidates.Sum(c => Weight(c.Value.Tier));
+        double bundleWeight = bundles.Sum(b => Weight(b.Tier));
+        double pick = World.Rng.NextDouble() * (singleWeight + bundleWeight);
+        foreach (var bundle in bundles)
+        {
+            pick -= Weight(bundle.Tier);
+            if (pick < 0) return NewBundleContract(bundle, income);
+        }
         var (item, info) = candidates[^1];
         foreach (var c in candidates)
         {
@@ -162,6 +180,27 @@ public sealed partial class Simulation
             OfferedAtTick = World.Tick,
             ExpiresAtTick = World.Tick + minutes * 60L * TicksPerSecond,
             Reward = (BigNum)(quantity * info.Value * bonus),
+        };
+    }
+
+    private Contract NewBundleContract(ContractBundleDef bundle, double income)
+    {
+        double unitValue = bundle.Items.Sum(x => x.Count * Content.ItemValue[x.Item].Value);
+        double wanted = income * (45 + 45 * World.Rng.NextDouble()) / unitValue;
+        long batches = NiceSteps.LastOrDefault(n => n <= wanted, 5);
+        int minutes = 6 + World.Rng.NextInt(7);
+        var lines = bundle.Items.Select(x => new ContractLine { Item = x.Item, Quantity = batches * x.Count }).ToList();
+        var first = lines[0];
+        return new Contract
+        {
+            Id = World.Contracts.NextId++,
+            Bundle = bundle.Id,
+            Item = first.Item,
+            Quantity = first.Quantity,
+            Additional = lines.Skip(1).ToList(),
+            OfferedAtTick = World.Tick,
+            ExpiresAtTick = World.Tick + minutes * 60L * TicksPerSecond,
+            Reward = (BigNum)(batches * unitValue * bundle.RewardMultiplier),
         };
     }
 

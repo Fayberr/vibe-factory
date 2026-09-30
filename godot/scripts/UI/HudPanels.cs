@@ -449,7 +449,7 @@ public sealed class OrdersPanel
         _empty.Text = sim.World.Stats.TotalEarned.IsZero
             ? "Orders arrive once your factory sells something."
             : "New orders arrive every half minute.";
-        _summary.Text = $"{board.Completed} completed · ${board.EarnedFromContracts.Format()} in bonuses · sell the item at any depot";
+        _summary.Text = $"{board.Completed} completed · ${board.EarnedFromContracts.Format()} in bonuses · sell the goods at any depot";
 
         while (_cards.GetChildCount() < board.Open.Count) _cards.AddChild(Card());
         for (int i = 0; i < _cards.GetChildCount(); i++)
@@ -493,12 +493,12 @@ public sealed class OrdersPanel
         var row = (HBoxContainer)((MarginContainer)card.GetChild(1)).GetChild(0);
         ((TextureRect)row.GetChild(0)).Texture = thumbs.GetItem(c.Item);
         var text = (VBoxContainer)row.GetChild(1);
-        string item = sim.Content.Items[c.Item].Name;
-        ((Label)text.GetChild(0)).Text = $"Deliver {c.Quantity} {item}";
-        ((ProgressBar)text.GetChild(1)).Value = (double)c.Delivered / c.Quantity;
+        var lines = c.Lines().ToList();
+        ((Label)text.GetChild(0)).Text = "Deliver " + string.Join(", ", lines.Select(line => $"{line.Quantity} {sim.Content.Items[line.Item].Name}"));
+        ((ProgressBar)text.GetChild(1)).Value = lines.Sum(line => (double)line.Delivered) / lines.Sum(line => line.Quantity);
         var info = (HBoxContainer)text.GetChild(2);
         double left = Math.Max(0, (c.ExpiresAtTick - sim.World.Tick) / (double)Simulation.TicksPerSecond);
-        ((Label)info.GetChild(0)).Text = $"{c.Delivered} / {c.Quantity} · {(int)left / 60}:{(int)left % 60:00} left";
+        ((Label)info.GetChild(0)).Text = $"{lines.Sum(line => line.Delivered)} / {lines.Sum(line => line.Quantity)} · {(int)left / 60}:{(int)left % 60:00} left";
         var reward = (Label)info.GetChild(2);
         reward.Text = "+$" + c.Reward.Format();
         var swap = (Button)row.GetChild(2);

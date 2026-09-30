@@ -392,8 +392,13 @@ for the title-screen backdrop and in most unit tests, which count money exactly)
   nice number, a 6 to 12 minute deadline, and a reward of 2 to 2.5 times its value. An item
   is only offered while an order for it stays under the largest nice number (1000), so cheap
   parts are asked for while income is small and expensive goods take over later.
+  Optional `contractBundles` are offered at their configured tier and use the same income sizing
+  and deadline, but ask for several goods in fixed ratios under one payout. Their `rewardMultiplier`
+  is capped at 1, so the bonus cannot exceed the requested goods' base content value. `Contract.Item`,
+  `Quantity` and `Delivered` remain the first line and `Additional` holds the rest, so saves from
+  before mixed orders load unchanged.
   `TickContext.Sell` calls `Deliver`, so items still sell normally and also count
-  toward the oldest open order for that item. `RerollContract` swaps one for 10% of its
+  toward the oldest open order that still needs that item. `RerollContract` swaps one for 10% of its
   reward. Everything is drawn from the seeded `Rng`, so orders are deterministic.
 - **Milestones** (`MilestoneDef` in the content pack, kinds `earned`, `sold`, `produced`,
   `produced_rate`, `built`, `level`, `contracts`, `tier`). `MilestoneProgress` returns the
@@ -403,6 +408,11 @@ for the title-screen backdrop and in most unit tests, which count money exactly)
   completion boundaries but not enough for a banked burst to replace steady production.
 - Both are saved (`SaveData.Contracts`, `Milestones`, `RateMilestones`), and rewards count as earnings.
   Removing a rate milestone also drops its now-unreferenced running sample on the next load.
+
+The 4.10.0 mixed-goods drop is the single `contractBundles` entry marked "Mixed customer order" in
+`base.json`. It requests two iron plates, two copper wire and one plank per batch, scaled to the same
+45 to 90 seconds of income as ordinary orders. Delete that entry and `MixedGoodsOrderTests.cs` to
+remove the drop; the dormant general multi-line contract support may stay.
 
 ### Determinism
 

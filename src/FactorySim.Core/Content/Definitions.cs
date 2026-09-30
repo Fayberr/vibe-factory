@@ -326,6 +326,18 @@ public sealed class MilestoneDef
     public BigNum Reward { get; init; }
 }
 
+/// <summary>A repeatable mix of goods that may be offered as one customer order.</summary>
+public sealed class ContractBundleDef
+{
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    /// <summary>The progression tier at which this bundle may be offered.</summary>
+    public int Tier { get; init; }
+    public ItemAmount[] Items { get; init; } = Array.Empty<ItemAmount>();
+    /// <summary>Reward as a share of the requested goods' market value.</summary>
+    public double RewardMultiplier { get; init; } = 0.75;
+}
+
 public sealed class ContentPack
 {
     /// <summary>Money a new game starts with; the last pack that sets it wins.</summary>
@@ -343,4 +355,5 @@ public sealed class ContentPack
     public MapDef? Map { get; init; }
 
     public List<MilestoneDef> Milestones { get; init; } = new();
+    public List<ContractBundleDef> ContractBundles { get; init; } = new();
 }
