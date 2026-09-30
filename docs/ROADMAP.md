@@ -407,6 +407,16 @@ say why they wait (starved or blocked, yellow or red lamps), and offline time ba
 like money. It is idea F1; the setting turns it back into the old toast. Details: "Offline
 progress" in the architecture notes.
 
+### 12. Live bottlenecks (done)
+
+The away report's list, while you play (ideas F3 and F5). The Bottlenecks window (key K) ranks the
+buildings that spent at least half of the last 30 seconds waiting, grouped by building and reason,
+by the time lost, each with a Show button. Key J, or the switch in the window, floats a pin over
+every one of them: yellow waits for input, red cannot get rid of its output, the same colours as
+the status lamps. It only reads the world, so it changes no numbers and nothing is saved. The
+numbers to tune are the window length and the 50% bar (`BottleneckTracker`). Details: "Offline
+progress" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

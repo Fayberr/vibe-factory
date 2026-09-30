@@ -57,15 +57,29 @@ public sealed class IdleSampler
     }
 
     /// <summary>The worst groups first: the most building-time lost, then by building and reason for a stable order.</summary>
-    public List<AwayProblem> Problems(World world, int max = 6)
+    public List<AwayProblem> Problems(World world, int max = 6) => ProblemRanking.Rank(world, _counts, Samples, MinShare, max);
+}
+
+/// <summary>
+/// Turns per building wait counts into ranked groups ("3 Smelters: waiting for Coal"). Shared by the away
+/// report (<see cref="IdleSampler"/>) and the live bottleneck list (<see cref="BottleneckTracker"/>).
+/// </summary>
+public static class ProblemRanking
+{
+    public static List<AwayProblem> Rank(
+        World world,
+        IReadOnlyDictionary<(int Id, IdleReason Reason, string Detail), int> counts,
+        int samples,
+        double minShare,
+        int max)
     {
-        if (Samples == 0) return new List<AwayProblem>();
+        if (samples <= 0) return new List<AwayProblem>();
 
         var groups = new Dictionary<(string Def, IdleReason Reason, string Detail), List<(Entity E, double Share)>>();
-        foreach (var ((id, reason, detail), n) in _counts)
+        foreach (var ((id, reason, detail), n) in counts)
         {
-            double share = (double)n / Samples;
-            if (share < MinShare || world.GetEntity(id) is not { } e) continue;
+            double share = (double)n / samples;
+            if (share < minShare || world.GetEntity(id) is not { } e) continue;
             var key = (e.Def.Id, reason, detail);
             if (!groups.TryGetValue(key, out var list)) groups[key] = list = new();
             list.Add((e, share));

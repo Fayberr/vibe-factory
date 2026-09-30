@@ -318,6 +318,9 @@ public partial class BuildController : Node3D
     }
 
     /// <summary>Selects one building and moves the camera to it (the away report's "Show").</summary>
+    /// <summary>The world view, for overlays the HUD switches on (the bottleneck pins).</summary>
+    public WorldView View => _view;
+
     public void ShowEntity(int id)
     {
         if (World.GetEntity(id) is not { } e) return;

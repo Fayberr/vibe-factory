@@ -64,7 +64,7 @@ public sealed class AwayReportPanel
         AddSection("WHAT HELD IT BACK");
         if (report.Problems.Count == 0)
             _col.AddChild(Ui.Pad(Ui.Label("Nothing sat waiting for long.", 13, Palette.Ok), 16, 6));
-        foreach (var problem in report.Problems) _col.AddChild(ProblemRow(problem, content, thumbs));
+        foreach (var problem in report.Problems) _col.AddChild(ProblemRow(problem, content, Picture, _show));
         _col.AddChild(Ui.Pad(new Control(), 0, 4));
         Refresh(thumbs);
     }
@@ -142,11 +142,15 @@ public sealed class AwayReportPanel
         return right;
     }
 
-    private Control ProblemRow(AwayProblem problem, ContentRegistry content, Thumbnails thumbs)
+    /// <summary>
+    /// One group of waiting buildings: picture, "3× Smelter", the reason and how long, a hint at the fix, and a
+    /// Show button. Shared with the live Bottlenecks window so both read the same.
+    /// </summary>
+    internal static Control ProblemRow(AwayProblem problem, ContentRegistry content, Func<string, int, TextureRect> picture, Action<int> showEntity)
     {
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
-        row.AddChild(Picture(problem.Building, 36));
+        row.AddChild(picture(problem.Building, 36));
 
         var text = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         text.AddThemeConstantOverride("separation", 1);
@@ -169,7 +173,7 @@ public sealed class AwayReportPanel
         show.AddThemeFontSizeOverride("font_size", 13);
         show.TooltipText = problem.Count == 1 ? "Select it and move the camera there" : "Select the one that waited longest and move the camera there";
         int id = problem.ExampleId;
-        show.Pressed += () => _show(id);
+        show.Pressed += () => showEntity(id);
         row.AddChild(show);
         return Ui.Pad(row, 16, 6);
     }

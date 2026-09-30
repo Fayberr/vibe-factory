@@ -461,6 +461,15 @@ problem that selects the building and flies the camera there. Settings, Gameplay
 happened while you were away" turns it off for the old one line toast. To remove it, drop the
 window from `Hud` and the event from `SimHost`; the report costs nothing if no one reads it.
 
+**Live bottlenecks** (ideas F3 and F5, `Bottlenecks.cs`) are the same sampler on a rolling window.
+`BottleneckTracker.Observe(world)` is called by the client after each frame's ticks and samples at
+most once per 13 ticks, keeping the last 30 seconds (`WindowSeconds`); `Problems` ranks them with
+the away report's `ProblemRanking`, and `Waiting` gives every building over the 50% bar with its
+main reason, which the client turns into pins (`WorldView.ShowDiagnostics`). It is client state,
+never saved, and a test proves watching leaves the save byte-identical. To remove it: the
+`BottleneckPanel`, its window and the `bottlenecks`/`diagnostics` keys in `Hud`/`Keybinds`, and the
+tracker in `SimHost`.
+
 ### Editing
 
 `FactorySim.Editing` makes building ergonomic without special-casing the simulation:

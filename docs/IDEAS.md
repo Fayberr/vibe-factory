@@ -164,10 +164,12 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   ring buffer. Progress you can see.
 - **F3. A bottleneck ranking (M).** "Your five biggest constraints right now", each one clickable to
   fly there. It is the question every player asks, and `EntityStatus` already computes the inputs.
+  *Built in 4.11.0* (roadmap step 12): the Bottlenecks window, key K.
 - **F4. Alerts (S/M).** A dismissible log of jams, low power, full depots and contract deadlines,
   with a fly-to.
 - **F5. The diagnostics overlay (S).** One hotkey lights up every machine that is not working,
   coloured by reason. The cheapest large win here, because the data already exists.
+  *Built in 4.11.0* (roadmap step 12): key J pins every building that keeps waiting.
 - **F6. A throughput view (M).** Show belts near capacity and mergers as gates.
 - **F7. Self set targets (S/M).** "Keep 200 circuits in stock", with an indicator when you are under.
 - **F8. Income by product (S).** A ranked list of which products actually

@@ -120,6 +120,12 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = false;
                 hud.ResearchWindow.Visible = true;
             }
+            if (arg == "--bottlenecks")
+            {
+                // The Bottlenecks window with the world pins on (the demo factory has a few waiting machines).
+                hud.BottleneckWindow.Visible = true;
+                hud.Bottlenecks.OverlayOn = true;
+            }
             if (arg.StartsWith("--away="))
             {
                 // As if the game had been closed this long: the catch-up and its report.

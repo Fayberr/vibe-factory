@@ -48,10 +48,12 @@ public partial class Hud : CanvasLayer
     private HudWindow _buyWindow = null!;
     private Label _buyText = null!;
     private PlotId _buyPlot;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!;
     private OrdersPanel _orders = null!;
     private ResearchPanel _research = null!;
     private AwayReportPanel _away = null!;
+    private BottleneckPanel _bottlenecks = null!;
+    private bool _pinsShown;
     private Button _researchButton = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
     private TutorialPanel _tutorial = null!;
@@ -84,6 +86,8 @@ public partial class Hud : CanvasLayer
     public HudWindow StatsWindow => _statsWindow;
     public HudWindow OrdersWindow => _ordersWindow;
     public HudWindow ResearchWindow => _researchWindow;
+    public HudWindow BottleneckWindow => _bottleneckWindow;
+    public BottleneckPanel Bottlenecks => _bottlenecks;
 
     public void Init(SimHost host, BuildController tools, Thumbnails thumbs)
     {
@@ -223,6 +227,7 @@ public partial class Hud : CanvasLayer
         _researchButton.Visible = false;
         col.AddChild(_researchButton);
         col.AddChild(Keyed(Ui.IconButton(Icon.Stats, "", () => ToggleWindow(_statsWindow), 44), () => $"Statistics ({K("stats")})"));
+        col.AddChild(Keyed(Ui.IconButton(Icon.Gauge, "", () => ToggleWindow(_bottleneckWindow), 44), () => $"Bottlenecks: what keeps buildings waiting ({K("bottlenecks")})\n{K("diagnostics")} marks them in the world"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Game, "", () => ToggleWindow(_gameWindow), 44), () => $"Game: save, speed, settings ({K("game_menu")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Help, "", () => _help.Visible = !_help.Visible, 44), () => $"Controls ({K("help")})"));
         _root.AddChild(Ui.Anchor(Ui.Panel(col), 0, 0.5f, 12, 0, Control.GrowDirection.End, Control.GrowDirection.Both));
@@ -367,6 +372,12 @@ public partial class Hud : CanvasLayer
         _awayWindow.Body.AddChild(_away.Root);
         AddWindow(_awayWindow);
 
+        _bottlenecks = new BottleneckPanel(id => _tools.ShowEntity(id), () => K("diagnostics"));
+        _bottlenecks.OverlayToggled += _ => _refresh = 0;
+        _bottleneckWindow = new HudWindow("Bottlenecks", Icon.Gauge, 440) { EscCloses = false };
+        _bottleneckWindow.Body.AddChild(_bottlenecks.Root);
+        AddWindow(_bottleneckWindow);
+
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
         _statsWindow.Body.AddChild(_stats.Root);
@@ -497,6 +508,7 @@ public partial class Hud : CanvasLayer
             : w == _ordersWindow ? new Vector2(84 + 350 + 320, 70)
             : w == _researchWindow ? new Vector2(84 + 350, 70)
             : w == _awayWindow ? new Vector2(84, 70) // clear of the toasts at the top centre
+            : w == _bottleneckWindow ? new Vector2(84 + 350, 70)
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
@@ -542,6 +554,7 @@ public partial class Hud : CanvasLayer
             ("RMB drag", "Orbit camera"), ("MMB drag", "Pan"),
             ("Wheel", "Zoom to cursor"), (K("progress"), "Progress: tiers, limits, goals"),
             (K("orders"), "Orders"), (K("research"), "Research"), (K("stats"), "Statistics"),
+            (K("bottlenecks"), "Bottlenecks"), (K("diagnostics"), "Mark waiting buildings"),
             (K("pause"), "Pause the factory"), (K("game_menu"), "Game menu"),
             (K("help"), "This help"),
             ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
@@ -727,6 +740,14 @@ public partial class Hud : CanvasLayer
             case var _ when Keybinds.Is(key, "stats"):
                 ToggleWindow(_statsWindow);
                 break;
+            case var _ when Keybinds.Is(key, "bottlenecks"):
+                ToggleWindow(_bottleneckWindow);
+                break;
+            case var _ when Keybinds.Is(key, "diagnostics"):
+                _bottlenecks.OverlayOn = !_bottlenecks.OverlayOn;
+                _toasts.Show(this, _bottlenecks.OverlayOn ? "Waiting buildings marked: yellow wait for input, red cannot get rid of their output" : "Marks off");
+                _refresh = 0;
+                break;
             case var _ when Keybinds.Is(key, "orders"):
                 ToggleWindow(_ordersWindow);
                 break;
@@ -841,7 +862,11 @@ public partial class Hud : CanvasLayer
         if (!_researchButton.Visible) _researchWindow.Visible = false;
         if (_researchWindow.Visible) _research.Refresh(_host.Sim, _thumbs);
         if (_awayWindow.Visible) _away.Refresh(_thumbs);
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow })
+        if (_bottleneckWindow.Visible) _bottlenecks.Refresh(_host.Sim, _host.Bottlenecks, _thumbs);
+        if (_bottlenecks.OverlayOn) _tools.View.ShowDiagnostics(_host.Bottlenecks.Waiting(world));
+        else if (_pinsShown) _tools.View.ShowDiagnostics(null);
+        _pinsShown = _bottlenecks.OverlayOn;
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;

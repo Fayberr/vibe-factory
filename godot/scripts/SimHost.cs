@@ -68,6 +68,9 @@ public partial class SimHost : Node
     /// <summary>Raised after a new/loaded world replaces the current one.</summary>
     public event Action? WorldReplaced;
 
+    /// <summary>What kept buildings waiting over the last half minute (the Bottlenecks window and overlay). Read only.</summary>
+    public BottleneckTracker Bottlenecks { get; } = new();
+
     /// <summary>Raised for every simulation event, after the frame's ticks ran.</summary>
     public event Action<SimEvent>? EventRaised;
 
@@ -112,7 +115,11 @@ public partial class SimHost : Node
 
         Sim.Events.Drain(_events);
         foreach (var ev in _events) EventRaised?.Invoke(ev);
-        if (ticks > 0) TicksAdvanced?.Invoke(ticks);
+        if (ticks > 0)
+        {
+            Bottlenecks.Observe(Sim.World);
+            TicksAdvanced?.Invoke(ticks);
+        }
 
         if (Slot == 0) return;
         if (!Paused) PlaySeconds += delta;
@@ -148,6 +155,7 @@ public partial class SimHost : Node
         Sim.Events.Clear();
         Paused = false;
         _sinceSave = 0;
+        Bottlenecks.Reset();
         WorldReplaced?.Invoke();
     }
 

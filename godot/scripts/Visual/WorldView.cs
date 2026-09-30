@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using FactorySim.Behaviors;
 using FactorySim.Content;
@@ -210,6 +211,7 @@ public partial class WorldView : Node3D
 
     private void RebuildAll()
     {
+        ShowDiagnostics(null);
         foreach (var v in _visuals.Values) v.Rig.Root.QueueFree();
         _visuals.Clear();
         _dirty.Clear();
@@ -472,6 +474,7 @@ public partial class WorldView : Node3D
             if (rig.Animated && rig.Root.Visible) rig.Animate(dt * _host.TimeScale, v.Working);
         }
 
+        BobMarkers(dt);
         _grid = Mathf.MoveToward(_grid, _gridTarget, dt * 4f);
         _ground?.SetShaderParameter("grid_strength", _grid);
 
@@ -485,6 +488,77 @@ public partial class WorldView : Node3D
             _pendingIncome.Clear();
         }
     }
+
+    // ---- Diagnostics overlay ----------------------------------------------------
+
+    private readonly Dictionary<int, (MeshInstance3D Pin, Vector3 Base)> _markers = new();
+    private readonly Stack<MeshInstance3D> _markerPool = new();
+    private float _markerPhase;
+    private Mesh? _pinMesh;
+    private StandardMaterial3D? _starvedPin, _blockedPin;
+
+    /// <summary>
+    /// Floats a pin over every building in <paramref name="waiting"/>: yellow when it waits for input, red when
+    /// its output is full, the same colours as the status lamps. Null or empty clears them. Seen through walls
+    /// on purpose, since the point is to find them.
+    /// </summary>
+    public void ShowDiagnostics(IReadOnlyDictionary<int, IdleReason>? waiting)
+    {
+        foreach (var id in _markers.Keys.ToList())
+        {
+            if (waiting != null && waiting.ContainsKey(id) && _visuals.ContainsKey(id)) continue;
+            var pin = _markers[id].Pin;
+            pin.Visible = false;
+            _markerPool.Push(pin);
+            _markers.Remove(id);
+        }
+        if (waiting == null) return;
+
+        foreach (var (id, reason) in waiting)
+        {
+            if (!_visuals.TryGetValue(id, out var v)) continue;
+            if (!_markers.TryGetValue(id, out var marker))
+            {
+                var pin = _markerPool.Count > 0 ? _markerPool.Pop() : NewPin();
+                marker = (pin, v.Rig.Root.Position + new Vector3(0, v.Rig.Height + 0.55f, 0));
+                _markers[id] = marker;
+            }
+            marker.Pin.MaterialOverride = reason == IdleReason.Blocked ? _blockedPin : _starvedPin;
+            marker.Pin.Visible = v.Rig.Root.Visible;
+        }
+    }
+
+    private void BobMarkers(float dt)
+    {
+        if (_markers.Count == 0) return;
+        _markerPhase += dt;
+        float lift = 0.08f * Mathf.Sin(_markerPhase * 3f);
+        foreach (var (pin, basePos) in _markers.Values) pin.Position = basePos + new Vector3(0, lift, 0);
+    }
+
+    private MeshInstance3D NewPin()
+    {
+        // A downward pointing marker: a prism flipped over, unshaded so it reads the same in any light.
+        _pinMesh ??= new PrismMesh { Size = new Vector3(0.34f, 0.4f, 0.34f) };
+        _starvedPin ??= PinMaterial(Palette.Waiting);
+        _blockedPin ??= PinMaterial(Palette.Danger);
+        var pin = new MeshInstance3D
+        {
+            Mesh = _pinMesh,
+            Rotation = new Vector3(Mathf.Pi, 0, 0),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(pin);
+        return pin;
+    }
+
+    private static StandardMaterial3D PinMaterial(Color color) => new()
+    {
+        AlbedoColor = color,
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        NoDepthTest = true,
+        RenderPriority = 1,
+    };
 
     private void FloatText(Visual v, string text)
     {
