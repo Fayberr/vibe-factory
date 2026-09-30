@@ -417,6 +417,16 @@ the status lamps. It only reads the world, so it changes no numbers and nothing 
 numbers to tune are the window length and the 50% bar (`BottleneckTracker`). Details: "Offline
 progress" in the architecture notes.
 
+### 13. The line planner (done)
+
+Idea F9. The Planner window (key H) answers "what does a line of this need": pick any product the
+factory can make and a rate per second, and it lists every step from the ore up with the number of
+buildings, belts when one is not enough, and a red count where the tier limit is too low, then the
+raw inputs, byproducts, what the line earns sold at a depot, what it costs to build and how soon it
+pays back. A building level switch shows how upgrades shrink the line. It is the balance tool's
+math with a window on top, so the numbers always match `balance item`. Details: "The Planner" in
+the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

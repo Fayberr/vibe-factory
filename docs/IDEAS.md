@@ -184,6 +184,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   player facing version is mostly UI over math that exists. This is the feature that lets a casual
   player skip the arithmetic the deep end normally demands, which is what makes depth optional
   (roadmap principle 6).
+  *Built in 4.12.0* (roadmap step 13): the Planner window, key H.
 
 ## G. Ownership and expression
 

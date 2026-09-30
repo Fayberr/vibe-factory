@@ -120,6 +120,12 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = false;
                 hud.ResearchWindow.Visible = true;
             }
+            if (arg.StartsWith("--planner"))
+            {
+                // The Planner window, on an item if given (--planner=steel).
+                hud.PlannerWindow.Visible = true;
+                if (arg.StartsWith("--planner=")) hud.Planner.Choose(arg["--planner=".Length..]);
+            }
             if (arg == "--bottlenecks")
             {
                 // The Bottlenecks window with the world pins on (the demo factory has a few waiting machines).

@@ -19,7 +19,7 @@
 │                placement rules)                                                     │
 │  Balance ───── the content as an economy: recipe book, production chains, tier      │
 │                pacing (the best product mix exactly, a small linear program).       │
-│                Calculates only, never runs; used by the CLI's balance report        │
+│                Calculates only, never runs; the CLI's balance report, the Planner   │
 │  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -564,6 +564,14 @@ falling back, so the next save can't overwrite it with the older backup.
 | `GameSettings` | Preferences in `user://settings.json`: audio (volumes, mute in background), display (window mode, vsync, FPS cap and counter, quality, UI scale capped to the window), camera (pan speed, edge pan, inverted zoom), gameplay toggles, autosave, tutorial seen, rebound keys |
 | `Input/Keybinds` | Rebindable single-key actions with defaults; binding a used key swaps the two. Esc, hotbar numbers, Ctrl shortcuts, Delete, arrows and PageUp/PageDown stay fixed. Tooltips, hints, help and tutorial text read the current keys (tutorial text uses `{action}` tokens) |
 | `SimHost` | Owns the `Simulation`: five save slots (`user://saves/slotN.json` plus a small `.meta.json` for the slot list), autosave, play time, offline catch-up on load, and moving saves from older versions into slot 1 |
+
+**The Planner** (idea F9, `UI/PlannerPanel` over `Balance/LinePlanner`) is the balance tool's
+`ProductionChain` in a window: `LinePlanner.BookFor(world, level)` builds a recipe book for the
+tiers the factory has open (all of them in sandbox), at one building level and without polishing,
+and `Plan` returns the steps (building counts, belts, tier limits), the raw inputs, byproducts,
+income and build cost. Nothing is simulated, so the counts are the ideal ratio before research
+bonuses. To remove it: `PlannerPanel`, its window and the `planner` key in `Hud`/`Keybinds`, and
+`LinePlanner.cs` with its tests.
 
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is

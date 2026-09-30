@@ -30,6 +30,7 @@ public enum Icon
     Auto,
     Orders,
     Research,
+    Chain,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -213,6 +214,16 @@ public partial class IconView : Control
                 Arc(12, 12, 7.5f, Mathf.Pi * 0.8f, Mathf.Pi * 1.75f, 2.2f);
                 Poly(19.5f, 6.5f, 19.8f, 12.2f, 14.6f, 9.9f);
                 Poly(4.5f, 17.5f, 4.2f, 11.8f, 9.4f, 14.1f);
+                break;
+            case Icon.Chain:
+                // A product over its two ingredients, joined like a family tree.
+                Outline(2, 9, 3, 15, 3, 15, 8, 9, 8);
+                Outline(2, 3, 16, 9, 16, 9, 21, 3, 21);
+                Outline(2, 15, 16, 21, 16, 21, 21, 15, 21);
+                L(12, 8, 12, 12, 1.8f);
+                L(6, 12, 18, 12, 1.8f);
+                L(6, 12, 6, 16, 1.8f);
+                L(18, 12, 18, 16, 1.8f);
                 break;
             case Icon.Research:
                 // A flask with liquid in it.
