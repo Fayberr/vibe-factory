@@ -32,7 +32,7 @@ Wanted:
   byproducts solvable.
 - **Fluids, handled differently from items**: a pipe network, with pumps and tanks (`B9`, `I7`).
 - **The away report** (`F1`). Built in 4.2.0, roadmap step 11.
-- **Income by product** (new `F8` below): statistics on what actually makes money and what does not.
+- **Income by product** (`F8`). Built, in the Statistics window.
 
 Liked but unsure:
 
@@ -180,6 +180,8 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   It answers the question every factory owner asks: what do I expand, and what do I stop making.
   Nearly free, because `StatsTracker` already keeps lifetime `Sold` and `Produced` per item and a
   rolling 60 s income window, so only a per-item window is new.
+  *Built* in the Statistics window: income per second, share and lifetime earnings per product, ranked,
+  plus the products that are made but earn nothing.
 - **F9. A chain and ratio helper (M).** Ask "what feeds this" or "how much do I need for one circuit
   per second", and the game answers with the input rates and the machine counts, from the recipe
   tree. The balance tool already computes exactly this in the CLI (`balance item <name> [rate]`), so a
