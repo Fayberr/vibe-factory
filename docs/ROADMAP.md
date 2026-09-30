@@ -229,6 +229,22 @@ remove their deliberate dead-end exclusions from `RecipeTreeTests.cs` and `Bypro
 The removal test proves every previous item, recipe, building, tier, goal, upgrade and item value
 remains unchanged.
 
+**Fifth drop: sustained production goal (4.9.0).** A new data-driven `produced_rate` milestone kind
+rewards a factory that keeps a line running instead of merely accumulating a lifetime total. The
+optional Steady Steel goal asks for 4 steel beams per second for 30 seconds and pays $750. One second
+of production may carry forward so a recipe that finishes across second boundaries is treated fairly;
+longer interruptions reset the timer. The running timer and credit survive save and load. No tier uses
+this goal as a gate.
+
+Four steel beams per second for 30 seconds means at least 120 beams worth $900, so the $750 reward is
+less than the goods required. It changes none of the balance tool's tier incomes or its 1d 6h whole-run
+estimate because milestones are deliberately excluded from those baseline pacing estimates.
+
+To remove the drop, delete the single `base.json` milestone marked "Sustained production goal" and
+delete `SustainedProductionGoalTests.cs`; the dormant generic goal kind may stay. Loading a save without
+that milestone discards its unreferenced running sample. The removal test proves every previous item,
+recipe, building, tier, goal, upgrade and item value remains unchanged.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

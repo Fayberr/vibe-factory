@@ -62,6 +62,9 @@ public sealed class World
     /// <summary>Ids of reached milestones.</summary>
     public HashSet<string> Milestones { get; internal set; } = new();
 
+    /// <summary>Running samples for sustained production-rate milestones, keyed by milestone id.</summary>
+    public Dictionary<string, RateMilestoneState> RateMilestones { get; internal set; } = new();
+
     internal Dictionary<string, int> UpgradeLevels { get; } = new();
     internal Dictionary<string, long> ScienceBank { get; } = new();
     internal int NextEntityId { get; set; } = 1;

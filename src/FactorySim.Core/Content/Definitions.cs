@@ -306,12 +306,13 @@ public static class StatIds
 /// <summary>
 /// A long-term goal with a cash reward. <see cref="Kind"/> picks what is measured:
 /// earned (lifetime $), sold / produced (units of <see cref="Item"/>, or of everything),
-/// built (current count of <see cref="Building"/>, or of everything), level (highest
-/// building level), contracts (completed), tier (unlocked tier).
+/// built (current count of <see cref="Building"/>, or of everything), produced_rate
+/// (units of <see cref="Item"/> per second held for <see cref="Target"/> seconds), level
+/// (highest building level), contracts (completed), tier (unlocked tier).
 /// </summary>
 public sealed class MilestoneDef
 {
-    public static readonly string[] Kinds = { "earned", "sold", "produced", "built", "level", "contracts", "tier" };
+    public static readonly string[] Kinds = { "earned", "sold", "produced", "produced_rate", "built", "level", "contracts", "tier" };
 
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
@@ -319,6 +320,8 @@ public sealed class MilestoneDef
     public string Kind { get; init; } = "";
     public string? Item { get; init; }
     public string? Building { get; init; }
+    /// <summary>Required units per second for a produced_rate milestone.</summary>
+    public double Rate { get; init; }
     public double Target { get; init; } = 1;
     public BigNum Reward { get; init; }
 }

@@ -396,9 +396,13 @@ for the title-screen backdrop and in most unit tests, which count money exactly)
   toward the oldest open order for that item. `RerollContract` swaps one for 10% of its
   reward. Everything is drawn from the seeded `Rng`, so orders are deterministic.
 - **Milestones** (`MilestoneDef` in the content pack, kinds `earned`, `sold`, `produced`,
-  `built`, `level`, `contracts`, `tier`). `MilestoneProgress` gives 0..1 for the UI;
-  reaching one pays its reward and raises `MilestoneReached`.
-- Both are saved (`SaveData.Contracts`, `Milestones`), and rewards count as earnings.
+  `produced_rate`, `built`, `level`, `contracts`, `tier`). `MilestoneProgress` returns the
+  current value for the UI; reaching the target pays its reward and raises `MilestoneReached`.
+  A `produced_rate` goal uses `rate` for required units per second and `target` for seconds held.
+  Its saved running state allows at most one second of output credit, enough for uneven recipe
+  completion boundaries but not enough for a banked burst to replace steady production.
+- Both are saved (`SaveData.Contracts`, `Milestones`, `RateMilestones`), and rewards count as earnings.
+  Removing a rate milestone also drops its now-unreferenced running sample on the next load.
 
 ### Determinism
 

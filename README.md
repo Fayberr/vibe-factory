@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-eight tiers, customer orders and 38 goals, and settings in four tabs:
+eight tiers, customer orders and 39 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -186,9 +186,10 @@ their choice.
   for things you can already make, sized to your current income, and newer products are
   asked for more often. Small parts (screws, rods) are only offered while income is small
   enough that an order stays a sane number of units. Don't like one? Swap it for a small fee.
-- **Goals.** 38 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
-  first robot, first car, first satellite, first deep-space probe, a trillion earned...), each with a cash reward. The Progress
-  window shows the next four with progress bars.
+- **Goals.** 39 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+  a sustained steel production challenge, first robot, first car, first satellite, first
+  deep-space probe, a trillion earned...), each with a cash reward. The Progress window shows
+  the next four with progress bars.
 - **Per-building upgrades.** Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
   splitters go from 4 to 20 items/s over 9 levels, mergers from 3.3 to 20 over 7 (a merger
@@ -242,7 +243,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (334)
+dotnet test                                                     # core and save-file tests (345)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit

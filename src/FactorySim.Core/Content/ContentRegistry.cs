@@ -152,6 +152,8 @@ public sealed class ContentRegistry
                 throw new ContentException($"Milestone '{m.Id}': unknown kind '{m.Kind}'. Known: {string.Join(", ", MilestoneDef.Kinds)}.");
             if (m.Item != null && !Items.ContainsKey(m.Item)) throw new ContentException($"Milestone '{m.Id}': unknown item '{m.Item}'.");
             if (m.Building != null && !Buildings.ContainsKey(m.Building)) throw new ContentException($"Milestone '{m.Id}': unknown building '{m.Building}'.");
+            if (m.Kind == "produced_rate" && (m.Item == null || m.Rate <= 0 || m.Target <= 0))
+                throw new ContentException($"Milestone '{m.Id}': produced_rate needs an item, rate > 0 and target > 0.");
         }
 
         foreach (var u in Upgrades.Values)

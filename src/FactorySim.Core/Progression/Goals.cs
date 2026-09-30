@@ -2,6 +2,14 @@ using FactorySim.Content;
 
 namespace FactorySim;
 
+/// <summary>Saved progress for one sustained production-rate milestone.</summary>
+public sealed class RateMilestoneState
+{
+    public long LastProduced { get; set; }
+    public double Credit { get; set; }
+    public int HeldSeconds { get; set; }
+}
+
 /// <summary>
 /// Contracts and milestones: the goals layered over free building. Checked once per
 /// simulated second, deterministic (contracts draw from the world's seeded RNG), saved.
@@ -34,6 +42,7 @@ public sealed partial class Simulation
 
         foreach (var m in Content.Milestones)
         {
+            if (m.Kind == "produced_rate" && !World.Milestones.Contains(m.Id)) UpdateRateMilestone(m);
             if (World.Milestones.Contains(m.Id) || MilestoneProgress(m) < m.Target) continue;
             World.Milestones.Add(m.Id);
             Reward(m.Reward);
@@ -50,12 +59,38 @@ public sealed partial class Simulation
             "earned" => s.TotalEarned.ToDouble(),
             "sold" => m.Item == null ? s.Sold.Values.Sum() : s.Sold.GetValueOrDefault(m.Item),
             "produced" => m.Item == null ? s.Produced.Values.Sum() : s.Produced.GetValueOrDefault(m.Item),
+            "produced_rate" => World.RateMilestones.GetValueOrDefault(m.Id)?.HeldSeconds ?? 0,
             "built" => m.Building == null ? World.EntityCount : World.CountOf(m.Building),
             "level" => World.EntityCount == 0 ? 0 : World.Entities.Max(e => e.Level),
             "contracts" => World.Contracts.Completed,
             "tier" => World.UnlockedTier,
             _ => 0,
         };
+    }
+
+    /// <summary>
+    /// Advances a sustained output goal. Up to one second of required output can carry forward,
+    /// enough for recipes whose crafts straddle second boundaries but not enough for a banked burst.
+    /// </summary>
+    private void UpdateRateMilestone(MilestoneDef m)
+    {
+        var state = World.RateMilestones.GetValueOrDefault(m.Id);
+        if (state == null)
+            World.RateMilestones[m.Id] = state = new RateMilestoneState();
+        long produced = World.Stats.Produced.GetValueOrDefault(m.Item!);
+        long made = Math.Max(0, produced - state.LastProduced);
+        state.LastProduced = produced;
+        state.Credit = Math.Min(m.Rate * 2, state.Credit + made) - m.Rate;
+        if (state.Credit < -1e-9)
+        {
+            state.Credit = 0;
+            state.HeldSeconds = 0;
+        }
+        else
+        {
+            state.Credit = Math.Max(0, state.Credit);
+            state.HeldSeconds++;
+        }
     }
 
     /// <summary>Sold items count toward the open order for that item.</summary>

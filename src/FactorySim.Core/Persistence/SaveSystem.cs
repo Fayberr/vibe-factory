@@ -30,6 +30,7 @@ public sealed class SaveData
     public bool Goals { get; set; } = true;
     public ContractBoard Contracts { get; set; } = new();
     public List<string> Milestones { get; set; } = new();
+    public Dictionary<string, RateMilestoneState> RateMilestones { get; set; } = new();
     public List<EntitySave> Entities { get; set; } = new();
 }
 
@@ -86,6 +87,7 @@ public static class SaveSystem
         Goals = world.Goals,
         Contracts = world.Contracts,
         Milestones = world.Milestones.OrderBy(id => id, StringComparer.Ordinal).ToList(),
+        RateMilestones = world.RateMilestones.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
         Entities = world.Entities.OrderBy(e => e.Id).Select(e => new EntitySave
         {
             Id = e.Id,
@@ -118,6 +120,8 @@ public static class SaveSystem
             Goals = data.Goals,
             Contracts = data.Contracts,
             Milestones = data.Milestones.ToHashSet(),
+            RateMilestones = (data.RateMilestones ?? new()).Where(kv => content.Milestones.Any(m => m.Id == kv.Key && m.Kind == "produced_rate"))
+                .ToDictionary(kv => kv.Key, kv => kv.Value),
         };
         RestoreLand(world, data, content);
 

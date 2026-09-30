@@ -591,7 +591,7 @@
     { "id": "research_machines_advanced", "name": "Advanced machine speed", "description": "Every machine works another 10% faster per level.",      "tier": 2, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 3, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_2", "count": 10 } ] }
   ],
 
-  // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, built,
+  // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, produced_rate, built,
   // level, contracts, tier (see MilestoneDef).
   "milestones": [
     { "id": "first_sale",   "name": "Open for business", "description": "Sell your first item.",                  "kind": "sold",      "target": 1,      "reward": 25 },
@@ -613,6 +613,8 @@
     // Consumer goods
     { "id": "lanterns_50",  "name": "Lights on",         "description": "Produce 50 lanterns.",                   "kind": "produced",  "item": "lantern", "target": 50, "reward": 4000 },
     { "id": "steel_100",    "name": "Steel works",       "description": "Produce 100 steel beams.",               "kind": "produced",  "item": "steel", "target": 100, "reward": 5000 },
+    // Sustained production goal (content drop, 4.9.0): delete this one milestone to remove the drop.
+    { "id": "steel_rate",   "name": "Steady steel",      "description": "Hold 4 steel beams per second for 30 seconds.", "kind": "produced_rate", "item": "steel", "rate": 4, "target": 30, "reward": 750 },
     { "id": "earn_100k",    "name": "Six figures",       "description": "Earn $100,000 in total.",                "kind": "earned",    "target": 1e5,    "reward": 15000 },
     { "id": "toy_1",        "name": "Playtime",          "description": "Produce your first toy.",                "kind": "produced",  "item": "toy", "target": 1, "reward": 20000 },
     // Consumer goods
