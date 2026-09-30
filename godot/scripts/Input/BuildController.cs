@@ -389,6 +389,58 @@ public partial class BuildController : Node3D
         Changed?.Invoke();
     }
 
+    // ---- Copy settings (idea H3; remove with SettingsCopy.cs) ------------------
+
+    /// <summary>The copied recipe, filters or sign text, if any.</summary>
+    public CopiedSettings? SettingsClipboard { get; private set; }
+
+    /// <summary>
+    /// Copies the settings of <paramref name="from"/>, else the hovered building, else the single selected one.
+    /// </summary>
+    public void CopySettings(Entity? from = null)
+    {
+        var selected = SelectedEntities().ToList();
+        from ??= _hoverEntity ?? (selected.Count == 1 ? selected[0] : null);
+        if (from == null)
+        {
+            Notice("Point at a building (or select one) to copy its settings");
+            return;
+        }
+        if (SettingsCopy.Capture(from) is not { } copied)
+        {
+            Notice($"{from.Def.Name} has no settings to copy");
+            return;
+        }
+        SettingsClipboard = copied;
+        Notice($"Copied the settings of this {from.Def.Name}. Ctrl+Shift+V pastes them");
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Pastes the copied settings onto the selection, or the hovered building when nothing is selected.
+    /// Only buildings of the copied type change. One undo step.
+    /// </summary>
+    public void PasteSettings()
+    {
+        if (SettingsClipboard is not { } copied)
+        {
+            Notice("No settings copied yet. Point at a building and press Ctrl+Shift+C");
+            return;
+        }
+        var targets = Selection.Count > 0 ? SelectedEntities().ToList()
+            : _hoverEntity is { } hover ? new List<Entity> { hover } : new List<Entity>();
+        string name = World.Content.Buildings.TryGetValue(copied.DefId, out var def) ? def.Name : copied.DefId;
+        if (!targets.Any(e => e.Def.Id == copied.DefId))
+        {
+            Notice($"Settings paste onto a {name} only");
+            return;
+        }
+        var (changed, error) = SettingsCopy.Apply(History, copied, targets);
+        if (error != null) Notice(error);
+        else Notice(changed == 0 ? "Those already have these settings" : changed == 1 ? $"Settings pasted to 1 {name}" : $"Settings pasted to {changed} {name}s");
+        Changed?.Invoke();
+    }
+
     public void DeleteSelection()
     {
         if (Selection.Count == 0) return;
@@ -560,6 +612,12 @@ public partial class BuildController : Node3D
                 return true;
             case Key.Z when ctrl:
                 Undo();
+                return true;
+            case Key.C when ctrl && key.ShiftPressed:
+                CopySettings();
+                return true;
+            case Key.V when ctrl && key.ShiftPressed:
+                PasteSettings();
                 return true;
             case Key.C when ctrl:
                 CopySelection(enterPaste: false);

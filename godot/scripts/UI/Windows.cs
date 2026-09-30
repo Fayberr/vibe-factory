@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using FactorySim.Behaviors;
 using FactorySim.Content;
+using FactorySim.Editing;
 using FactorySim.View;
 
 namespace FactorySim.Client;
@@ -273,6 +274,12 @@ public sealed class ManageWindow
     private int _whyEntity;
     private long _whyLastWorked;
 
+    // Copy settings (idea H3): see SettingsCopy. To remove: these fields, the row in the constructor, the lines
+    // in Show that set it, and the three settings parameters of the constructor.
+    private readonly HBoxContainer _settingsRow = new();
+    private readonly Button _copySettings, _pasteSettings;
+    private readonly Func<CopiedSettings?> _copiedSettings;
+
     private readonly GridContainer _info = new() { Columns = 2 };
     private readonly Control _infoSection;
     private readonly List<InfoLine> _lines = new();
@@ -282,8 +289,10 @@ public sealed class ManageWindow
     private static readonly HashSet<string> CoveredBySign = new() { "Text" };
     private static readonly double RawShare = new SellerParams().RawMultiplier;
 
-    public ManageWindow(Action upgrade, Action delete, Action<string?> choose, Action<int, string?> filter, Action<string> write, Action rotate, Action move, Action copy, Action close)
+    public ManageWindow(Action upgrade, Action delete, Action<string?> choose, Action<int, string?> filter, Action<string> write, Action rotate, Action move, Action copy, Action close,
+        Action<Entity> copySettings, Action pasteSettings, Func<CopiedSettings?> copiedSettings)
     {
+        _copiedSettings = copiedSettings;
         _write = write;
         _upgrade = upgrade;
         _delete = delete;
@@ -331,6 +340,16 @@ public sealed class ManageWindow
         _deleteButton.Pressed += () => _delete();
         actions.AddChild(_deleteButton);
         body.AddChild(actions);
+
+        // Copy settings | Paste settings (idea H3).
+        _settingsRow.AddThemeConstantOverride("separation", 0);
+        _copySettings = new Button { ThemeTypeVariation = "FlatButton", Text = "Copy settings", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 36), TooltipText = "Copy what this makes, its filters or its text (Ctrl+Shift+C over a building)" };
+        _copySettings.Pressed += () => { if (_shownFirst != null) copySettings(_shownFirst); };
+        _settingsRow.AddChild(_copySettings);
+        _pasteSettings = new Button { ThemeTypeVariation = "FlatButton", Text = "Paste settings", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 36) };
+        _pasteSettings.Pressed += () => pasteSettings();
+        _settingsRow.AddChild(_pasteSettings);
+        body.AddChild(_settingsRow);
 
         // Why a building waits and what to do about it (idea H6).
         _whyBox.AddThemeConstantOverride("separation", 0);
@@ -466,6 +485,7 @@ public sealed class ManageWindow
         string key = Keybinds.Name("upgrade");
         _upgradeButton.TooltipText = selection.Count == 1 ? $"Upgrade ({key})" : $"Upgrade all ({key}): cheapest first, as far as the money goes";
         _deleteButton.Text = selection.Count == 1 ? "Delete" : "Delete all";
+        ShowSettingsRow(selection);
 
         if (selection.Count == 1) ShowOne(sim, first, thumbs);
         else ShowMany(world, selection, thumbs, sameKind);
@@ -504,6 +524,26 @@ public sealed class ManageWindow
     /// Explains one building that keeps waiting: the Bottlenecks view when it has one, else a building that
     /// has not worked for <see cref="WhyAfterSeconds"/> while selected. Never a machine between two items.
     /// </summary>
+    private Entity? _shownFirst;
+
+    private void ShowSettingsRow(IReadOnlyList<Entity> selection)
+    {
+        _shownFirst = selection.Count == 1 ? selection[0] : null;
+        _settingsRow.Visible = selection.Any(SettingsCopy.HasSettings);
+        _copySettings.Disabled = _shownFirst == null || !SettingsCopy.HasSettings(_shownFirst);
+        var copied = _copiedSettings();
+        int changes = copied == null ? 0 : SettingsCopy.Changes(copied, selection);
+        _pasteSettings.Disabled = changes == 0;
+        _pasteSettings.Text = changes > 1 ? $"Paste settings to {changes}" : "Paste settings";
+        _pasteSettings.TooltipText = copied == null ? "Copy a building's settings first"
+            : !selection.Any(e => e.Def.Id == copied.DefId) ? "The copied settings are for another kind of building"
+            : changes == 0 ? "These already have the copied settings"
+            : "Paste the copied settings (Ctrl+Shift+V)";
+    }
+
+    /// <summary>For scripted tests: the paste button's text, or null while it cannot paste.</summary>
+    public string? PasteSettingsText => _settingsRow.Visible && !_pasteSettings.Disabled ? _pasteSettings.Text : null;
+
     private void ShowWhy(World world, Entity? e, IReadOnlyDictionary<int, IdleReason>? waiting)
     {
         StopExplanation? explanation = null;

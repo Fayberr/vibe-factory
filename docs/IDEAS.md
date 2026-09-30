@@ -211,6 +211,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
 - **H2. A finer speed control (S).** A slider from x0.5 to x10 instead of fixed steps.
   *Built in 4.16.0* (roadmap step 16) as steps: ×0.5 to ×16 on the factory card, keys `,` and `.`.
 - **H3. Copy settings between machines (S).** Paste a recipe to a whole selection.
+  *Built in 4.20.0* (roadmap step 21): Ctrl+Shift+C / Ctrl+Shift+V, and two buttons in the Manage window.
 - **H4. Mass upgrade a line (S).** Partly exists through the upgrade tool.
 - **H5. Search and filter in the build menu (S).**
   *Built in 4.17.0* (roadmap step 18): matches names, descriptions and the items made or used.

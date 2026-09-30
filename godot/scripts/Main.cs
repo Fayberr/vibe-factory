@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace FactorySim.Client;
@@ -202,6 +203,25 @@ public partial class Main : Node3D
                 host.Execute(new SelectRecipe(at, "smelt_iron"));
                 if (placed.Ok) tools.Selection.Add(placed.EntityId);
                 GetTree().CreateTimer(Math.Max(0.5, wait - 0.5)).Timeout += () => GD.Print($"WHY: {hud.Manage.WhyText?.Replace('\n', '|') ?? "(hidden)"}");
+            }
+            if (arg == "--paste-settings")
+            {
+                // --paste-settings: the demo's line A smelter set to iron, its settings copied, every smelter
+                // selected, then pasted after a second (idea H3). Prints the button text before and the recipes after.
+                var source = host.Sim.World.EntityAt(FactorySim.Samples.DemoLayout.CellOf(host.Sim, 4, 4));
+                if (source != null)
+                {
+                    host.Execute(new SelectRecipe(source.Pos, "smelt_iron"));
+                    tools.CopySettings(source);
+                    foreach (var e in host.Sim.World.Entities.Where(e => e.Def.Id == "smelter")) tools.Selection.Add(e.Id);
+                    GetTree().CreateTimer(1.0).Timeout += () =>
+                    {
+                        string before = hud.Manage.PasteSettingsText ?? "(disabled)";
+                        tools.PasteSettings();
+                        var recipes = host.Sim.World.Entities.Where(e => e.Def.Id == "smelter").Select(e => e.Behavior.Selection(e) ?? "auto");
+                        GD.Print($"SETTINGS: {before} | {string.Join(",", recipes)}");
+                    };
+                }
             }
             if (arg.StartsWith("--select="))
             {

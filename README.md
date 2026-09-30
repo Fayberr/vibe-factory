@@ -134,6 +134,7 @@ are the default keys: every single-key action can be rebound in *Settings → Co
 | `X` | Delete tool (click or drag a box) · `Del` deletes the selection |
 | `M` | Move the selection (keeps items on belts; `E`/`Q` lifts or lowers it) |
 | `C` · `Ctrl+C` / `Ctrl+V` / `Ctrl+X` | Copy & paste selection · copy / paste / cut |
+| `Ctrl+Shift+C` / `Ctrl+Shift+V` | Copy / paste a building's settings |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo (a dragged line is one step) |
 | `Ctrl+A` | Select all |
 | `Esc` / right-click | Cancel the tool, then clear the selection |
@@ -246,6 +247,9 @@ their choice.
 - **Why it waits.** Select a building that keeps waiting and the Manage window says why: the
   input it lacks and which buildings make it (how many you have and whether they run, or the tier
   that unlocks them), or, for a full output, what could take the stuck item.
+- **Copy settings.** `Ctrl+Shift+C` over a machine copies what it makes, a splitter's filters or a
+  sign's text; `Ctrl+Shift+V` pastes them onto every selected building of that kind in one undo
+  step. The Manage window has the same as buttons.
 - **Build menu search.** The build menu (`B`) has a search box that matches a building's name,
   category and description and the items it makes or uses, so "wire" lists every building that
   makes or takes wire. Enter builds the first unlocked match; closing the menu clears the search.
@@ -305,7 +309,7 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # --away=seconds (simulates that long offline and shows the away report), --bottlenecks (opens
 # Bottlenecks with the world pins on), --planner[=item] (opens the Planner), --history (opens History;
 # add --wait=65 for a line), --alerts (opens Alerts), --run-until=tier|money|minutes
-# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --targets (the Targets window with three targets set), --why=x,y (an unfed smelter on the demo layout's cell x,y, selected), --tutorial (an empty factory at the tutorial's
+# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --targets (the Targets window with three targets set), --why=x,y (an unfed smelter on the demo layout's cell x,y, selected), --paste-settings (line A's smelter set to iron, copied and pasted onto every smelter), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).

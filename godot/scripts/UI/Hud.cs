@@ -420,7 +420,10 @@ public partial class Hud : CanvasLayer
             rotate: () => _tools.Rotate(1),
             move: () => _tools.BeginMove(),
             copy: () => _tools.CopySelection(enterPaste: true),
-            close: _tools.ClearSelection);
+            close: _tools.ClearSelection,
+            copySettings: e => _tools.CopySettings(e),
+            pasteSettings: _tools.PasteSettings,
+            copiedSettings: () => _tools.SettingsClipboard);
         AddWindow(_manage.Window);
 
         _progress = new ProgressPanel(() => _host.Execute(new UnlockTier()));
@@ -646,7 +649,7 @@ public partial class Hud : CanvasLayer
             (K("pick"), "Pick hovered building"), (K("upgrade"), "Upgrade tool / selection"),
             ($"Shift+LMB ({K("upgrade")})", "Upgrade whole belt line"), (K("delete_tool"), "Delete tool"),
             ("Click a plot next to yours", "Buy it (it asks first)"), ("Del", "Delete selection"), (K("move"), "Move selection"),
-            (K("copy"), "Copy & paste selection"), ("Ctrl+C / V / X", "Copy / paste / cut"),
+            (K("copy"), "Copy & paste selection"), ("Ctrl+C / V / X", "Copy / paste / cut"), ("Ctrl+Shift+C / V", "Copy / paste settings"),
             ("Ctrl+Z / Y", "Undo / redo"), ("Ctrl+A", "Select all"),
             ("Esc / RMB click", "Cancel tool"), ($"{K("pan_forward")}{K("pan_left")}{K("pan_back")}{K("pan_right")}, arrows", "Pan (Shift = fast)"),
             ("RMB drag", "Orbit camera"), ("MMB drag", "Pan"),

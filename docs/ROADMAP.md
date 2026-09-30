@@ -526,6 +526,14 @@ them. For a full output it names the stuck item and what could take it: a depot 
 that use it. It follows the Bottlenecks window's 30 s view, so a machine on an underfed line does
 not flicker in and out between two items. Details: "Why it waits" in the architecture notes.
 
+### 21. Copy settings (done)
+
+Idea H3. Ctrl+Shift+C over a building copies its settings: what a machine makes (or automatic), a
+splitter's output filters, or a sign's text. Ctrl+Shift+V pastes them onto the selection, or the
+hovered building when nothing is selected. Only buildings of the same kind change, and one paste is
+one undo step. The Manage window has the same as two buttons, and the paste button says how many
+buildings it would change. Details: "Copy settings" in the architecture notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

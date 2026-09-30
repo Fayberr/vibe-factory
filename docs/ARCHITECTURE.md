@@ -670,6 +670,16 @@ never explained. To remove it: `StopExplainer.cs`, `StopExplainerTests.cs`, the 
 fields, section and `ShowWhy` in `ManageWindow`, the `waiting` argument of `ManageWindow.Show`, and
 the `--why` smoke flag.
 
+**Copy settings** (idea H3, `Editing/SettingsCopy`): `Capture(entity)` records the building type,
+its `Selection` (recipe or sign text, null for automatic) and its splitter filters. `Paste` returns
+the existing `SelectRecipe` and `SetFilter` commands for every target of the same type whose
+settings differ, and `Apply` runs them through `EditHistory` inside one group, so undo, redo and saves
+need nothing new. A splitter with no filter set reports none at all, which `Paste` reads as every
+output taking anything. The clipboard lives on the client's `BuildController` and is not saved. To
+remove it: `SettingsCopy.cs`, `SettingsCopyTests.cs`, `CopySettings`/`PasteSettings` and their
+Ctrl+Shift keys in `BuildController`, the settings row of `ManageWindow` with its three constructor
+arguments, the help line in `Hud`, and the `--paste-settings` smoke flag.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);
