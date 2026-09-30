@@ -13,7 +13,9 @@ namespace FactorySim.Cli;
 ///   balance items               value, use and ore share of every item
 ///   balance item &lt;item&gt; [rate]  the full production line for one item (default 1/s)
 /// Options: --level N (every building at level N), --polish none|products|all,
-///          --tier N (unlocked tier for items/item, default the last), --pack extra.json (repeatable).
+///          --tier N (unlocked tier for items/item, default the last), --pack extra.json (repeatable),
+///          --payback MIN (tier pacing buys whole-factory upgrades that pay back within MIN minutes,
+///          starting each tier at --level).
 /// Polish: none, products (what the game does: one polisher before the depot) or all (a
 /// hypothetical where the bonus compounds at every stage, which the game does not allow).
 /// </summary>
@@ -23,7 +25,7 @@ public static class BalanceCommand
 
     public const string Usage =
         "usage: FactorySim.Cli balance [tiers | land | items | item <item> [rate]]\n" +
-        "         [--level N] [--polish none|products|all] [--tier N] [--pack extra.json]";
+        "         [--level N] [--polish none|products|all] [--tier N] [--pack extra.json] [--payback MIN]";
 
     public static int Run(string[] args)
     {
@@ -44,6 +46,9 @@ public static class BalanceCommand
                         break;
                     case "--polish":
                         assumptions = assumptions with { Polish = ParsePolish(Next()) };
+                        break;
+                    case "--payback":
+                        assumptions = assumptions with { UpgradePaybackSeconds = ParseMinutes(Next()) * 60 };
                         break;
                     case "--tier":
                         tier = ParseInt(Next(), "--tier", min: 0);
@@ -116,7 +121,10 @@ public static class BalanceCommand
             PolishMode.Products => $"products polished (x{Num(book.PolishMultiplier)})",
             _ => $"every stage polished (x{Num(book.PolishMultiplier)} each, not what the game does)",
         };
-        return $"== {title}: buildings at level {book.Assumptions.Level}, {polish}, " +
+        string level = book.Assumptions.UpgradePaybackSeconds is double payback
+            ? $"buildings from level {book.Assumptions.Level}, upgraded when they pay back within {Duration(payback)}"
+            : $"buildings at level {book.Assumptions.Level}";
+        return $"== {title}: {level}, {polish}, " +
                $"belts carry {Num(book.BeltItemsPerSecond)}/s ==\n";
     }
 
@@ -125,7 +133,11 @@ public static class BalanceCommand
     {
         var estimates = TierPacing.Estimate(content, assumptions);
         var book = RecipeBook.Create(content, assumptions);
-        var table = new Table("Tier", "Name", ">Income/s", ">Setup", ">Next in", ">Total", "Next tier asks for", "Sells", "Idle raw");
+        bool climbs = assumptions.UpgradePaybackSeconds != null;
+        var columns = new List<string> { "Tier", "Name" };
+        if (climbs) columns.Add(">Level");
+        columns.AddRange(new[] { ">Income/s", ">Setup", ">Next in", ">Total", "Next tier asks for", "Sells", "Idle raw" });
+        var table = new Table(columns.ToArray());
         foreach (var e in estimates)
         {
             string sells = string.Join(", ", e.Products.Take(3).Select(p =>
@@ -137,9 +149,15 @@ public static class BalanceCommand
             if (e.Tier + 1 < content.Tiers.Count && content.Tiers[e.Tier + 1].Deliver.Length > 0)
                 asks = string.Join(", ", content.Tiers[e.Tier + 1].Deliver.Select(d => $"{d.Count} {book.NameOf(d.Item)}")) +
                        $" ({Duration(e.DeliverySeconds)})";
-            table.Add(e.Tier.ToString(Inv), e.Name, Money(e.IncomePerSecond), Money(e.SetupCost),
+            var cells = new List<string> { e.Tier.ToString(Inv), e.Name };
+            if (climbs) cells.Add(e.Level == e.StartLevel ? e.Level.ToString(Inv) : $"{e.StartLevel}->{e.Level}");
+            cells.AddRange(new[]
+            {
+                Money(e.IncomePerSecond), Money(e.SetupCost),
                 double.IsNaN(e.Seconds) ? "-" : Duration(e.Seconds), Duration(e.CumulativeSeconds), asks,
-                sells.Length > 0 ? sells : "-", idle.Length > 0 ? idle : "-");
+                sells.Length > 0 ? sells : "-", idle.Length > 0 ? idle : "-",
+            });
+            table.Add(cells.ToArray());
         }
 
         var sb = new StringBuilder(table.ToString());
@@ -147,6 +165,10 @@ public static class BalanceCommand
         sb.AppendLine("A lower bound: no ramp-up, belt travel, orders, milestone rewards or build time.");
         sb.AppendLine("Belts and mergers are not modelled either, so a flow that needs several belts counts as one.");
         sb.AppendLine("Next tier asks for = goods to sell before it unlocks, with the fastest they can all be made; it runs alongside earning.");
+        if (climbs)
+            sb.AppendLine("Level = the whole factory's level when the tier opens -> when it ends; income, setup and sells are at the end level.\n" +
+                          "Each tier's factory is rebuilt at the start level (old buildings refunded) and upgraded one level at a time\n" +
+                          "as soon as it can pay, if the upgrade pays back in time and brings the next tier closer.");
         return sb.ToString();
     }
 
@@ -276,6 +298,13 @@ public static class BalanceCommand
         if (!double.TryParse(text, NumberStyles.Float, Inv, out double rate) || !(rate > 0) || double.IsInfinity(rate))
             throw new ArgumentException("The rate must be a positive number of items per second.");
         return rate;
+    }
+
+    private static double ParseMinutes(string text)
+    {
+        if (!double.TryParse(text, NumberStyles.Float, Inv, out double minutes) || !(minutes > 0) || double.IsInfinity(minutes))
+            throw new ArgumentException("--payback must be a positive number of minutes.");
+        return minutes;
     }
 
     private static PolishMode ParsePolish(string text) => text.ToLowerInvariant() switch

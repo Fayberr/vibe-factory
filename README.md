@@ -70,8 +70,9 @@ each tier takes, `balance items` lists what everything is worth and what uses it
 `balance item <name> [rate]` breaks down one production line (machines, ores per second, build
 cost, payback), and `balance land` prices the map's plots against income (which tier can afford
 each ring, and how many minutes of income it is). Options: `--level N` (every building at level N), `--polish none|products|all`,
-`--tier N` (what is unlocked), `--pack extra.json` (repeatable). It reads content only, so it can
-check a balance change before it ships.
+`--tier N` (what is unlocked), `--pack extra.json` (repeatable), `--payback MIN` (tier pacing buys
+whole-factory upgrades that earn their price back within MIN minutes, and shows the level each tier
+reaches). It reads content only, so it can check a balance change before it ships.
 
 **Save inspector.** `inspect <save.json>` loads through the game's save system, runs the loaded
 factory for one measured minute without changing the file, then reports its tier, money, buildings

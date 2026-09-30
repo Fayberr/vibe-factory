@@ -90,6 +90,12 @@ against it instead of guessed:
 - `balance item <name> [rate]` breaks down one production line: machines per step, ores per
   second, belt load, build cost, payback time.
 - Options: `--level N`, `--polish none|products|all`, `--tier N`, `--pack extra.json`.
+- Since 4.27.0, `--payback MIN` makes `balance tiers` play a player who upgrades: each tier's
+  factory is rebuilt at whichever level up to the old one gets to the next tier first, then
+  upgraded one whole-factory level at a time as soon as it can pay, if the upgrade earns its
+  price back within MIN minutes and brings the next tier closer. A Level column shows where each
+  tier starts and ends. Fixed levels bracket the game (level 1 is nobody's real game, level 10
+  everywhere is unaffordable early); this is the measuring stick in between.
 - Since 4.8.0, `inspect <save.json>` measures a loaded factory for one minute and reports its
   buildings, product rates and income, waiting reasons, and remaining tier requirements.
 

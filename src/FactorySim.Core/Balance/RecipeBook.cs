@@ -34,6 +34,14 @@ public sealed record BalanceAssumptions
     /// <summary>Count assumed for an extractor or depot that has no build limit.</summary>
     public int Unlimited { get; init; } = 10;
 
+    /// <summary>
+    /// Null: every building stays at <see cref="Level"/>. Otherwise the tier pacing plays a player
+    /// who starts each tier's factory at <see cref="Level"/> and upgrades the whole factory one level
+    /// at a time, as soon as it can pay, whenever the upgrade earns its price back within this many
+    /// seconds and brings the next tier closer.
+    /// </summary>
+    public double? UpgradePaybackSeconds { get; init; }
+
     public static BalanceAssumptions Default { get; } = new();
 }
 

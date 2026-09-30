@@ -197,6 +197,59 @@ public class BalanceTests
     }
 
     [Fact]
+    public void Upgrades_that_never_pay_back_are_not_bought()
+    {
+        var fixedLevel = TierPacing.Estimate(TestUtil.Content, new BalanceAssumptions { Level = 1 });
+        var impatient = TierPacing.Estimate(TestUtil.Content, new BalanceAssumptions { Level = 1, UpgradePaybackSeconds = 1e-9 });
+
+        Assert.Equal(fixedLevel.Select(e => e.CumulativeSeconds), impatient.Select(e => e.CumulativeSeconds));
+        Assert.Equal(fixedLevel.Select(e => e.IncomePerSecond), impatient.Select(e => e.IncomePerSecond));
+        Assert.All(impatient, e => Assert.Equal((1, 1), (e.StartLevel, e.Level)));
+    }
+
+    [Fact]
+    public void Buying_upgrades_that_pay_back_brings_every_tier_sooner()
+    {
+        var fixedLevel = TierPacing.Estimate(TestUtil.Content, new BalanceAssumptions { Level = 1 });
+        var upgrading = TierPacing.Estimate(TestUtil.Content, new BalanceAssumptions { Level = 1, UpgradePaybackSeconds = 1800 });
+
+        Assert.Equal(fixedLevel.Count, upgrading.Count);
+        for (int i = 0; i < upgrading.Count; i++)
+        {
+            var e = upgrading[i];
+            Assert.InRange(e.StartLevel, 1, e.Level);
+            Assert.True(e.CumulativeSeconds <= fixedLevel[i].CumulativeSeconds * (1 + 1e-9),
+                $"{e.Name}: upgrading reaches it later than never upgrading");
+            if (i > 0) Assert.True(e.StartLevel <= upgrading[i - 1].Level, $"{e.Name} starts above the level the factory had");
+        }
+        Assert.Contains(upgrading, e => e.Level > 1);
+        Assert.True(upgrading[^1].CumulativeSeconds < fixedLevel[^1].CumulativeSeconds);
+    }
+
+    [Fact]
+    public void The_last_tier_climbs_while_upgrades_pay_back()
+    {
+        var once = TierPacing.Estimate(TestUtil.Content, new BalanceAssumptions { Level = 1, UpgradePaybackSeconds = 1800 })[^1];
+        var patient = TierPacing.Estimate(TestUtil.Content, new BalanceAssumptions { Level = 1, UpgradePaybackSeconds = 1e7 })[^1];
+
+        Assert.True(double.IsNaN(patient.Seconds));
+        Assert.InRange(patient.Level, once.Level, TierPacing.MaxClimbLevel);
+        Assert.True(patient.Level > once.Level, "a patient player should end on a higher level");
+        Assert.True(patient.IncomePerSecond > once.IncomePerSecond);
+    }
+
+    [Fact]
+    public void Tier_report_shows_levels_only_when_upgrades_are_bought()
+    {
+        var plain = BalanceCommand.TierReport(TestUtil.Content, new BalanceAssumptions { Level = 1 });
+        var climbing = BalanceCommand.TierReport(TestUtil.Content, new BalanceAssumptions { Level = 1, UpgradePaybackSeconds = 1800 });
+
+        Assert.DoesNotContain("Level", plain.Split('\n')[0]);
+        Assert.Contains("Level", climbing.Split('\n')[0]);
+        Assert.Contains("->", climbing);
+    }
+
+    [Fact]
     public void A_recipe_that_makes_its_own_input_is_ignored()
     {
         // A pack can be silly without hanging the tool or inventing free items.
