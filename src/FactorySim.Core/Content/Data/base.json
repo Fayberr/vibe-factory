@@ -11,7 +11,7 @@
 // about the same ($1), so what an item is worth comes from the work in it: a recipe's output is worth
 // what went in times its valueMultiplier. Later goods need many different parts in larger amounts,
 // so the old lines stay needed: nothing is replaced by a newer tier, it is built on top.
-// There are no global upgrades: every building is levelled on its own.
+// Every building is levelled on its own; the only global upgrades are the research trial's (below).
 // "meta" is ignored by the simulation; frontends use it:
 //   model   procedural 3D model in the Godot client; accent = highlight colour
 //   glyph   ASCII view; description = build menu text; items: color + shape (mesh).
@@ -29,19 +29,19 @@
   // totals over the whole game) are both there, and it is paid for. The goods are what the tier
   // before makes, so a factory has to actually run its parts, not only earn.
   "tiers": [
-    { "name": "Basics",         "description": "Drill, smelt, sell.",                                          "cost": 0,     "requiredEarnings": 0 },
-    { "name": "Workshop",       "description": "Copper, wood, presses and polishers.",                         "cost": 500,   "requiredEarnings": 750 },
-    { "name": "Industry",       "description": "Coal, steel, sand, glass, gears, screws and crates.",          "cost": 6000,  "requiredEarnings": 1e4,
+    { "name": "Basics",         "description": "Drill, smelt, sell.",                                             "cost": 0,     "requiredEarnings": 0 },
+    { "name": "Workshop",       "description": "Copper, wood, chairs, presses and polishers.",                    "cost": 500,   "requiredEarnings": 750 },
+    { "name": "Industry",       "description": "Coal, steel, sand, glass, gears, screws, crates and lanterns.",   "cost": 6000,  "requiredEarnings": 1e4,
       "deliver": [ { "item": "iron_plate", "count": 150 }, { "item": "copper_wire", "count": 150 } ] },
-    { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, toys and export terminals.",     "cost": 8e4,   "requiredEarnings": 1.5e5,
+    { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys and export terminals.", "cost": 8e4,   "requiredEarnings": 1.5e5,
       "deliver": [ { "item": "steel", "count": 150 }, { "item": "crate", "count": 60 } ] },
-    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors and jewelry.",               "cost": 1e6,   "requiredEarnings": 2e6,
+    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones and jewelry.",          "cost": 1e6,   "requiredEarnings": 2e6,
       "deliver": [ { "item": "toy", "count": 80 }, { "item": "frame", "count": 60 } ] },
-    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits.",                 "cost": 1.5e7, "requiredEarnings": 3e7,
+    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, and cars.",           "cost": 1.5e7, "requiredEarnings": 3e7,
       "deliver": [ { "item": "motor", "count": 60 }, { "item": "jewelry", "count": 40 } ] },
-    { "name": "Aerospace",      "description": "Bauxite, aluminium and drones.",                               "cost": 1.2e8, "requiredEarnings": 2.5e8,
+    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones and airliners.",                       "cost": 1.2e8, "requiredEarnings": 2.5e8,
       "deliver": [ { "item": "robot", "count": 40 } ] },
-    { "name": "Space",          "description": "Rocket fuel and satellites.",                                  "cost": 2e9,   "requiredEarnings": 4e9,
+    { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 2e9,   "requiredEarnings": 4e9,
       "deliver": [ { "item": "drone", "count": 30 } ] }
   ],
 
@@ -87,7 +87,19 @@
     // Research trial (see "Research" in docs/ARCHITECTURE.md): a pack is made from parts, a lab banks it,
     // and the bank buys the upgrades below. Nothing needs research: remove the pack, its recipe, the
     // Science Bench, the Lab and the upgrades, and the game is as it was. "science" keeps packs out of orders.
-    { "id": "science_1",    "name": "Basic Science Pack", "baseValue": 0, "science": true, "meta": { "color": "#8f7cff", "shape": "flask" } }
+    { "id": "science_1",    "name": "Basic Science Pack", "baseValue": 0, "science": true, "meta": { "color": "#8f7cff", "shape": "flask" } },
+
+    // Consumer goods (content drop, 4.3.0): an optional side line with one product a tier, built from the
+    // parts the main line already makes, so each tier has a second thing worth selling. Its parts feed
+    // each other: chairs and tires go into cars, phones into airliners; lanterns are only sold. To remove
+    // it, delete every entry marked "Consumer goods" (items, recipes, buildings, goals) and put the tier
+    // descriptions back; nothing else refers to them.
+    { "id": "chair",        "name": "Chair",        "baseValue": 0,               "meta": { "color": "#c8925a", "shape": "chair" } },
+    { "id": "lantern",      "name": "Lantern",      "baseValue": 0,               "meta": { "color": "#ffc94a", "shape": "lantern" } },
+    { "id": "tire",         "name": "Tire",         "baseValue": 0,               "meta": { "color": "#3a3a42", "shape": "tire" } },
+    { "id": "phone",        "name": "Phone",        "baseValue": 0,               "meta": { "color": "#4a6cf0", "shape": "phone" } },
+    { "id": "car",          "name": "Car",          "baseValue": 0,               "meta": { "color": "#3fa7d6", "shape": "car" } },
+    { "id": "airliner",     "name": "Airliner",     "baseValue": 0,               "meta": { "color": "#eef3f8", "shape": "plane" } }
   ],
 
   "recipes": [
@@ -130,9 +142,24 @@
     { "id": "crack_oil", "inputs": [ { "item": "crude_oil", "count": 2 } ], "outputs": [ { "item": "plastic", "count": 3 }, { "item": "tar", "count": 1 } ], "ticks": 40, "valueMultiplier": 2 },
     { "id": "forge_steel_tar", "inputs": [ { "item": "iron_ingot", "count": 1 }, { "item": "tar", "count": 1 } ], "outputs": [ { "item": "steel", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 },
 
-    // Research trial. Value multiplier 1: a pack sells for exactly its parts, so selling packs is never a
-    // reason to make them.
-    { "id": "pack_1", "inputs": [ { "item": "iron_plate", "count": 1 }, { "item": "copper_wire", "count": 1 } ], "outputs": [ { "item": "science_1", "count": 1 } ], "ticks": 40, "valueMultiplier": 1 }
+    // Research trial. Value multiplier 0.5: a pack sells for the average of its two parts, so a depot never
+    // earns more from a belt of packs than from a belt of plates or wire, and selling packs is never a reason
+    // to make them. (At 1 it did: two parts' worth in one unit wins wherever depots are the limit.)
+    { "id": "pack_1", "inputs": [ { "item": "iron_plate", "count": 1 }, { "item": "copper_wire", "count": 1 } ], "outputs": [ { "item": "science_1", "count": 1 } ], "ticks": 40, "valueMultiplier": 0.5 },
+
+    // Consumer goods. Chairs use the logs that sit idle until crates; lanterns the coal (through steel)
+    // that sits idle until steel is needed; phones and cars are a second product beside motors and robots;
+    // airliners give Aerospace, the longest wait for the next tier, a second product as good as drones.
+    // Three ingredients at most, like every recipe, so each has a side of the machine. Cars and airliners
+    // multiply more than robots and drones (5.5 against 4.5 and 3.2) because chairs, tires and lanterns
+    // are few steps from the ore and carry little value into them; `balance tiers` shows each good
+    // taking a real share of its tier's income, not all of it.
+    { "id": "make_chair", "inputs": [ { "item": "plank", "count": 4 }, { "item": "iron_plate", "count": 1 } ], "outputs": [ { "item": "chair", "count": 1 } ], "ticks": 40, "valueMultiplier": 1.8 },
+    { "id": "make_lantern", "inputs": [ { "item": "glass", "count": 1 }, { "item": "steel", "count": 1 }, { "item": "copper_wire", "count": 2 } ], "outputs": [ { "item": "lantern", "count": 1 } ], "ticks": 40, "valueMultiplier": 2.2 },
+    { "id": "make_tire", "inputs": [ { "item": "plastic", "count": 3 }, { "item": "steel", "count": 1 } ], "outputs": [ { "item": "tire", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.2 },
+    { "id": "make_phone", "inputs": [ { "item": "circuit", "count": 1 }, { "item": "battery", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "phone", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
+    { "id": "make_car", "inputs": [ { "item": "motor", "count": 2 }, { "item": "tire", "count": 4 }, { "item": "chair", "count": 2 } ], "outputs": [ { "item": "car", "count": 1 } ], "ticks": 80, "valueMultiplier": 5.5 },
+    { "id": "make_airliner", "inputs": [ { "item": "frame", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "phone", "count": 2 } ], "outputs": [ { "item": "airliner", "count": 1 } ], "ticks": 120, "valueMultiplier": 5.5 }
   ],
 
   "buildings": [
@@ -357,7 +384,7 @@
       "meta": { "model": "assembler", "accent": "#3fbf6a", "glyph": "E", "description": "Assembles circuit boards (3 wire, plastic, glass) and motors (steel, 2 gears and a battery)." }
     },
     {
-      "id": "battery_plant", "name": "Battery Plant", "behavior": "processor", "cost": 150000.0, "category": "crafting", "tier": 4,
+      "id": "battery_plant", "name": "Battery Plant", "behavior": "processor", "cost": 1.5e5, "category": "crafting", "tier": 4,
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_battery" ], "inputCapacity": 10, "outputCapacity": 8 },
@@ -404,6 +431,52 @@
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_satellite" ], "inputCapacity": 8, "outputCapacity": 4 },
       "meta": { "model": "launchpad", "accent": "#ff8a3d", "glyph": "s", "description": "Assembles satellites from a drone, 2 jewelry and 2 rocket fuel." }
+    },
+
+    // ---- Consumer goods (content drop, 4.3.0) ----------------------------------------------
+    // One machine a tier for the side line; each makes only its own product, so none of them changes
+    // how an existing machine on automatic picks its recipe or what it takes off a belt.
+    {
+      "id": "carpenter", "name": "Carpenter", "behavior": "processor", "cost": 300, "category": "crafting", "tier": 1,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_chair" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "sawmill", "accent": "#c8925a", "glyph": "h", "description": "Builds a chair from 4 planks and an iron plate. Consumer goods: chairs sell well and later seat cars." }
+    },
+    {
+      "id": "lamp_works", "name": "Lamp Works", "behavior": "processor", "cost": 2000, "category": "crafting", "tier": 2,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_lantern" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "forge", "accent": "#ffc94a", "glyph": "l", "description": "Makes a lantern from glass, a steel beam and 2 copper wire. Consumer goods: lanterns sell well while coal would sit idle." }
+    },
+    {
+      "id": "tire_plant", "name": "Tire Plant", "behavior": "processor", "cost": 1.2e4, "category": "processing", "tier": 3,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_tire" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "press", "accent": "#55555f", "glyph": "t", "description": "Moulds a tire from 3 plastic around a steel beam. Consumer goods: a car takes four." }
+    },
+    {
+      "id": "phone_factory", "name": "Phone Factory", "behavior": "processor", "cost": 1.5e5, "category": "crafting", "tier": 4,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_phone" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#4a6cf0", "glyph": "p", "description": "Puts a circuit board, a battery and a glass screen together into a phone. Consumer goods: sells beside motors, and airliners need them." }
+    },
+    {
+      "id": "car_plant", "name": "Car Plant", "behavior": "processor", "cost": 3e6, "category": "crafting", "tier": 5,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_car" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#3fa7d6", "glyph": "c", "description": "Builds a car from 2 motors, 4 tires and 2 chairs. Consumer goods: sells beside robots." }
+    },
+    {
+      "id": "aircraft_works", "name": "Aircraft Works", "behavior": "processor", "cost": 4e7, "category": "crafting", "tier": 6,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_airliner" ], "inputCapacity": 16, "outputCapacity": 8 },
+      "meta": { "model": "launchpad", "accent": "#eef3f8", "glyph": "v", "description": "Builds an airliner from 2 frames, 2 motors and 2 phones. Consumer goods: the end of the line, as good as drones." }
     },
 
     // ---- Economy -------------------------------------------------------------------------
@@ -468,24 +541,36 @@
     { "id": "level_5",      "name": "Tuned up",          "description": "Upgrade a building to level 5.",         "kind": "level",     "target": 5,      "reward": 300 },
     { "id": "contract_1",   "name": "Contractor",        "description": "Complete an order.",                     "kind": "contracts", "target": 1,      "reward": 250 },
     { "id": "tier_1",       "name": "Workshop",          "description": "Unlock the Workshop tier.",              "kind": "tier",      "target": 1,      "reward": 300 },
+    // Consumer goods
+    { "id": "chairs_50",    "name": "Take a seat",       "description": "Produce 50 chairs.",                     "kind": "produced",  "item": "chair", "target": 50, "reward": 600 },
     { "id": "earn_10k",     "name": "Ten grand",         "description": "Earn $10,000 in total.",                 "kind": "earned",    "target": 1e4,    "reward": 1500 },
     { "id": "crate_1",      "name": "Boxed up",          "description": "Produce your first crate.",              "kind": "produced",  "item": "crate", "target": 1, "reward": 1000 },
     { "id": "contract_10",  "name": "Reliable supplier", "description": "Complete 10 orders.",                    "kind": "contracts", "target": 10,     "reward": 5000 },
     { "id": "level_10",     "name": "Fine tuned",        "description": "Upgrade a building to level 10.",        "kind": "level",     "target": 10,     "reward": 8000 },
     { "id": "gears_100",   "name": "Cogs turning",      "description": "Produce 100 gears.",                     "kind": "produced",  "item": "gear", "target": 100, "reward": 6000 },
+    // Consumer goods
+    { "id": "lanterns_50",  "name": "Lights on",         "description": "Produce 50 lanterns.",                   "kind": "produced",  "item": "lantern", "target": 50, "reward": 4000 },
     { "id": "steel_100",    "name": "Steel works",       "description": "Produce 100 steel beams.",               "kind": "produced",  "item": "steel", "target": 100, "reward": 5000 },
     { "id": "earn_100k",    "name": "Six figures",       "description": "Earn $100,000 in total.",                "kind": "earned",    "target": 1e5,    "reward": 15000 },
     { "id": "toy_1",        "name": "Playtime",          "description": "Produce your first toy.",                "kind": "produced",  "item": "toy", "target": 1, "reward": 20000 },
+    // Consumer goods
+    { "id": "tires_100",    "name": "Rolling",           "description": "Produce 100 tires.",                     "kind": "produced",  "item": "tire", "target": 100, "reward": 25000 },
     { "id": "frames_50",   "name": "Framework",         "description": "Produce 50 frames.",                     "kind": "produced",  "item": "frame", "target": 50, "reward": 30000 },
     { "id": "sold_10k",     "name": "Mass market",       "description": "Sell 10,000 items.",                     "kind": "sold",      "target": 1e4,    "reward": 40000 },
     { "id": "earn_1m",      "name": "Millionaire",       "description": "Earn $1,000,000 in total.",              "kind": "earned",    "target": 1e6,    "reward": 150000 },
     { "id": "circuit_100",  "name": "Chip maker",        "description": "Produce 100 circuits.",                  "kind": "produced",  "item": "circuit", "target": 100, "reward": 100000 },
     { "id": "battery_50",  "name": "Fully charged",     "description": "Produce 50 batteries.",                  "kind": "produced",  "item": "battery", "target": 50, "reward": 200000 },
+    // Consumer goods
+    { "id": "phone_1",      "name": "Hello?",            "description": "Produce your first phone.",              "kind": "produced",  "item": "phone", "target": 1, "reward": 250000 },
     { "id": "contract_50",  "name": "Trusted partner",   "description": "Complete 50 orders.",                    "kind": "contracts", "target": 50,     "reward": 400000 },
     { "id": "level_25",     "name": "Maxed out",         "description": "Upgrade a building to level 25.",        "kind": "level",     "target": 25,     "reward": 1e6 },
     { "id": "robot_1",      "name": "It's alive",        "description": "Produce your first robot.",              "kind": "produced",  "item": "robot", "target": 1, "reward": 2e6 },
+    // Consumer goods
+    { "id": "car_1",        "name": "Road trip",         "description": "Produce your first car.",                "kind": "produced",  "item": "car", "target": 1, "reward": 3e6 },
     { "id": "earn_100m",    "name": "Tycoon",            "description": "Earn $100 million in total.",            "kind": "earned",    "target": 1e8,    "reward": 1.5e7 },
     { "id": "drone_1",      "name": "Liftoff",           "description": "Produce your first drone.",              "kind": "produced",  "item": "drone", "target": 1, "reward": 5e7 },
+    // Consumer goods
+    { "id": "airliner_1",   "name": "Wheels up",         "description": "Produce your first airliner.",           "kind": "produced",  "item": "airliner", "target": 1, "reward": 8e7 },
     { "id": "sold_1m",      "name": "World market",      "description": "Sell a million items.",                  "kind": "sold",      "target": 1e6,    "reward": 2e8 },
     { "id": "earn_10b",     "name": "Mogul",             "description": "Earn $10 billion in total.",             "kind": "earned",    "target": 1e10,   "reward": 1.5e9 },
     { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },

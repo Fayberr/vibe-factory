@@ -27,10 +27,11 @@ public class RecipeTreeTests
     [Fact]
     public void Every_craft_adds_value_so_the_more_work_in_an_item_the_more_it_is_worth()
     {
-        // Research packs are the exception: a pack sells for exactly its parts, so selling is never a reason to make one.
+        // Research packs are the exception: a pack sells for less than its parts (ResearchTrialTests), so
+        // selling is never a reason to make one.
         bool MakesPacks(RecipeDef r) => r.Outputs.Any(o => C.Items[o.Item].Science);
         Assert.All(C.Recipes.Values.Where(r => !MakesPacks(r)), r => Assert.True(r.ValueMultiplier > 1, $"{r.Id} does not add value"));
-        Assert.All(C.Recipes.Values.Where(MakesPacks), r => Assert.Equal(1, r.ValueMultiplier));
+        Assert.All(C.Recipes.Values.Where(MakesPacks), r => Assert.True(r.ValueMultiplier <= 1, $"{r.Id} adds value"));
 
         var v = C.ItemValue;
         double Parts(string recipe) => C.Recipes[recipe].Inputs.Sum(i => v[i.Item].Value * i.Count);
@@ -61,10 +62,20 @@ public class RecipeTreeTests
     [Fact]
     public void Only_the_final_product_is_a_dead_end()
     {
-        // Research packs end in a lab, not a recipe, so they are dead ends by design.
+        // Research packs end in a lab, not a recipe, and the consumer goods side line ends in goods that are
+        // only sold (ConsumerGoodsTests), so both are dead ends by design. The main line has one.
         var used = UsedIn();
-        var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science).ToList();
+        var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science && !ConsumerGoodsTests.Items.Contains(id)).ToList();
         Assert.Equal(new[] { "satellite" }, deadEnds);
+    }
+
+    [Fact]
+    public void Every_recipe_fits_the_input_sides_of_its_machines()
+    {
+        // One ingredient a side: a recipe never needs two goods merged onto one belt to be made.
+        foreach (var b in C.BuildingList.Where(b => b.Params is ProcessorParams))
+            foreach (var id in ((ProcessorParams)b.Params!).Recipes)
+                Assert.True(C.Recipes[id].Inputs.Select(i => i.Item).Distinct().Count() <= b.InputPorts.Count, $"{id} in {b.Id}");
     }
 
     [Fact]

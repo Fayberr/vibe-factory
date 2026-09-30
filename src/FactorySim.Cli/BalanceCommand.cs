@@ -143,7 +143,7 @@ public static class BalanceCommand
         }
 
         var sb = new StringBuilder(table.ToString());
-        sb.AppendLine("Best factory per tier: every extractor and depot its limits allow, products picked by income.");
+        sb.AppendLine("Best factory per tier: every extractor and depot its limits allow, selling the mix of products that earns the most.");
         sb.AppendLine("A lower bound: no ramp-up, belt travel, orders, milestone rewards or build time.");
         sb.AppendLine("Belts and mergers are not modelled either, so a flow that needs several belts counts as one.");
         sb.AppendLine("Next tier asks for = goods to sell before it unlocks, with the fastest they can all be made; it runs alongside earning.");

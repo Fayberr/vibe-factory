@@ -25,10 +25,11 @@ public sealed record TierEstimate(
 
 /// <summary>
 /// How fast progression goes. For every tier it builds the best factory the tier's build limits
-/// allow (every extractor it permits, every building at the assumed level), picking products
-/// greedily by income, and times how long that factory takes to reach the next tier's earnings
-/// and price. A rough lower bound: it ignores ramp-up, travel time on belts, orders and
-/// milestone rewards, and assumes the factory is complete the moment its tier opens.
+/// allow (every extractor it permits, every building at the assumed level), selling the mix of
+/// products that earns the most (<see cref="LinearProgram"/>), and times how long that factory
+/// takes to reach the next tier's earnings and price. A rough lower bound: it ignores ramp-up,
+/// travel time on belts, orders and milestone rewards, and assumes the factory is complete the
+/// moment its tier opens.
 /// </summary>
 public static class TierPacing
 {
@@ -99,58 +100,67 @@ public static class TierPacing
         return Math.Max(seconds, depots > 0 ? units / depots : double.PositiveInfinity);
     }
 
+    /// <summary>
+    /// The mix of products that earns the most from the tier's raw supply and depots: a linear program with
+    /// one variable per product and depot, limited by every raw resource and every depot's belt. Exact where a
+    /// greedy pick is not: a side product capped by one resource (chairs by logs) still gets the share of a
+    /// shared one (iron) that makes the whole factory earn more.
+    /// </summary>
     private static (List<ProductShare> Products, double Setup, Dictionary<string, double> Idle) BestFactory(RecipeBook book)
     {
         var supply = RawSupply(book);
-        var left = new Dictionary<string, double>(supply);
+        var raws = supply.Where(kv => kv.Value > 0).Select(kv => kv.Key).OrderBy(r => r, StringComparer.Ordinal).ToList();
 
         // Selling: each depot takes one belt, so depots cap how many units the factory can sell.
         var depots = book.Content.BuildingList.Where(b => book.Available(b) && b.Params is SellerParams)
             .Select(b => (Def: b, Capacity: book.AllowedCount(b) * book.BeltItemsPerSecond))
-            .OrderByDescending(d => ((SellerParams)d.Def.Params!).Multiplier * book.ValueFactor(d.Def))
+            .Where(d => d.Capacity > 0)
             .ToList();
-        double capacity = depots.Sum(d => d.Capacity);
 
-        var perUnit = book.Sources.Keys.ToDictionary(id => id, id => ProductionChain.For(book, id).RawPerSecond);
-        var rates = new Dictionary<string, double>();
+        // Everything the tier can make from the raws it has, and sell.
+        var candidates = book.Sources.Keys.OrderBy(id => id, StringComparer.Ordinal)
+            .Select(id => (Id: id, Raw: ProductionChain.For(book, id).RawPerSecond))
+            .Where(p => book.SaleValue(p.Id) > 0 && p.Raw.All(kv => supply.GetValueOrDefault(kv.Key) > 0))
+            .ToList();
 
-        // Greedy: repeatedly add the product that earns the most from what is left.
-        for (int round = 0; round < 64; round++)
+        int d = depots.Count, n = candidates.Count * d;
+        var value = new double[n];
+        var limits = new List<(double[] Row, double Limit)>();
+        foreach (var r in raws)
         {
-            string? best = null;
-            double bestRate = 0, bestIncome = 1e-12;
-            foreach (var (id, raw) in perUnit)
-            {
-                double rate = capacity;
-                foreach (var (r, perOne) in raw) rate = Math.Min(rate, left.GetValueOrDefault(r) / perOne);
-                double income = rate * book.SaleValue(id);
-                if (income > bestIncome) (best, bestRate, bestIncome) = (id, rate, income);
-            }
-            if (best == null) break;
-            rates[best] = rates.GetValueOrDefault(best) + bestRate;
-            capacity -= bestRate;
-            foreach (var (r, perOne) in perUnit[best]) left[r] -= bestRate * perOne;
+            var row = new double[n];
+            for (int p = 0; p < candidates.Count; p++)
+                for (int k = 0; k < d; k++) row[p * d + k] = candidates[p].Raw.GetValueOrDefault(r);
+            limits.Add((row, supply[r]));
         }
+        for (int k = 0; k < d; k++)
+        {
+            var row = new double[n];
+            for (int p = 0; p < candidates.Count; p++) row[p * d + k] = 1;
+            limits.Add((row, depots[k].Capacity));
+        }
+        for (int p = 0; p < candidates.Count; p++)
+            for (int k = 0; k < d; k++) value[p * d + k] = book.SaleValue(candidates[p].Id, depots[k].Def);
 
-        // The best goods go to the best-paying depots.
+        var x = LinearProgram.Maximise(value, limits.Select(l => l.Row).ToArray(), limits.Select(l => l.Limit).ToArray());
+
         var products = new List<ProductShare>();
-        var slots = depots.Select(d => (d.Def, Left: d.Capacity)).ToList();
-        foreach (var (id, rate) in rates.OrderByDescending(kv => book.SaleValue(kv.Key)))
+        var left = new Dictionary<string, double>(supply);
+        double sold = x.Sum();
+        for (int p = 0; p < candidates.Count; p++)
         {
-            double remaining = rate, income = 0;
-            for (int i = 0; i < slots.Count && remaining > 1e-12; i++)
-            {
-                double units = Math.Min(remaining, slots[i].Left);
-                income += units * book.SaleValue(id, slots[i].Def);
-                slots[i] = (slots[i].Def, slots[i].Left - units);
-                remaining -= units;
-            }
-            products.Add(new ProductShare(id, rate, income));
+            double rate = 0, income = 0;
+            for (int k = 0; k < d; k++) (rate, income) = (rate + x[p * d + k], income + x[p * d + k] * value[p * d + k]);
+            if (rate <= sold * 1e-9) continue; // rounding, not a product
+            products.Add(new ProductShare(candidates[p].Id, rate, income));
+            foreach (var (r, perOne) in candidates[p].Raw) left[r] -= rate * perOne;
         }
-        products.Sort((a, b) => b.IncomePerSecond.CompareTo(a.IncomePerSecond));
+        products.Sort((a, b) => b.IncomePerSecond != a.IncomePerSecond
+            ? b.IncomePerSecond.CompareTo(a.IncomePerSecond)
+            : string.CompareOrdinal(a.Item, b.Item));
 
         double setup = products.Sum(p => ProductionChain.For(book, p.Item, p.Rate).TotalCost);
-        var idle = supply.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => Math.Max(0, left[kv.Key]) / kv.Value);
+        var idle = supply.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => Math.Clamp(left[kv.Key] / kv.Value, 0, 1));
         return (products, setup, idle);
     }
 }

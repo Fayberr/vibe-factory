@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-eight tiers, customer orders and 29 goals, and settings in four tabs:
+eight tiers, customer orders and 35 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -161,13 +161,18 @@ their choice.
   raises build limits. The factory card always shows the next goal; `P` opens the details,
   including what the next tier still wants sold. The late game adds bauxite, aluminium,
   drones, rocket fuel and satellites, and ends at a launch complex.
+- **Consumer goods.** A side line with a second product for every tier, each from a machine of
+  its own: chairs (Workshop), lanterns (Industry), tires (Petrochemicals), phones (Electronics),
+  cars (Robotics) and airliners (Aerospace). They are built from parts the main line already
+  makes, use resources that would otherwise sit idle, and feed each other: chairs and tires go
+  into cars, phones into airliners.
 - **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
   before the deadline for about twice its value on top of the normal sale. Orders ask
   for things you can already make, sized to your current income, and newer products are
   asked for more often. Small parts (screws, rods) are only offered while income is small
   enough that an order stays a sane number of units. Don't like one? Swap it for a small fee.
-- **Goals.** 29 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
-  first robot, first satellite, a trillion earned…), each with a cash reward. The Progress
+- **Goals.** 35 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+  first robot, first car, first satellite, a trillion earned…), each with a cash reward. The Progress
   window shows the next four with progress bars.
 - **Per-building upgrades.** Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
@@ -180,7 +185,7 @@ their choice.
   an iron plate and a copper wire, and a Lab takes them off a belt and banks one every 4 seconds.
   The Research window (`L`) spends the bank on three bonuses for the whole factory, five levels
   each: drills +5%, market prices +5% and machines +10% a level, each level twice the packs of the
-  last. It never gates a tier, and packs sell for exactly their parts and are never ordered.
+  last. It never gates a tier, and packs sell for half their parts and are never ordered.
 - **While you were away.** The factory keeps running while the game is closed (the first ten
   minutes simulated in full, the rest worked out from them). After a break of two minutes or more,
   a window shows what it earned, each product's rate and share, and the buildings that sat waiting

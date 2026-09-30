@@ -56,12 +56,15 @@ public class ResearchTrialTests
     }
 
     [Fact]
-    public void A_pack_is_worth_its_parts_and_is_made_from_tier_1()
+    public void A_pack_sells_for_less_than_either_part_would_and_is_made_from_tier_1()
     {
         var v = C.ItemValue;
         Assert.True(C.Items["science_1"].Science);
         Assert.False(C.Items["science_1"].Raw);
-        Assert.Equal(v["iron_plate"].Value + v["copper_wire"].Value, v["science_1"].Value);
+        // The average of its parts: a depot's belt earns no more with packs on it than with plates or wire,
+        // so packs are made for research, never to sell.
+        Assert.Equal((v["iron_plate"].Value + v["copper_wire"].Value) / 2, v["science_1"].Value);
+        Assert.True(v["science_1"].Value <= Math.Max(v["iron_plate"].Value, v["copper_wire"].Value));
         Assert.Equal(1, v["science_1"].Tier);
         Assert.All(C.UpgradeList.Where(u => u.Packs.Length > 0), u => Assert.Equal(1, u.Tier));
     }

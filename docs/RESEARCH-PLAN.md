@@ -94,7 +94,9 @@ Two quirks worth knowing before content uses it:
 - `Goals.cs` offers contracts for any non-raw item of an unlocked tier with a value. Packs would show
   up as orders unless excluded.
 - `TierPacing.BestFactory` will sell a pack if it ever pays best. With `valueMultiplier: 1` it never
-  does (verified in section 6: pacing is unchanged with the packs added).
+  does (verified in section 6: pacing is unchanged with the packs added). (True of the greedy picker
+  of the time. The exact optimiser of 4.3.0 sold packs wherever depots were the limit, so packs now
+  sell for half their parts.)
 
 ---
 
@@ -313,7 +315,8 @@ Each block below shows only the arguments. The full command is `dotnet run --no-
 ```
 
 `science_3` is a light tier 3 pack (cable, gear, glass); `science_3h` a heavy one (frame, cable).
-`valueMultiplier: 1` means a pack is worth its parts and adds nothing when sold.
+`valueMultiplier: 1` means a pack is worth its parts and adds nothing when sold. (Shipped with 0.5 for
+two parts instead: at 1, two parts' worth in one unit sells better wherever depots are the limit.)
 
 ### Baseline, and packs do not disturb it
 

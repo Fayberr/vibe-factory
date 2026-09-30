@@ -83,7 +83,8 @@ A calculator over the content file, part of the headless CLI. Every later change
 against it instead of guessed:
 
 - `balance tiers` estimates how long each tier takes with the best factory its build limits
-  allow (a lower bound: no ramp-up, belt travel, orders or milestone rewards).
+  allow (a lower bound: no ramp-up, belt travel, orders or milestone rewards). Since 4.3.0 the
+  product mix is the exact optimum, a small linear program, not a greedy pick.
 - `balance items` lists value, sale price, where it is made, what uses it, and which ores its
   value comes from.
 - `balance item <name> [rate]` breaks down one production line: machines per step, ores per
@@ -136,6 +137,49 @@ buildings are dropped, and a machine whose chosen recipe is gone runs automatica
 More products and tiers on top of that tree. Adding a tier or product should stay a data change
 in `base.json`, with no code changes. Ideas not decided yet: ore deposits placed on the map by
 seed, alternative recipes, end-game megaprojects.
+
+**First drop: consumer goods (4.3.0).** A side line with one product and one machine a tier,
+built from parts the main line already makes, so every tier has a second thing worth selling:
+
+| Tier | Good | Machine | Made from | Share of the tier's income |
+|---|---|---|---|---|
+| Workshop | Chair | Carpenter | 4 planks, 1 iron plate | 43% |
+| Industry | Lantern | Lamp Works | glass, steel beam, 2 copper wire | 44% (34% at Petrochemicals) |
+| Petrochemicals | Tire | Tire Plant | 3 plastic, 1 steel beam | a car part only |
+| Electronics | Phone | Phone Factory | circuit board, battery, glass | 11% |
+| Robotics | Car | Car Plant | 2 motors, 4 tires, 2 chairs | 11% |
+| Aerospace | Airliner | Aircraft Works | 2 frames, 2 motors, 2 phones | 47% (11% at Space) |
+
+Each machine makes only its own product, so no existing machine on automatic changes what it
+makes, and no tier asks for a consumer good. Chairs use the logs that sat idle until crates,
+lanterns the coal that sat idle until steel. Cars and airliners multiply value by 5.5 (robots 4.5,
+drones 3.2) because chairs, tires and lanterns are few steps from the ore. Six goals come with it
+(50 chairs, 50 lanterns, 100 tires, first phone, first car, first airliner), and six item models.
+
+`balance tiers` at level 1, before and after:
+
+| | Basics | Workshop | Industry | Petrochem. | Electronics | Robotics | Aerospace | Space | Whole run |
+|---|---|---|---|---|---|---|---|---|---|
+| Before | $8 | $42 | $190 | $884 | $4.50K | $18.41K | $34.67K | $93.84K | 1d 11h |
+| After | $8 | $60 | $248 | $1.04K | $4.79K | $18.61K | $41.41K | $97.80K | 1d 6h |
+
+The longest wait, Aerospace to Space, went from 1d 6h to 1d 1h.
+
+Two fixes came out of measuring it:
+
+- **The balance tool picks the best mix exactly.** It used to add products greedily, the one
+  that earned most from what was left first, so a product capped by one resource never got its
+  share of a shared one: plates took all the iron before chairs, capped by logs, were looked at.
+  `TierPacing` now solves a small linear program (`LinearProgram`, simplex with Bland's rule, so
+  it is deterministic): one variable per product and depot, limited by every raw resource and
+  every depot's belt. On the old content it gives the same numbers to within 1%.
+- **Research packs sell for half their parts.** At `valueMultiplier: 1` two parts' worth rode in
+  one unit, which beats selling plates wherever depots are the limit (the exact optimiser sold
+  packs at Workshop). At 0.5 a belt of packs never earns more than a belt of plates or wire.
+
+To remove the drop, delete every `base.json` entry marked "Consumer goods" (6 items, 6 recipes,
+6 machines, 6 goals), put the tier descriptions back and delete `ConsumerGoodsTests.cs`; a test
+checks that every other item keeps its value and tier without it. The item models can stay.
 
 ### 5. Polish and belt look (done)
 
@@ -283,7 +327,9 @@ progress" in the architecture notes.
 
 ## Open questions
 
-- Step 4 (more content): which products and tiers to add on top of the tree.
+- Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it
+  and what to add after it, and which of the undecided ideas (ore deposits by seed, alternative
+  recipes, end-game megaprojects) is worth a first try.
 - Step 8 (multiplayer): the open items listed above, and when to start it.
 - Step 9 (byproducts): keep, extend or remove the trial after playing it.
 - Step 10 (research): keep, retune or remove the trial after playing it; whether a second pack

@@ -18,7 +18,8 @@
 │  Content ───── JSON packs → validated registry (tiers, items, buildings, recipes,   │
 │                placement rules)                                                     │
 │  Balance ───── the content as an economy: recipe book, production chains, tier      │
-│                pacing. Calculates only, never runs; used by the CLI's balance report │
+│                pacing (the best product mix exactly, a small linear program).       │
+│                Calculates only, never runs; used by the CLI's balance report        │
 │  Persistence ─ versioned JSON saves        View ─ shared path geometry, view models │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -285,8 +286,10 @@ of a choice, and the player spends the bank whenever they like in the Research w
 
 - **Packs.** `ItemDef.Science` (`"science": true`) marks a pack. It is made, sold and belted like any
   item and is never asked for in an order (orders skip it as they skip byproducts). The trial
-  recipe has `valueMultiplier: 1`, so a pack sells for exactly its parts and selling packs is never a
-  reason to make them. `balance items` lists packs on their own line and never as a dead end.
+  recipe has `valueMultiplier: 0.5`, so a pack sells for the average of its two parts: a depot's belt
+  earns no more with packs on it than with plates or wire, and selling packs is never a reason to make
+  them. (At 1 it was: two parts' worth in one unit wins wherever depots are the limit, which the exact
+  balance optimiser found in 4.3.0.) `balance items` lists packs on their own line and never as a dead end.
 - **The bank.** `World.Science` holds banked packs per item (`ScienceOf`, `CanPay`, internal
   `AddScience`/`PayScience`). It is saved as `SaveData.Science`, sorted by id, zero entries left out,
   so old saves load with an empty bank. A banked item the content no longer has is dropped with a
@@ -446,6 +449,15 @@ falling back, so the next save can't overwrite it with the older backup.
 ## Extending
 
 - **New building with existing behavior:** JSON only (footprint, ports, params, meta).
+- **New product:** JSON only for the item and its recipe, plus a machine to make it (a machine is
+  picked automatically only while it lists one recipe) and a model in `godot/scripts/Visual/ItemMeshes.cs`.
+- **New tier:** a `tiers` entry and items/buildings that name it. Tiers do not grow the map (land is
+  bought, see `Land`), so nothing else has to change.
+- **Optional content:** a drop a player may not want should be one entry per thing (item, recipe,
+  machine, goal) under a comment that names the drop, so it can be deleted as a set. Give each new
+  product its own machine so no existing machine on automatic changes what it makes, and add a test
+  that rebuilds the pack without it and checks every other item keeps its value and tier
+  (`tests/FactorySim.Tests/ConsumerGoodsTests.cs`, the consumer goods drop in 4.3.0).
 - **New behavior:** subclass `Behavior<TParams, TState>` and implement `Tick`,
   `TryAccept`, `CollectItems` and `GetStatus`. Validate params in `Bind`. Register
   it in `BehaviorRegistry`. Keep state plain and serializable, and keep randomness
