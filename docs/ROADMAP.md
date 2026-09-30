@@ -458,6 +458,16 @@ pays back. A building level switch shows how upgrades shrink the line. It is the
 math with a window on top, so the numbers always match `balance item`. Details: "The Planner" in
 the architecture notes.
 
+### 14. History graphs (done)
+
+Idea F2. The History window (key T) draws income, money or the production rate of any item made so
+far, over the last hour (a point every 30 seconds) or the last day (a point every 15 minutes). The
+points are saved with the statistics, so the graphs survive a restart, and an older save simply
+starts with empty graphs. Each point keeps its tick and running totals, so time away (which the
+catch-up only partly simulates) shows as one long step at the right average. The numbers to tune
+are the two intervals and capacities in `HistoryLog`. Details: "History graphs" in the architecture
+notes.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

@@ -53,6 +53,7 @@ public sealed partial class Simulation
             e.Behavior.Tick(_ctx, e);
         }
         World.Stats.EndTick(World.Tick);
+        World.Stats.History.EndTick(World, World.Tick);
         if (World.Goals && World.Tick % TicksPerSecond == 0) UpdateGoals();
         World.Tick++;
     }

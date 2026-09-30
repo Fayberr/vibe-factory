@@ -29,6 +29,12 @@ public sealed class StatsTracker
     /// </summary>
     public Dictionary<string, BigNum[]> EarnedBucketsByItem { get; set; } = new();
 
+    /// <summary>Lifetime order and goal rewards (part of <see cref="TotalEarned"/>, not of income). Missing in old saves, which then start at zero.</summary>
+    public BigNum RewardsEarned { get; set; }
+
+    /// <summary>Money, income and production over the last hour and day, for the History graphs. Missing in old saves.</summary>
+    public HistoryLog History { get; set; } = new();
+
     public void RecordSale(string item, long count, BigNum value)
     {
         TotalEarned += value;

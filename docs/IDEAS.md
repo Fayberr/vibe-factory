@@ -161,7 +161,8 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   retention value on this page. *Built in 4.2.0* (roadmap step 11): products with rates and
   earnings, and the buildings that waited, grouped by reason, each with a Show button.
 - **F2. History graphs (S).** Money, income and the production of a chosen item over time, from a
-  ring buffer. Progress you can see.
+  ring buffer. Progress you can see. *Built in 4.14.0* (roadmap step 14): the History window,
+  key T, with an hour and a day of saved points.
 - **F3. A bottleneck ranking (M).** "Your five biggest constraints right now", each one clickable to
   fly there. It is the question every player asks, and `EntityStatus` already computes the inputs.
   *Built in 4.11.0* (roadmap step 12): the Bottlenecks window, key K.

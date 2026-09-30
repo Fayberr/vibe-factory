@@ -48,12 +48,13 @@ public partial class Hud : CanvasLayer
     private HudWindow _buyWindow = null!;
     private Label _buyText = null!;
     private PlotId _buyPlot;
-    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!, _plannerWindow = null!;
+    private HudWindow _progressWindow = null!, _statsWindow = null!, _gameWindow = null!, _ordersWindow = null!, _researchWindow = null!, _awayWindow = null!, _bottleneckWindow = null!, _plannerWindow = null!, _historyWindow = null!;
     private OrdersPanel _orders = null!;
     private ResearchPanel _research = null!;
     private AwayReportPanel _away = null!;
     private BottleneckPanel _bottlenecks = null!;
     private PlannerPanel _planner = null!;
+    private HistoryPanel _history = null!;
     private bool _pinsShown;
     private Button _researchButton = null!;
     private readonly List<HudWindow> _openWindows = new(); // most recently opened last
@@ -91,6 +92,7 @@ public partial class Hud : CanvasLayer
     public BottleneckPanel Bottlenecks => _bottlenecks;
     public HudWindow PlannerWindow => _plannerWindow;
     public PlannerPanel Planner => _planner;
+    public HudWindow HistoryWindow => _historyWindow;
 
     public void Init(SimHost host, BuildController tools, Thumbnails thumbs)
     {
@@ -232,6 +234,7 @@ public partial class Hud : CanvasLayer
         col.AddChild(Keyed(Ui.IconButton(Icon.Stats, "", () => ToggleWindow(_statsWindow), 44), () => $"Statistics ({K("stats")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Gauge, "", () => ToggleWindow(_bottleneckWindow), 44), () => $"Bottlenecks: what keeps buildings waiting ({K("bottlenecks")})\n{K("diagnostics")} marks them in the world"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Chain, "", () => ToggleWindow(_plannerWindow), 44), () => $"Planner: what a production line needs ({K("planner")})"));
+        col.AddChild(Keyed(Ui.IconButton(Icon.Graph, "", () => ToggleWindow(_historyWindow), 44), () => $"History: money, income and output over time ({K("history")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Game, "", () => ToggleWindow(_gameWindow), 44), () => $"Game: save, speed, settings ({K("game_menu")})"));
         col.AddChild(Keyed(Ui.IconButton(Icon.Help, "", () => _help.Visible = !_help.Visible, 44), () => $"Controls ({K("help")})"));
         _root.AddChild(Ui.Anchor(Ui.Panel(col), 0, 0.5f, 12, 0, Control.GrowDirection.End, Control.GrowDirection.Both));
@@ -387,6 +390,12 @@ public partial class Hud : CanvasLayer
         _plannerWindow.Body.AddChild(_planner.Root);
         AddWindow(_plannerWindow);
 
+        _history = new HistoryPanel();
+        _historyWindow = new HudWindow("History", Icon.Graph, 460) { EscCloses = false };
+        _historyWindow.Body.AddChild(_history.Root);
+        AddWindow(_historyWindow);
+
+
         _stats = new StatsPanel();
         _statsWindow = new HudWindow("Statistics", Icon.Stats, 300) { EscCloses = false };
         _statsWindow.Body.AddChild(_stats.Root);
@@ -519,6 +528,7 @@ public partial class Hud : CanvasLayer
             : w == _awayWindow ? new Vector2(84, 70) // clear of the toasts at the top centre
             : w == _bottleneckWindow ? new Vector2(84 + 350, 70)
             : w == _plannerWindow ? new Vector2(84 + 350, 70)
+            : w == _historyWindow ? new Vector2(84 + 350, 70)
             : new Vector2(84 + 350 + 310, 70);
         w.Fit();
     }
@@ -565,7 +575,7 @@ public partial class Hud : CanvasLayer
             ("Wheel", "Zoom to cursor"), (K("progress"), "Progress: tiers, limits, goals"),
             (K("orders"), "Orders"), (K("research"), "Research"), (K("stats"), "Statistics"),
             (K("bottlenecks"), "Bottlenecks"), (K("diagnostics"), "Mark waiting buildings"),
-            (K("planner"), "Planner"),
+            (K("planner"), "Planner"), (K("history"), "History"),
             (K("pause"), "Pause the factory"), (K("game_menu"), "Game menu"),
             (K("help"), "This help"),
             ("Esc (nothing to cancel)", "Pause menu (windows stay open)"),
@@ -759,6 +769,9 @@ public partial class Hud : CanvasLayer
                 _toasts.Show(this, _bottlenecks.OverlayOn ? "Waiting buildings marked: yellow wait for input, red cannot get rid of their output" : "Marks off");
                 _refresh = 0;
                 break;
+            case var _ when Keybinds.Is(key, "history"):
+                ToggleWindow(_historyWindow);
+                break;
             case var _ when Keybinds.Is(key, "planner"):
                 ToggleWindow(_plannerWindow);
                 break;
@@ -881,7 +894,8 @@ public partial class Hud : CanvasLayer
         else if (_pinsShown) _tools.View.ShowDiagnostics(null);
         _pinsShown = _bottlenecks.OverlayOn;
         if (_plannerWindow.Visible) _planner.Refresh(_host.Sim, _thumbs);
-        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow, _plannerWindow })
+        if (_historyWindow.Visible) _history.Refresh(_host.Sim, _thumbs);
+        foreach (var w in new[] { _progressWindow, _statsWindow, _gameWindow, _ordersWindow, _researchWindow, _awayWindow, _bottleneckWindow, _plannerWindow, _historyWindow })
             if (w.Visible) w.Fit();
         _undo.Disabled = !_host.History.CanUndo;
         _redo.Disabled = !_host.History.CanRedo;

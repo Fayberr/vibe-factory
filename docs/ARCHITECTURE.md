@@ -591,6 +591,17 @@ income and build cost. Nothing is simulated, so the counts are the ideal ratio b
 bonuses. To remove it: `PlannerPanel`, its window and the `planner` key in `Hud`/`Keybinds`, and
 `LinePlanner.cs` with its tests.
 
+**History graphs** (idea F2, `UI/HistoryPanel` and `UI/LineGraph` over `World/HistoryLog`):
+`Simulation.Step` calls `HistoryLog.EndTick` after the statistics, which appends a point to the
+`Recent` series every 30 s and to the `Long` series every 15 min, each trimmed to its capacity (an
+hour and a day). A point is the tick, money, lifetime earnings, lifetime rewards
+(`StatsTracker.RewardsEarned`) and the units of each item made since the point before, so income
+between two points is the earnings difference less rewards over the ticks between them: the
+factory card's sales income, and right across the offline skip. The log is a property of `StatsTracker`,
+so it is saved with it, and a save without it loads with empty series. To remove it: those three
+files, the `History` property and its call in `Simulation.Step`, the window and the `history` key
+in `Hud`/`Keybinds`, the `Graph` icon, and `HistoryTests.cs`.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

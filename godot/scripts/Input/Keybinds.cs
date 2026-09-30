@@ -41,6 +41,7 @@ public static class Keybinds
         new("bottlenecks", "Bottlenecks", Key.K, "Windows"),
         new("diagnostics", "Mark waiting buildings", Key.J, "Windows"),
         new("planner", "Planner", Key.H, "Windows"),
+        new("history", "History", Key.T, "Windows"),
         new("game_menu", "Game menu", Key.G, "Windows"),
         new("help", "Help", Key.F1, "Windows"),
         new("pause", "Pause the factory", Key.Space, "Windows"),

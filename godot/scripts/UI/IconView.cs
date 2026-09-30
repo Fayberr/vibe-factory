@@ -31,6 +31,7 @@ public enum Icon
     Orders,
     Research,
     Chain,
+    Graph,
 }
 
 /// <summary>Crisp vector icons drawn in code on a 24×24 grid (no image assets needed).</summary>
@@ -224,6 +225,14 @@ public partial class IconView : Control
                 L(6, 12, 18, 12, 1.8f);
                 L(6, 12, 6, 16, 1.8f);
                 L(18, 12, 18, 16, 1.8f);
+                break;
+            case Icon.Graph:
+                // Axes with a rising line across them.
+                L(4, 3, 4, 20, 1.8f);
+                L(4, 20, 21, 20, 1.8f);
+                L(6, 16, 10.5f, 11, 1.8f);
+                L(10.5f, 11, 14, 14, 1.8f);
+                L(14, 14, 20, 6, 1.8f);
                 break;
             case Icon.Research:
                 // A flask with liquid in it.

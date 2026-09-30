@@ -120,6 +120,11 @@ public partial class Main : Node3D
                 host.Sim.World.Sandbox = false;
                 hud.ResearchWindow.Visible = true;
             }
+            if (arg == "--history")
+            {
+                // The History window (the demo factory fills it after half a minute; use --wait=40).
+                hud.HistoryWindow.Visible = true;
+            }
             if (arg.StartsWith("--planner"))
             {
                 // The Planner window, on an item if given (--planner=steel).

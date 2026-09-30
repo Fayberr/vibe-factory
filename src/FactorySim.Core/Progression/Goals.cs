@@ -118,6 +118,7 @@ public sealed partial class Simulation
     {
         World.AddMoney(amount);
         World.Stats.TotalEarned += amount; // counts toward tiers, not toward the income rate
+        World.Stats.RewardsEarned += amount;
     }
 
     /// <summary>
