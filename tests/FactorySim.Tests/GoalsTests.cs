@@ -134,6 +134,9 @@ public class GoalsTests
         Assert.Equal(6, v["drone"].Tier);
         Assert.Equal(7, v["satellite"].Tier);
         Assert.True(v["satellite"].Value > 2 * v["drone"].Value);
-        Assert.Equal(8, TestUtil.Content.Tiers.Count);
+        // Orbital tier (4.13.0): a ninth tier after Space, ending in stations built around a satellite.
+        Assert.Equal(8, v["orbital_station"].Tier);
+        Assert.True(v["orbital_station"].Value > 2 * v["satellite"].Value);
+        Assert.Equal(9, TestUtil.Content.Tiers.Count);
     }
 }

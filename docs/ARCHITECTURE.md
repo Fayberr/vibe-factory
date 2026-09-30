@@ -200,7 +200,7 @@ underneath. Lifts and multi-level machines use the same mechanism.
   Manage window shows it, and a test checks that each tier's best product is worth at
   least double the last. Every ore is worth $1, so an item's value is the work in it.
 - **Recipe tree.** `base.json` holds one connected tree: shared parts feed many recipes and
-  only the final main-line product (the deep-space probe) is sold and used in nothing. Optional
+  only the final main-line products (the deep-space probe and the orbital station) are sold and used in nothing. Optional
   consumer goods and industrial exports are deliberate sell-only leaves. Tests walk the tree to
   check that: no recipe cycle, no dead end, one late product pulls every raw resource
   through the factory, and every machine's `inputCapacity` can hold the inputs of all its
@@ -306,6 +306,24 @@ Every entry is marked "Deep-space probes" in `base.json`. To remove the incremen
 recipe, building and goal, delete `tests/FactorySim.Tests/DeepSpaceProbeTests.cs`, remove the
 `space_probe` item mesh case, and restore the two main recipe-tree test expectations from
 `space_probe` to `satellite`. The removal test proves all earlier content and item values are unchanged.
+
+### Orbital tier
+
+The 4.13.0 content drop adds a ninth tier after Space, as data only. Orbital opens with 25
+satellites, $12 billion earned and a $5 billion price, and brings one new ore and four machines,
+each with a recipe of its own so no existing machine's automatic choice changes: a Titanium Mine,
+an Arc Furnace (2 titanium ore and coal to titanium, like aluminium), Solar Works (2 glass, a
+circuit board and aluminium to a solar panel), a Module Yard (4 titanium, 2 panels and a robot to a
+habitat module) and a Station Dock (2 modules, a satellite and 4 rocket fuel to an orbital
+station). Stations are worth about eight satellites, the most of any good. Three goals come with it.
+
+Every entry is marked "Orbital tier" in `base.json`. To remove it, delete those entries (the tier,
+five items, four recipes, five buildings, three goals), delete `OrbitalTierTests.cs` and the three
+item mesh cases (`solar_panel`, `module`, `station`), and put back the Space-era test expectations
+(`GoalsTests` back to 8 tiers, the dead ends back to `space_probe` alone, the raw-resource chain back
+to `satellite`, and the probe test's Space index back to the last tier). A saved game past Space
+would lose the tier on load, so remove it only before release. The removal test proves every earlier
+item, recipe, building, goal, tier income and item value is unchanged.
 
 ### Industrial exports
 

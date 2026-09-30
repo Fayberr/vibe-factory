@@ -36,6 +36,10 @@ public static class ItemMeshes
         "tire" => 0.075f,
         "phone" => 0.012f,
         "plane" => 0.04f,
+        // Orbital tier (4.13.0)
+        "solar_panel" => 0.02f,
+        "module" => 0.07f,
+        "station" => 0.045f,
         _ => 0.11f,
     };
 
@@ -184,6 +188,29 @@ public static class ItemMeshes
                 break;
             case "plane":
                 Plane(mb, mat);
+                break;
+            // Orbital tier (4.13.0): delete these three cases with the tier.
+            case "solar_panel":
+                // A flat frame with the cells a step above it, split by two thin bars.
+                mb.Box(mat, Vector3.Zero, new Vector3(0.17f, 0.018f, 0.13f), 0.004f);
+                mb.Box(mat, new Vector3(0, 0.011f, 0), new Vector3(0.155f, 0.004f, 0.115f), 0.001f);
+                foreach (float x in new[] { -0.026f, 0.026f })
+                    mb.Box(mat, new Vector3(x, 0.014f, 0), new Vector3(0.006f, 0.003f, 0.115f), 0f);
+                break;
+            case "module":
+                // A lying habitat drum with a docking collar at each end and a window band on top.
+                LyingCylinder(mb, mat, Vector3.Zero, 0.065f, 0.13f, 14);
+                LyingCylinder(mb, mat, new Vector3(0.075f, 0, 0), 0.035f, 0.02f, 10);
+                LyingCylinder(mb, mat, new Vector3(-0.075f, 0, 0), 0.035f, 0.02f, 10);
+                mb.Box(mat, new Vector3(0, 0.062f, 0), new Vector3(0.08f, 0.012f, 0.03f), 0.003f);
+                break;
+            case "station":
+                // Two drums on a spine with a panel wing to each side.
+                LyingCylinder(mb, mat, new Vector3(-0.045f, 0, 0), 0.04f, 0.075f, 12);
+                LyingCylinder(mb, mat, new Vector3(0.045f, 0, 0), 0.04f, 0.075f, 12);
+                mb.Box(mat, Vector3.Zero, new Vector3(0.02f, 0.02f, 0.2f), 0.002f);
+                foreach (float z in new[] { -0.08f, 0.08f })
+                    mb.Box(mat, new Vector3(0, 0, z), new Vector3(0.12f, 0.006f, 0.045f), 0.001f);
                 break;
             default:
                 mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.18f, 0.18f), 0.03f);

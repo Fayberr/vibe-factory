@@ -42,7 +42,7 @@ public sealed class PlannerPanel
         {
             if (key == null) return;
             _chosen = key;
-            _item.SetSelected(key, false);
+            _item!.SetSelected(key, false); // the picker exists by the time it calls back
             _shown = "";
         });
         grid.AddChild(_item.Button);

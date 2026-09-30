@@ -42,7 +42,10 @@
     { "name": "Aerospace",      "description": "Bauxite, aluminium, drones and airliners.",                       "cost": 1.2e8, "requiredEarnings": 2.5e8,
       "deliver": [ { "item": "robot", "count": 40 } ] },
     { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 2e9,   "requiredEarnings": 4e9,
-      "deliver": [ { "item": "drone", "count": 30 } ] }
+      "deliver": [ { "item": "drone", "count": 30 } ] },
+    // Orbital tier (content drop, 4.13.0): delete every entry marked "Orbital tier" to remove it.
+    { "name": "Orbital",        "description": "Titanium, solar panels, habitat modules and orbital stations.",  "cost": 5e9,   "requiredEarnings": 1.2e10,
+      "deliver": [ { "item": "satellite", "count": 25 } ] }
   ],
 
   // Every ore is worth the same $1. Nothing else has a base value: it all comes from processing.
@@ -82,6 +85,13 @@
     { "id": "satellite",    "name": "Satellite",    "baseValue": 0,               "meta": { "color": "#dfe8f2", "shape": "satellite" } },
     // Deep-space probes (content drop, 4.6.0): delete every entry marked "Deep-space probes" to remove it.
     { "id": "space_probe",  "name": "Deep-Space Probe", "baseValue": 0,             "meta": { "color": "#77c8ff", "shape": "space_probe" } },
+    // Orbital tier (content drop, 4.13.0): a ninth tier after Space. A new ore, one metal from it, a panel
+    // and a module from parts the factory already makes, and a station at the end of the line.
+    { "id": "titanium_ore", "name": "Titanium Ore", "baseValue": 1, "raw": true, "meta": { "color": "#8e9bab", "shape": "rock" } },
+    { "id": "titanium",     "name": "Titanium",     "baseValue": 0,               "meta": { "color": "#b8c4d4", "shape": "ingot" } },
+    { "id": "solar_panel",  "name": "Solar Panel",  "baseValue": 0,               "meta": { "color": "#2f4f9e", "shape": "solar_panel" } },
+    { "id": "habitat_module", "name": "Habitat Module", "baseValue": 0,           "meta": { "color": "#e6ebf2", "shape": "module" } },
+    { "id": "orbital_station", "name": "Orbital Station", "baseValue": 0,         "meta": { "color": "#cfd9e6", "shape": "station" } },
     // Byproduct trial (see "Byproducts" in docs/ARCHITECTURE.md): tar comes out of cracking crude oil
     // next to plastic, and a blast furnace burns it instead of coal. "byproduct" keeps it out of orders.
     { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } },
@@ -146,6 +156,12 @@
     { "id": "make_satellite", "inputs": [ { "item": "drone", "count": 1 }, { "item": "jewelry", "count": 2 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "satellite", "count": 1 } ], "ticks": 120, "valueMultiplier": 2.0 },
     // Deep-space probes (content drop, 4.6.0): an optional final use for satellites, with a modest value gain.
     { "id": "make_space_probe", "inputs": [ { "item": "satellite", "count": 1 }, { "item": "circuit", "count": 2 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "space_probe", "count": 1 } ], "ticks": 160, "valueMultiplier": 1.5 },
+    // Orbital tier (content drop, 4.13.0): titanium like aluminium, panels from glass, circuits and aluminium,
+    // a module crewed by a robot, and a station from two modules, a satellite and fuel to lift it.
+    { "id": "make_titanium", "inputs": [ { "item": "titanium_ore", "count": 2 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "titanium", "count": 1 } ], "ticks": 40, "valueMultiplier": 3.5 },
+    { "id": "make_solar_panel", "inputs": [ { "item": "glass", "count": 2 }, { "item": "circuit", "count": 1 }, { "item": "aluminium", "count": 1 } ], "outputs": [ { "item": "solar_panel", "count": 1 } ], "ticks": 60, "valueMultiplier": 3 },
+    { "id": "make_habitat_module", "inputs": [ { "item": "titanium", "count": 4 }, { "item": "solar_panel", "count": 2 }, { "item": "robot", "count": 1 } ], "outputs": [ { "item": "habitat_module", "count": 1 } ], "ticks": 120, "valueMultiplier": 4 },
+    { "id": "make_orbital_station", "inputs": [ { "item": "habitat_module", "count": 2 }, { "item": "satellite", "count": 1 }, { "item": "rocket_fuel", "count": 4 } ], "outputs": [ { "item": "orbital_station", "count": 1 } ], "ticks": 200, "valueMultiplier": 3.5 },
     // Byproduct trial. A craft's value is split evenly over all its output units, so both recipes are
     // tuned to make exactly what the plain recipes make: plastic $1 and steel $7.5, and tar $1 like the
     // coal it replaces. Cracking gives less plastic per oil (1.5 against 2) but works through oil 50%
@@ -462,6 +478,45 @@
       "meta": { "model": "launchpad", "accent": "#77c8ff", "glyph": "p", "description": "Fits a satellite with 2 circuit boards and 2 rocket fuel for a deep-space mission." }
     },
 
+    // ---- Orbital tier (content drop, 4.13.0) --------------------------------------------------
+    // One extractor and four machines, each with its own recipe, so no existing machine changes what it makes.
+    {
+      "id": "titanium_mine", "name": "Titanium Mine", "behavior": "miner", "cost": 3e8, "category": "production", "tier": 8,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "limit": { "base": 2, "perTier": 2 },
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "titanium_ore", "interval": 40, "amount": 1 },
+      "meta": { "model": "drill", "accent": "#8e9bab", "glyph": "T", "description": "Mines titanium ore: 1 every 2 s." }
+    },
+    {
+      "id": "arc_furnace", "name": "Arc Furnace", "behavior": "processor", "cost": 6e8, "category": "processing", "tier": 8,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_titanium" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "furnace", "accent": "#b8c4d4", "glyph": "a", "description": "Reduces 2 titanium ore with coal into titanium (3.5× value)." }
+    },
+    {
+      "id": "solar_works", "name": "Solar Works", "behavior": "processor", "cost": 1e9, "category": "crafting", "tier": 8,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_solar_panel" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#3a64c8", "glyph": "o", "description": "Lays 2 glass over a circuit board in an aluminium frame: a solar panel." }
+    },
+    {
+      "id": "module_yard", "name": "Module Yard", "behavior": "processor", "cost": 2e9, "category": "crafting", "tier": 8,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_habitat_module" ], "inputCapacity": 10, "outputCapacity": 4 },
+      "meta": { "model": "assembler", "accent": "#e6ebf2", "glyph": "h", "description": "Builds a habitat module from 4 titanium and 2 solar panels, with a robot to run it." }
+    },
+    {
+      "id": "station_dock", "name": "Station Dock", "behavior": "processor", "cost": 4e9, "category": "crafting", "tier": 8,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_orbital_station" ], "inputCapacity": 10, "outputCapacity": 4 },
+      "meta": { "model": "launchpad", "accent": "#cfd9e6", "glyph": "O", "description": "Joins 2 habitat modules and a satellite into an orbital station, with 4 rocket fuel to lift it." }
+    },
+
     // ---- Industrial exports (content drop, 4.7.0) -------------------------------------------
     // Dedicated machines keep the products optional and leave existing automatic recipe lists unchanged.
     {
@@ -647,6 +702,10 @@
     { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },
     // Deep-space probes (content drop, 4.6.0): delete with the item, recipe and Probe Works.
     { "id": "space_probe_1", "name": "Beyond orbit",      "description": "Launch your first deep-space probe.",    "kind": "produced",  "item": "space_probe", "target": 1, "reward": 3e9 },
+    // Orbital tier (content drop, 4.13.0): delete with the tier, items, recipes and machines.
+    { "id": "titanium_200", "name": "Light and strong",  "description": "Produce 200 titanium.",                   "kind": "produced",  "item": "titanium", "target": 200, "reward": 4e9 },
+    { "id": "habitat_module_1", "name": "Room with a view", "description": "Build your first habitat module.",  "kind": "produced",  "item": "habitat_module", "target": 1, "reward": 6e9 },
+    { "id": "orbital_station_1", "name": "Home in orbit", "description": "Launch your first orbital station.",   "kind": "produced",  "item": "orbital_station", "target": 1, "reward": 1.5e10 },
     { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 }
   ]
 }

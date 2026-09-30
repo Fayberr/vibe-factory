@@ -67,7 +67,7 @@ public class RecipeTreeTests
         var used = UsedIn();
         var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science
             && !ConsumerGoodsTests.Items.Contains(id) && !MidGameExportsTests.Items.Contains(id)).ToList();
-        Assert.Equal(new[] { "space_probe" }, deadEnds);
+        Assert.Equal(new[] { "space_probe", "orbital_station" }, deadEnds); // probes are sold, stations end the Orbital tier
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class RecipeTreeTests
     public void One_late_product_pulls_every_raw_resource_through_the_factory()
     {
         var book = RecipeBook.Create(C, new BalanceAssumptions { Level = 1 }, C.Tiers.Count - 1);
-        var chain = ProductionChain.For(book, "satellite");
+        var chain = ProductionChain.For(book, "orbital_station");
         var raws = C.Items.Values.Where(i => i.Raw).Select(i => i.Id).ToHashSet();
         Assert.Equal(raws, chain.RawPerSecond.Keys.ToHashSet());
         Assert.True(chain.Depth >= 8);

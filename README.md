@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-eight tiers, customer orders and 39 goals, and settings in four tabs:
+nine tiers, customer orders and 42 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -162,12 +162,16 @@ their choice.
 
 ## Progression and balance
 
-- **Tiers.** Eight tiers (Basics, Workshop, Industry, Petrochemicals, Electronics,
-  Robotics, Aerospace, Space). Each needs lifetime earnings, a delivery of goods the tier
+- **Tiers.** Nine tiers (Basics, Workshop, Industry, Petrochemicals, Electronics,
+  Robotics, Aerospace, Space, Orbital). Each needs lifetime earnings, a delivery of goods the tier
   before makes (from Industry on) and a price, unlocks new extractors and machines and
   raises build limits. The factory card always shows the next goal; `P` opens the details,
   including what the next tier still wants sold. The late game adds bauxite, aluminium,
-  drones, rocket fuel and satellites, and ends at a launch complex.
+  drones, rocket fuel and satellites, and a launch complex.
+- **Orbital.** The ninth tier, opened with 25 satellites: a titanium mine and an arc furnace,
+  solar panels from glass, circuit boards and aluminium, habitat modules crewed by a robot, and
+  orbital stations built from two modules, a satellite and rocket fuel, the most valuable good
+  in the game.
 - **Consumer goods.** A side line with a second product for every tier, each from a machine of
   its own: chairs (Workshop), lanterns (Industry), tires (Petrochemicals), phones (Electronics),
   cars (Robotics) and airliners (Aerospace). They are built from parts the main line already
@@ -189,9 +193,9 @@ their choice.
   enough that an order stays a sane number of units. The optional Workshop supplies order combines
   iron plates, copper wire and planks, and pays 75% of their base content value. Don't like one?
   Swap it for a small fee.
-- **Goals.** 39 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+- **Goals.** 42 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   a sustained steel production challenge, first robot, first car, first satellite, first
-  deep-space probe, a trillion earned...), each with a cash reward. The Progress window shows
+  deep-space probe, first orbital station, a trillion earned...), each with a cash reward. The Progress window shows
   the next four with progress bars.
 - **Per-building upgrades.** Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
@@ -224,7 +228,7 @@ their choice.
   newer tier builds on the old chains instead of replacing them. Parts feed many recipes
   (plates, rods, screws and gears go into crates, frames, toys, motors and robots), and the
   old dead ends are ingredients now: crates pack toys, toys are robot bodies, jewelry goes
-  into satellites, and satellites go into deep-space probes. A robot is worth thousands of iron ore.
+  into satellites, and satellites go into deep-space probes and orbital stations. A robot is worth thousands of iron ore.
 - **Disposal is optional and earns nothing.** The Incinerator destroys anything fed into it, so a
   surplus can keep flowing without becoming a source of money. It does not change recipe values,
   tier income or the balance tool's pacing estimates.

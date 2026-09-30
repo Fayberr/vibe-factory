@@ -261,6 +261,37 @@ To remove the drop, delete the single `contractBundles` entry marked "Mixed cust
 stay. The removal test proves every previous item, recipe, building, tier, goal, upgrade and item value
 remains unchanged.
 
+**Seventh drop: the Orbital tier (4.13.0).** A ninth tier after Space, opened with 25 satellites,
+$12 billion earned and a $5 billion price. It adds titanium ore and four machines, each with its
+own recipe:
+
+| Machine | Makes | From | Value |
+|---|---|---|---|
+| Titanium Mine | Titanium Ore | the ground, 1 every 2 s | $1 |
+| Arc Furnace | Titanium | 2 titanium ore, coal (×3.5) | $10.5 |
+| Solar Works | Solar Panel | 2 glass, circuit board, aluminium (×3) | $200 |
+| Module Yard | Habitat Module | 4 titanium, 2 solar panels, robot (×4) | $37.5K |
+| Station Dock | Orbital Station | 2 habitat modules, satellite, 4 rocket fuel (×3.5) | $465K |
+
+A station is worth about eight satellites and uses three robots (two modules and the satellite), so
+it is the best use of the late chain without making satellites pointless: `balance tiers` sells
+satellites and stations about half and half. Three goals (200 titanium, the first module, the first
+station).
+
+`balance tiers`, before and after:
+
+| | Space income | Orbital income | Space to Orbital | Whole run |
+|---|---|---|---|---|
+| Level 1, before | $105.03K | - | - | 1d 6h |
+| Level 1, after | $105.03K | $182.74K | 1d 6h | 2d 13h |
+| Level 5, before | $2.01M | - | - | 4h 0m |
+| Level 5, after | $2.01M | $3.35M | 13h 17m | 17h 17m |
+
+Every earlier tier is unchanged. The new wait is about as long as the one before it at level 1
+(Aerospace to Space, 1d 1h); at level 5 it is mostly the Space factory's own setup cost, which the
+balance tool counts in full. The numbers to tune are the tier's `cost` and `requiredEarnings` and
+the two top multipliers. To remove it, see "Orbital tier" in the architecture notes.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

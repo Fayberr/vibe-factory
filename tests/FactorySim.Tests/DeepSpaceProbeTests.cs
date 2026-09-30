@@ -46,8 +46,10 @@ public class DeepSpaceProbeTests
         var without = Without();
         var withPacing = TierPacing.Estimate(C, new BalanceAssumptions { Level = 1 });
         var withoutPacing = TierPacing.Estimate(without, new BalanceAssumptions { Level = 1 });
-        Assert.Equal(withoutPacing[^1].CumulativeSeconds, withPacing[^1].CumulativeSeconds, 6);
-        Assert.InRange(withPacing[^1].IncomePerSecond, withoutPacing[^1].IncomePerSecond, withoutPacing[^1].IncomePerSecond * 1.25);
+        // Space, not the last tier: the Orbital tier (4.13.0) comes after it, and probes do speed that one up.
+        int space = C.Tiers.ToList().FindIndex(t => t.Name == "Space");
+        Assert.Equal(withoutPacing[space - 1].CumulativeSeconds, withPacing[space - 1].CumulativeSeconds, 6); // a row's total includes its own wait
+        Assert.InRange(withPacing[space].IncomePerSecond, withoutPacing[space].IncomePerSecond, withoutPacing[space].IncomePerSecond * 1.25);
         Assert.True(C.ItemValue["space_probe"].Value > C.ItemValue["satellite"].Value);
     }
 
