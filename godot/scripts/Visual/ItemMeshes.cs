@@ -29,7 +29,7 @@ public static class ItemMeshes
         "battery" => 0.09f,
         "motor" => 0.08f,
         "gem" => 0.1f,
-        "toy" or "robot" or "satellite" => 0.01f,
+        "toy" or "robot" or "satellite" or "space_probe" => 0.01f,
         "drone" => 0.04f,
         "flask" => 0.08f,
         "chair" or "lantern" or "car" => 0.01f,
@@ -142,6 +142,12 @@ public static class ItemMeshes
                 break;
             case "satellite":
                 Satellite(mb, mat);
+                break;
+            case "space_probe":
+                mb.Box(mat, Vector3.Zero, new Vector3(0.12f, 0.09f, 0.08f), 0.008f);
+                mb.Box(mat, new Vector3(0, 0.015f, 0), new Vector3(0.035f, 0.025f, 0.17f), 0.002f);
+                LyingCylinder(mb, mat, new Vector3(-0.06f, 0, 0), 0.022f, 0.05f, 8);
+                LyingCylinder(mb, mat, new Vector3(0.06f, 0, 0), 0.018f, 0.05f, 8);
                 break;
             case "flask":
                 // A science pack: a round-shouldered flask with a neck and a stopper.

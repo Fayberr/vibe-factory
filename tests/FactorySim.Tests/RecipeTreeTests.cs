@@ -66,7 +66,7 @@ public class RecipeTreeTests
         // only sold (ConsumerGoodsTests), so both are dead ends by design. The main line has one.
         var used = UsedIn();
         var deadEnds = C.Items.Keys.Where(id => !used.ContainsKey(id) && !C.Items[id].Science && !ConsumerGoodsTests.Items.Contains(id)).ToList();
-        Assert.Equal(new[] { "satellite" }, deadEnds);
+        Assert.Equal(new[] { "space_probe" }, deadEnds);
     }
 
     [Fact]
@@ -84,6 +84,7 @@ public class RecipeTreeTests
         Assert.Contains(C.Recipes.Values, r => r.Id == "make_toy" && r.Inputs.Any(i => i.Item == "crate"));   // crates pack toys
         Assert.Contains(C.Recipes.Values, r => r.Id == "make_robot" && r.Inputs.Any(i => i.Item == "toy"));   // toys are robot bodies
         Assert.Contains(C.Recipes.Values, r => r.Id == "make_satellite" && r.Inputs.Any(i => i.Item == "jewelry")); // jewelry is a part
+        Assert.Contains(C.Recipes.Values, r => r.Id == "make_space_probe" && r.Inputs.Any(i => i.Item == "satellite")); // probes extend the space chain
     }
 
     [Theory]

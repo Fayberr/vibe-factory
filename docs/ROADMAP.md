@@ -193,6 +193,21 @@ To remove the drop, delete the single `base.json` entry marked "Incinerator" and
 `IncineratorTests.cs`; the dormant general behavior may stay for content packs. The removal test
 proves every previous item, recipe, building, tier, goal, upgrade and item value remains unchanged.
 
+**Third drop: deep-space probes (4.6.0).** The Space-tier Probe Works turns one satellite, two circuit
+boards and two rocket fuel into one deep-space probe. This is an optional final sale, not a tier
+delivery, so satellites keep mattering after the Launch Complex without moving any progression gate.
+The Probe Works has only this recipe, which leaves every existing machine's automatic choice alone.
+
+At level 1 the eight tier incomes before the drop were $8, $60.2, $247.6, $1.04K, $4.79K, $18.61K,
+$41.41K and $97.80K per second, with a whole-run estimate of 1d 6h. After the drop they are $8,
+$60.2, $247.6, $1.04K, $4.79K, $18.61K, $41.41K and $105.03K. Earlier tiers and the whole-run
+estimate are unchanged, while Space income rises 7.4%.
+
+To remove the drop, delete every `base.json` entry marked "Deep-space probes" (one item, recipe,
+machine and goal), delete `DeepSpaceProbeTests.cs`, remove the `space_probe` mesh case, and restore
+the recipe-tree dead-end expectations to `satellite`. The removal test proves every previous item,
+recipe, building, tier, goal, upgrade and item value remains unchanged.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

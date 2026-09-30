@@ -80,6 +80,8 @@
     { "id": "drone",        "name": "Drone",        "baseValue": 0,               "meta": { "color": "#ffb13b", "shape": "drone" } },
     { "id": "rocket_fuel",  "name": "Rocket Fuel",  "baseValue": 0,               "meta": { "color": "#8ae05a", "shape": "barrel" } },
     { "id": "satellite",    "name": "Satellite",    "baseValue": 0,               "meta": { "color": "#dfe8f2", "shape": "satellite" } },
+    // Deep-space probes (content drop, 4.6.0): delete every entry marked "Deep-space probes" to remove it.
+    { "id": "space_probe",  "name": "Deep-Space Probe", "baseValue": 0,             "meta": { "color": "#77c8ff", "shape": "space_probe" } },
     // Byproduct trial (see "Byproducts" in docs/ARCHITECTURE.md): tar comes out of cracking crude oil
     // next to plastic, and a blast furnace burns it instead of coal. "byproduct" keeps it out of orders.
     { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } },
@@ -137,6 +139,8 @@
     { "id": "make_drone", "inputs": [ { "item": "frame", "count": 1 }, { "item": "aluminium", "count": 2 }, { "item": "robot", "count": 1 } ], "outputs": [ { "item": "drone", "count": 1 } ], "ticks": 90, "valueMultiplier": 3.2 },
     { "id": "make_fuel", "inputs": [ { "item": "crude_oil", "count": 2 }, { "item": "coal", "count": 1 } ], "outputs": [ { "item": "rocket_fuel", "count": 1 } ], "ticks": 40, "valueMultiplier": 4 },
     { "id": "make_satellite", "inputs": [ { "item": "drone", "count": 1 }, { "item": "jewelry", "count": 2 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "satellite", "count": 1 } ], "ticks": 120, "valueMultiplier": 2.0 },
+    // Deep-space probes (content drop, 4.6.0): an optional final use for satellites, with a modest value gain.
+    { "id": "make_space_probe", "inputs": [ { "item": "satellite", "count": 1 }, { "item": "circuit", "count": 2 }, { "item": "rocket_fuel", "count": 2 } ], "outputs": [ { "item": "space_probe", "count": 1 } ], "ticks": 160, "valueMultiplier": 1.5 },
     // Byproduct trial. A craft's value is split evenly over all its output units, so both recipes are
     // tuned to make exactly what the plain recipes make: plastic $1 and steel $7.5, and tar $1 like the
     // coal it replaces. Cracking gives less plastic per oil (1.5 against 2) but works through oil 50%
@@ -439,6 +443,14 @@
       "params": { "recipes": [ "make_satellite" ], "inputCapacity": 8, "outputCapacity": 4 },
       "meta": { "model": "launchpad", "accent": "#ff8a3d", "glyph": "s", "description": "Assembles satellites from a drone, 2 jewelry and 2 rocket fuel." }
     },
+    // Deep-space probes (content drop, 4.6.0): its own machine keeps Launch Complex automation unchanged.
+    {
+      "id": "probe_works", "name": "Probe Works", "behavior": "processor", "cost": 5e7, "category": "crafting", "tier": 7,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_space_probe" ], "inputCapacity": 8, "outputCapacity": 4 },
+      "meta": { "model": "launchpad", "accent": "#77c8ff", "glyph": "p", "description": "Fits a satellite with 2 circuit boards and 2 rocket fuel for a deep-space mission." }
+    },
 
     // ---- Consumer goods (content drop, 4.3.0) ----------------------------------------------
     // One machine a tier for the side line; each makes only its own product, so none of them changes
@@ -595,6 +607,8 @@
     { "id": "sold_1m",      "name": "World market",      "description": "Sell a million items.",                  "kind": "sold",      "target": 1e6,    "reward": 2e8 },
     { "id": "earn_10b",     "name": "Mogul",             "description": "Earn $10 billion in total.",             "kind": "earned",    "target": 1e10,   "reward": 1.5e9 },
     { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },
+    // Deep-space probes (content drop, 4.6.0): delete with the item, recipe and Probe Works.
+    { "id": "space_probe_1", "name": "Beyond orbit",      "description": "Launch your first deep-space probe.",    "kind": "produced",  "item": "space_probe", "target": 1, "reward": 3e9 },
     { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 }
   ]
 }

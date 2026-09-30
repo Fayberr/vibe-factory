@@ -196,7 +196,7 @@ underneath. Lifts and multi-level machines use the same mechanism.
   Manage window shows it, and a test checks that each tier's best product is worth at
   least double the last. Every ore is worth $1, so an item's value is the work in it.
 - **Recipe tree.** `base.json` holds one connected tree: shared parts feed many recipes and
-  only the final product (the satellite) is sold and used in nothing. Tests walk the tree to
+  only the final main-line product (the deep-space probe) is sold and used in nothing. Tests walk the tree to
   check that: no recipe cycle, no dead end, one late product pulls every raw resource
   through the factory, and every machine's `inputCapacity` can hold the inputs of all its
   recipes (`ProcessorBehavior.Bind` refuses one that cannot, which would idle the machine).
@@ -289,6 +289,18 @@ purchase is the small disposal cost; sending the same item to a depot is always 
 To remove the increment, delete the one `base.json` building entry marked "Incinerator" and delete
 `tests/FactorySim.Tests/IncineratorTests.cs`. The registered behavior can stay dormant for external
 content packs. No item, recipe, tier, goal or balance value refers to the building.
+
+### Deep-space probes
+
+The 4.6.0 content drop reconnects the main recipe tree's last dead end. At Space, the optional Probe
+Works takes one satellite, two circuit boards and two rocket fuel and makes a deep-space probe. It
+has its own machine, so adding it does not change the Launch Complex's automatic recipe choice. No
+tier delivery asks for probes, and the one goal is a reward rather than a gate.
+
+Every entry is marked "Deep-space probes" in `base.json`. To remove the increment, delete that item,
+recipe, building and goal, delete `tests/FactorySim.Tests/DeepSpaceProbeTests.cs`, remove the
+`space_probe` item mesh case, and restore the two main recipe-tree test expectations from
+`space_probe` to `satellite`. The removal test proves all earlier content and item values are unchanged.
 
 ### Research
 

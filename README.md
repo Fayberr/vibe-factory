@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-eight tiers, customer orders and 35 goals, and settings in four tabs:
+eight tiers, customer orders and 36 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -169,13 +169,16 @@ their choice.
 - **Incinerator.** Petrochemicals unlocks a cheap one-input sink that destroys any solid item and
   pays nothing. It is the simple escape valve for an unwanted byproduct; use a depot instead when
   the sale matters.
+- **Deep-space probes.** Space adds an optional Probe Works that turns a satellite, circuit boards
+  and rocket fuel into a more valuable final product. It gives the existing space chain somewhere
+  further to go without gating a tier or changing how the Launch Complex runs automatically.
 - **Orders.** Customers post up to three orders (`O`): deliver a quantity of one product
   before the deadline for about twice its value on top of the normal sale. Orders ask
   for things you can already make, sized to your current income, and newer products are
   asked for more often. Small parts (screws, rods) are only offered while income is small
   enough that an order stays a sane number of units. Don't like one? Swap it for a small fee.
-- **Goals.** 35 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
-  first robot, first car, first satellite, a trillion earned…), each with a cash reward. The Progress
+- **Goals.** 36 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+  first robot, first car, first satellite, first deep-space probe, a trillion earned...), each with a cash reward. The Progress
   window shows the next four with progress bars.
 - **Per-building upgrades.** Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
@@ -200,7 +203,7 @@ their choice.
   newer tier builds on the old chains instead of replacing them. Parts feed many recipes
   (plates, rods, screws and gears go into crates, frames, toys, motors and robots), and the
   old dead ends are ingredients now: crates pack toys, toys are robot bodies, jewelry goes
-  into satellites. A robot is worth thousands of iron ore.
+  into satellites, and satellites go into deep-space probes. A robot is worth thousands of iron ore.
 - **Disposal is optional and earns nothing.** The Incinerator destroys anything fed into it, so a
   surplus can keep flowing without becoming a source of money. It does not change recipe values,
   tier income or the balance tool's pacing estimates.
@@ -230,7 +233,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (328)
+dotnet test                                                     # core and save-file tests (334)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit
