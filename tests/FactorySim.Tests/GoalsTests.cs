@@ -137,6 +137,9 @@ public class GoalsTests
         // Orbital tier (4.13.0): a ninth tier after Space, ending in stations built around a satellite.
         Assert.Equal(8, v["orbital_station"].Tier);
         Assert.True(v["orbital_station"].Value > 2 * v["satellite"].Value);
-        Assert.Equal(9, TestUtil.Content.Tiers.Count);
+        // Fusion tier (4.25.0): a tenth tier after Orbital, ending in starships built around a station.
+        Assert.Equal(9, v["starship"].Tier);
+        Assert.True(v["starship"].Value > 2 * v["orbital_station"].Value);
+        Assert.Equal(10, TestUtil.Content.Tiers.Count);
     }
 }

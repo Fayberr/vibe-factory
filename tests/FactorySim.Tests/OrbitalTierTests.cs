@@ -8,11 +8,11 @@ namespace FactorySim.Tests;
 /// Orbital tier content drop (4.13.0): a ninth tier after Space. Delete every base.json entry marked
 /// "Orbital tier", its "Tier orders" entry (station_supplies), the three item mesh cases and this file to remove it, and put back the Space-era
 /// expectations noted in <c>GoalsTests</c>, <c>RecipeTreeTests</c>, <c>ByproductTrialTests</c> and
-/// <c>DeepSpaceProbeTests</c>.
+/// <c>DeepSpaceProbeTests</c>. The Fusion tier (4.25.0) is built on this one, so remove that first.
 /// </summary>
 public class OrbitalTierTests
 {
-    private static readonly ContentRegistry C = TestUtil.Content;
+    private static readonly ContentRegistry C = FusionTierTests.Without(); // the game up to this tier, as it shipped
     public static readonly string[] Items = { "titanium_ore", "titanium", "solar_panel", "habitat_module", "orbital_station" };
     private static readonly string[] Recipes = { "make_titanium", "make_solar_panel", "make_habitat_module", "make_orbital_station" };
     private static readonly string[] Buildings = { "titanium_mine", "arc_furnace", "solar_works", "module_yard", "station_dock" };
@@ -22,6 +22,7 @@ public class OrbitalTierTests
     private static ContentRegistry Without()
     {
         var pack = ContentRegistry.ParsePack(ContentRegistry.BasePackJson());
+        FusionTierTests.RemoveFrom(pack); // the Fusion tier (4.25.0) is built on this one, so it goes first
         Assert.Equal("Orbital", pack.Tiers[^1].Name);
         pack.Tiers.RemoveAt(pack.Tiers.Count - 1);
         Assert.Equal(5, pack.Items.RemoveAll(i => Items.Contains(i.Id)));

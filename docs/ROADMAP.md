@@ -319,6 +319,22 @@ deliberately the lesser choice: variety, a place for spare parts, four goals (10
 washing machine and e-bike). `balance tiers` is unchanged except Aerospace, $41.41K to $41.61K a
 second. Remove: see "Home appliances" in the architecture notes.
 
+**Tenth drop: Fusion tier (4.25.0).** A tenth tier after Orbital, opened with 10 orbital stations,
+$35B earned and a $15B price. Lithium brine is pumped from a Brine Well and boiled down to lithium;
+superconductors take gold ingots, titanium and cable; fusion cells take lithium, superconductors and
+batteries; and a Shipyard builds a starship around an orbital station with six fusion cells and four
+titanium. Starships ($1.68M) are the new most valuable good, so the old last product feeds a new one.
+
+| Tier | Income at level 1 | Wait for it |
+|---|---|---|
+| Orbital | $182.74K/s | 1d 6h |
+| Fusion | $297.21K/s | 1d 13h |
+
+Tuning notes: the first draft asked for $80B earned (a 5d 8h wait) and 20 titanium a hull, which made
+titanium the limit and kept starships unsold; both were cut. Three goals (500 lithium, first fusion
+cell, first starship) and a Shipyard order come with it. Remove: see "Fusion tier" in the architecture
+notes.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

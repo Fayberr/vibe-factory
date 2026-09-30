@@ -69,7 +69,8 @@ public class TierOrdersTests
     public void Removing_the_drop_leaves_all_previous_content_unchanged()
     {
         var without = Without();
-        Assert.Equal(new[] { "workshop_supplies" }, without.ContractBundles.Select(b => b.Id));
+        Assert.DoesNotContain(without.ContractBundles, b => Bundles.Contains(b.Id));
+        Assert.Contains(without.ContractBundles, b => b.Id == "workshop_supplies");
         Assert.Equal(C.Items.Keys.OrderBy(id => id), without.Items.Keys.OrderBy(id => id));
         Assert.Equal(C.Recipes.Keys.OrderBy(id => id), without.Recipes.Keys.OrderBy(id => id));
         Assert.Equal(C.Buildings.Keys.OrderBy(id => id), without.Buildings.Keys.OrderBy(id => id));

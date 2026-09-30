@@ -45,7 +45,10 @@
       "deliver": [ { "item": "drone", "count": 30 } ] },
     // Orbital tier (content drop, 4.13.0): delete every entry marked "Orbital tier" to remove it.
     { "name": "Orbital",        "description": "Titanium, solar panels, habitat modules and orbital stations.",  "cost": 5e9,   "requiredEarnings": 1.2e10,
-      "deliver": [ { "item": "satellite", "count": 25 } ] }
+      "deliver": [ { "item": "satellite", "count": 25 } ] },
+    // Fusion tier (content drop, 4.25.0): delete every entry marked "Fusion tier" to remove it.
+    { "name": "Fusion",         "description": "Lithium brine, superconductors, fusion cells and starships.",    "cost": 1.5e10, "requiredEarnings": 3.5e10,
+      "deliver": [ { "item": "orbital_station", "count": 10 } ] }
   ],
 
   // Every ore is worth the same $1. Nothing else has a base value: it all comes from processing.
@@ -92,6 +95,13 @@
     { "id": "solar_panel",  "name": "Solar Panel",  "baseValue": 0,               "meta": { "color": "#2f4f9e", "shape": "solar_panel" } },
     { "id": "habitat_module", "name": "Habitat Module", "baseValue": 0,           "meta": { "color": "#e6ebf2", "shape": "module" } },
     { "id": "orbital_station", "name": "Orbital Station", "baseValue": 0,         "meta": { "color": "#cfd9e6", "shape": "station" } },
+    // Fusion tier (content drop, 4.25.0): a tenth tier after Orbital. Brine pumped from the ground, lithium from
+    // it, superconductors from gold, titanium and cable, fusion cells, and a starship built around a station.
+    { "id": "lithium_brine", "name": "Lithium Brine", "baseValue": 1, "raw": true, "meta": { "color": "#6fd6c8", "shape": "barrel" } },
+    { "id": "lithium",      "name": "Lithium",      "baseValue": 0,               "meta": { "color": "#e3d7ea", "shape": "ingot" } },
+    { "id": "superconductor", "name": "Superconductor", "baseValue": 0,           "meta": { "color": "#4f7dff", "shape": "coil" } },
+    { "id": "fusion_cell",  "name": "Fusion Cell",  "baseValue": 0,               "meta": { "color": "#ff9a3c", "shape": "fusion_cell" } },
+    { "id": "starship",     "name": "Starship",     "baseValue": 0,               "meta": { "color": "#dde4ee", "shape": "starship" } },
     // Byproduct trial (see "Byproducts" in docs/ARCHITECTURE.md): tar comes out of cracking crude oil
     // next to plastic, and a blast furnace burns it instead of coal. "byproduct" keeps it out of orders.
     { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } },
@@ -170,6 +180,13 @@
     { "id": "make_solar_panel", "inputs": [ { "item": "glass", "count": 2 }, { "item": "circuit", "count": 1 }, { "item": "aluminium", "count": 1 } ], "outputs": [ { "item": "solar_panel", "count": 1 } ], "ticks": 60, "valueMultiplier": 3 },
     { "id": "make_habitat_module", "inputs": [ { "item": "titanium", "count": 4 }, { "item": "solar_panel", "count": 2 }, { "item": "robot", "count": 1 } ], "outputs": [ { "item": "habitat_module", "count": 1 } ], "ticks": 120, "valueMultiplier": 4 },
     { "id": "make_orbital_station", "inputs": [ { "item": "habitat_module", "count": 2 }, { "item": "satellite", "count": 1 }, { "item": "rocket_fuel", "count": 4 } ], "outputs": [ { "item": "orbital_station", "count": 1 } ], "ticks": 200, "valueMultiplier": 3.5 },
+    // Fusion tier (content drop, 4.25.0): lithium dried out of brine, superconductors that give gold ingots and
+    // titanium a second use, fusion cells that pull batteries through the whole electronics line, and a starship:
+    // an orbital station with fusion cells to drive it and a titanium hull, so stations stop being a dead end.
+    { "id": "make_lithium", "inputs": [ { "item": "lithium_brine", "count": 3 } ], "outputs": [ { "item": "lithium", "count": 1 } ], "ticks": 40, "valueMultiplier": 3 },
+    { "id": "make_superconductor", "inputs": [ { "item": "gold_ingot", "count": 2 }, { "item": "titanium", "count": 1 }, { "item": "cable", "count": 2 } ], "outputs": [ { "item": "superconductor", "count": 1 } ], "ticks": 60, "valueMultiplier": 3.5 },
+    { "id": "make_fusion_cell", "inputs": [ { "item": "lithium", "count": 4 }, { "item": "superconductor", "count": 2 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "fusion_cell", "count": 1 } ], "ticks": 100, "valueMultiplier": 3.5 },
+    { "id": "make_starship", "inputs": [ { "item": "orbital_station", "count": 1 }, { "item": "fusion_cell", "count": 6 }, { "item": "titanium", "count": 4 } ], "outputs": [ { "item": "starship", "count": 1 } ], "ticks": 300, "valueMultiplier": 3.5 },
     // Byproduct trial. A craft's value is split evenly over all its output units, so both recipes are
     // tuned to make exactly what the plain recipes make: plastic $1 and steel $7.5, and tar $1 like the
     // coal it replaces. Cracking gives less plastic per oil (1.5 against 2) but works through oil 50%
@@ -545,6 +562,45 @@
       "meta": { "model": "launchpad", "accent": "#cfd9e6", "glyph": "O", "description": "Joins 2 habitat modules and a satellite into an orbital station, with 4 rocket fuel to lift it." }
     },
 
+    // ---- Fusion tier (content drop, 4.25.0) ---------------------------------------------------
+    // One extractor and four machines, each with its own recipe, like the Orbital tier.
+    {
+      "id": "brine_well", "name": "Brine Well", "behavior": "miner", "cost": 2e9, "category": "production", "tier": 9,
+      "group": "extractor", "replaces": [ "extractor" ],
+      "limit": { "base": 2, "perTier": 2 },
+      "ports": [ { "kind": "out", "side": "front" } ],
+      "params": { "item": "lithium_brine", "interval": 20, "amount": 1 },
+      "meta": { "model": "pump", "accent": "#6fd6c8", "glyph": "L", "description": "Pumps lithium brine: 1 a second." }
+    },
+    {
+      "id": "lithium_plant", "name": "Lithium Plant", "behavior": "processor", "cost": 3e9, "category": "processing", "tier": 9,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_lithium" ], "inputCapacity": 12, "outputCapacity": 8 },
+      "meta": { "model": "refinery", "accent": "#e3d7ea", "glyph": "l", "description": "Dries 3 lithium brine into lithium (3× value)." }
+    },
+    {
+      "id": "superconductor_works", "name": "Superconductor Works", "behavior": "processor", "cost": 5e9, "category": "crafting", "tier": 9,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_superconductor" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#4f7dff", "glyph": "c", "description": "Winds 2 gold ingots, titanium and 2 cables into a superconductor." }
+    },
+    {
+      "id": "cell_foundry", "name": "Cell Foundry", "behavior": "processor", "cost": 8e9, "category": "crafting", "tier": 9,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_fusion_cell" ], "inputCapacity": 10, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#ff9a3c", "glyph": "f", "description": "Seals 4 lithium, 2 superconductors and 2 batteries into a fusion cell." }
+    },
+    {
+      "id": "shipyard", "name": "Shipyard", "behavior": "processor", "cost": 2e10, "category": "crafting", "tier": 9,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_starship" ], "inputCapacity": 30, "outputCapacity": 2 },
+      "meta": { "model": "launchpad", "accent": "#dde4ee", "glyph": "S", "description": "Builds a starship around an orbital station: 6 fusion cells to drive it and 4 titanium for the hull." }
+    },
+
     // ---- Industrial exports (content drop, 4.7.0) -------------------------------------------
     // Dedicated machines keep the products optional and leave existing automatic recipe lists unchanged.
     {
@@ -757,7 +813,9 @@
     // Tier orders
     { "id": "mission_supplies", "name": "Mission supplies", "tier": 7, "items": [ { "item": "satellite", "count": 1 }, { "item": "rocket_fuel", "count": 20 }, { "item": "circuit", "count": 10 } ], "rewardMultiplier": 0.75 },
     // Tier orders
-    { "id": "station_supplies", "name": "Station supplies", "tier": 8, "items": [ { "item": "habitat_module", "count": 1 }, { "item": "solar_panel", "count": 4 }, { "item": "titanium", "count": 20 } ], "rewardMultiplier": 0.75 }
+    { "id": "station_supplies", "name": "Station supplies", "tier": 8, "items": [ { "item": "habitat_module", "count": 1 }, { "item": "solar_panel", "count": 4 }, { "item": "titanium", "count": 20 } ], "rewardMultiplier": 0.75 },
+    // Tier orders, Fusion tier: delete with the tier.
+    { "id": "shipyard_order",   "name": "Shipyard order",   "tier": 9, "items": [ { "item": "fusion_cell", "count": 2 }, { "item": "superconductor", "count": 4 }, { "item": "lithium", "count": 20 } ], "rewardMultiplier": 0.75 }
   ],
 
   // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, produced_rate, built,
@@ -823,6 +881,10 @@
     { "id": "titanium_200", "name": "Light and strong",  "description": "Produce 200 titanium.",                   "kind": "produced",  "item": "titanium", "target": 200, "reward": 4e9 },
     { "id": "habitat_module_1", "name": "Room with a view", "description": "Build your first habitat module.",  "kind": "produced",  "item": "habitat_module", "target": 1, "reward": 6e9 },
     { "id": "orbital_station_1", "name": "Home in orbit", "description": "Launch your first orbital station.",   "kind": "produced",  "item": "orbital_station", "target": 1, "reward": 1.5e10 },
+    // Fusion tier (content drop, 4.25.0): delete with the tier, items, recipes and machines.
+    { "id": "lithium_500",  "name": "Salt of the earth", "description": "Produce 500 lithium.",                   "kind": "produced",  "item": "lithium", "target": 500, "reward": 2e10 },
+    { "id": "fusion_cell_1", "name": "A star in a jar",  "description": "Produce your first fusion cell.",        "kind": "produced",  "item": "fusion_cell", "target": 1, "reward": 3e10 },
+    { "id": "starship_1",   "name": "To the stars",      "description": "Launch your first starship.",            "kind": "produced",  "item": "starship", "target": 1, "reward": 8e10 },
     { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 }
   ]
 }

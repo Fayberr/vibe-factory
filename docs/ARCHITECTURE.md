@@ -315,7 +315,7 @@ each with a recipe of its own so no existing machine's automatic choice changes:
 an Arc Furnace (2 titanium ore and coal to titanium, like aluminium), Solar Works (2 glass, a
 circuit board and aluminium to a solar panel), a Module Yard (4 titanium, 2 panels and a robot to a
 habitat module) and a Station Dock (2 modules, a satellite and 4 rocket fuel to an orbital
-station). Stations are worth about eight satellites, the most of any good. Three goals come with it.
+station). Stations are worth about eight satellites. Three goals come with it.
 
 Every entry is marked "Orbital tier" in `base.json`. To remove it, delete those entries (the tier,
 five items, four recipes, five buildings, three goals), delete `OrbitalTierTests.cs` and the three
@@ -323,7 +323,27 @@ item mesh cases (`solar_panel`, `module`, `station`), and put back the Space-era
 (`GoalsTests` back to 8 tiers, the dead ends back to `space_probe` alone, the raw-resource chain back
 to `satellite`, and the probe test's Space index back to the last tier). A saved game past Space
 would lose the tier on load, so remove it only before release. The removal test proves every earlier
-item, recipe, building, goal, tier income and item value is unchanged.
+item, recipe, building, goal, tier income and item value is unchanged. The Fusion tier is built on this
+one, so remove it first; `OrbitalTierTests` already tests against the game without Fusion.
+
+### Fusion tier
+
+The 4.25.0 content drop adds a tenth tier after Orbital, built the same way. Fusion opens with 10
+orbital stations, $35 billion earned and a $15 billion price, and brings one new raw resource and five
+buildings, each machine with a recipe of its own: a Brine Well (lithium brine, a pumped liquid), a
+Lithium Plant (3 brine to lithium), Superconductor Works (2 gold ingots, titanium and 2 cable), a Cell
+Foundry (4 lithium, 2 superconductors and 2 batteries to a fusion cell) and a Shipyard (an orbital
+station, 6 fusion cells and 4 titanium to a starship). Starships are worth about 3.6 stations
+($1.68M), so stations stop being a dead end. At level 1 the tier earns 1.6 times Orbital ($297K a
+second, starships 47% of it) after a 1d 13h wait, close to the 1d 6h wait for Orbital. Three goals
+and a Shipyard order (fusion cells, superconductors, lithium) come with it.
+
+Every entry is marked "Fusion tier" in `base.json`. To remove it, delete those entries (the tier, five
+items, four recipes, five buildings, three goals and `shipyard_order`), the two item mesh cases
+(`fusion_cell`, `starship`) and `FusionTierTests.cs`, point `OrbitalTierTests` back at
+`TestUtil.Content`, and put back the Orbital-era expectations (`GoalsTests` 9 tiers, the dead ends and
+the raw-resource chain back to `orbital_station`). The removal test proves every earlier item, recipe,
+building, goal, tier income and item value is unchanged.
 
 ### Industrial exports
 
@@ -451,8 +471,8 @@ remove the drop; the dormant general multi-line contract support may stay.
 The 4.23.0 tier orders are seven more `contractBundles` entries marked "Tier orders", one for each tier
 from Industry to Orbital. A bundle is drawn only while its tier is the newest, so every tier has one mixed
 order on offer. They ask only for main-line goods (never a consumer good or an export), so removing another
-drop never leaves an order asking for a missing item; only `station_supplies` belongs to a removable drop,
-and goes with the Orbital tier. Delete the marked entries and `TierOrdersTests.cs` to remove them.
+drop never leaves an order asking for a missing item; only `station_supplies` and `shipyard_order` belong
+to a removable drop, and go with the Orbital and Fusion tiers. Delete the marked entries and `TierOrdersTests.cs` to remove them.
 
 ### Determinism
 

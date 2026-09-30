@@ -42,6 +42,9 @@ public static class ItemMeshes
         "station" => 0.045f,
         // Home appliances (4.24.0): built up from the belt deck.
         "kettle" or "tv" or "washer" or "bike" => 0.01f,
+        // Fusion tier (4.25.0)
+        "fusion_cell" => 0.01f,
+        "starship" => 0.036f,
         _ => 0.11f,
     };
 
@@ -235,6 +238,19 @@ public static class ItemMeshes
             case "bike":
                 Bike(mb, mat);
                 break;
+            // Fusion tier (4.25.0): delete these two cases with the tier.
+            case "fusion_cell":
+                // A caged core: a round core between two plates, held by four corner posts.
+                mb.Box(mat, new Vector3(0, 0.01f, 0), new Vector3(0.12f, 0.02f, 0.12f), 0.004f);
+                mb.Box(mat, new Vector3(0, 0.13f, 0), new Vector3(0.12f, 0.02f, 0.12f), 0.004f);
+                mb.Cylinder(mat, new Vector3(0, 0.02f, 0), 0.036f, 0.1f, 14, smooth: true);
+                foreach (float x in new[] { -0.05f, 0.05f })
+                    foreach (float z in new[] { -0.05f, 0.05f })
+                        mb.Beam(mat, new Vector3(x, 0.02f, z), new Vector3(x, 0.12f, z), 0.012f);
+                break;
+            case "starship":
+                Starship(mb, mat);
+                break;
             default:
                 mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.18f, 0.18f), 0.03f);
                 break;
@@ -373,6 +389,18 @@ public static class ItemMeshes
     }
 
     /// <summary>Electric kettle: a tapering body on a base plate, a lid knob, a spout ahead and a handle behind.</summary>
+    /// <summary>Lying along the belt, nose forward: a hull drum, a cone nose, an engine skirt and two fins.</summary>
+    private static void Starship(MeshBuilder mb, Material m)
+    {
+        LyingCylinder(mb, m, new Vector3(-0.01f, 0, 0), 0.032f, 0.12f, 14);
+        mb.With(new Transform3D(new Basis(Vector3.Forward, Mathf.Pi / 2), new Vector3(0.05f, 0, 0)),
+            b => b.Cylinder(m, Vector3.Zero, 0.032f, 0.04f, 14, topRadius: 0.004f));
+        LyingCylinder(mb, m, new Vector3(-0.077f, 0, 0), 0.024f, 0.014f, 12);
+        foreach (float z in new[] { -0.045f, 0.045f })
+            mb.Box(m, new Vector3(-0.052f, 0, z), new Vector3(0.04f, 0.005f, 0.028f), 0.001f);
+        mb.Box(m, new Vector3(0.03f, 0.03f, 0), new Vector3(0.022f, 0.008f, 0.026f), 0.002f);
+    }
+
     private static void Kettle(MeshBuilder mb, Material m)
     {
         mb.Cylinder(m, Vector3.Zero, 0.06f, 0.012f, 12);
