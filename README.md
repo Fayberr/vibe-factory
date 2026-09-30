@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-ten tiers, customer orders and 49 goals, and settings in four tabs:
+ten tiers, customer orders and 52 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -192,6 +192,10 @@ their choice.
   Electronics, a washing machine at Robotics and an e-bike at Aerospace, each from a machine of its
   own and main-line parts. They sell for less than the tier's main product, so they are variety and
   a home for spare parts rather than the best way to play.
+- **Late exports.** The last three tiers get an optional product each: a planetary rover at Space
+  (motors, batteries, aluminium), a space suit at Orbital (titanium, plastic, batteries) and a
+  maglev train at Fusion (superconductors, motors, aluminium). Like the appliances they are
+  variety rather than the best sale.
 - **Industrial exports.** Industry and Petrochemicals add dedicated Tool Works and Pump Works.
   Their optional toolkits and pumps turn rods, screws, gears, cables and frames into sellable
   equipment without changing a tier gate or any existing machine's automatic recipes.
@@ -204,7 +208,7 @@ their choice.
   has a mixed order of its own while it is your newest tier (Builder's order, Hardware store,
   Gadget shop, Robot workshop, Hangar order, Mission supplies, Station supplies, Shipyard order). Don't like one?
   Swap it for a small fee.
-- **Goals.** 49 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+- **Goals.** 52 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   a sustained steel production challenge, first robot, first car, first satellite, first
   deep-space probe, first orbital station, first starship, a trillion earned...), each with a cash reward. The Progress window shows
   the next four with progress bars.

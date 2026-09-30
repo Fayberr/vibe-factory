@@ -335,6 +335,19 @@ titanium the limit and kept starships unsold; both were cut. Three goals (500 li
 cell, first starship) and a Shipyard order come with it. Remove: see "Fusion tier" in the architecture
 notes.
 
+**Eleventh drop: late exports (4.26.0).** The last three tiers had the fewest products, so each gets an
+optional one with a machine of its own, main-line parts only, each only sold.
+
+| Tier | Good | Machine | Made from | Worth |
+|---|---|---|---|---|
+| Space | Planetary Rover | Rover Works | 4 motors, 2 batteries, 6 aluminium | $11.4K |
+| Orbital | Space Suit | Suit Lab | 4 titanium, 10 plastic, 2 batteries | $1.58K |
+| Fusion | Maglev Train | Maglev Works | 8 superconductors, 4 motors, 20 aluminium | $16.4K |
+
+The first draft had four ingredients for the rover and the suit, which the recipe rule (one ingredient
+a machine side) rejects, so circuit boards and the solar panel came out. `balance tiers` is unchanged.
+Three goals (first rover, suit and maglev). Remove: see "Late exports" in the architecture notes.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

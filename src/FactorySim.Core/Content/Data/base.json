@@ -138,7 +138,14 @@
     { "id": "kettle",       "name": "Electric Kettle", "baseValue": 0,            "meta": { "color": "#e9eef2", "shape": "kettle" } },
     { "id": "television",   "name": "Television",   "baseValue": 0,               "meta": { "color": "#2a2f3a", "shape": "tv" } },
     { "id": "washing_machine", "name": "Washing Machine", "baseValue": 0,         "meta": { "color": "#f4f6f8", "shape": "washer" } },
-    { "id": "ebike",        "name": "E-Bike",       "baseValue": 0,               "meta": { "color": "#2fbf8f", "shape": "bike" } }
+    { "id": "ebike",        "name": "E-Bike",       "baseValue": 0,               "meta": { "color": "#2fbf8f", "shape": "bike" } },
+
+    // Late exports (content drop, 4.26.0): one optional product and machine for each of the last three tiers
+    // (Space, Orbital, Fusion), from main-line parts only, each only sold. Delete every entry marked "Late
+    // exports" to remove it. The space suit and maglev go with the Orbital and Fusion tiers if those are removed.
+    { "id": "rover",        "name": "Planetary Rover", "baseValue": 0,            "meta": { "color": "#d9a066", "shape": "rover" } },
+    { "id": "space_suit",   "name": "Space Suit",   "baseValue": 0,               "meta": { "color": "#f2f2ee", "shape": "suit" } },
+    { "id": "maglev",       "name": "Maglev Train", "baseValue": 0,               "meta": { "color": "#c8d4e6", "shape": "maglev" } }
   ],
 
   "recipes": [
@@ -232,6 +239,13 @@
     { "id": "make_television", "inputs": [ { "item": "glass", "count": 2 }, { "item": "circuit", "count": 2 }, { "item": "plastic", "count": 4 } ], "outputs": [ { "item": "television", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
     { "id": "make_washing_machine", "inputs": [ { "item": "motor", "count": 1 }, { "item": "steel", "count": 4 }, { "item": "iron_plate", "count": 4 } ], "outputs": [ { "item": "washing_machine", "count": 1 } ], "ticks": 60, "valueMultiplier": 3 },
     { "id": "make_ebike", "inputs": [ { "item": "aluminium", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "ebike", "count": 1 } ], "ticks": 80, "valueMultiplier": 3.5 },
+
+    // Late exports (4.26.0). The rover is a second use of motors and batteries at Space, the suit a small use of
+    // titanium at Orbital, the maglev a second use of superconductors at Fusion. Each is worth
+    // far less per item than its tier's main product, so like the appliances they never change `balance tiers`.
+    { "id": "make_rover", "inputs": [ { "item": "motor", "count": 4 }, { "item": "battery", "count": 2 }, { "item": "aluminium", "count": 6 } ], "outputs": [ { "item": "rover", "count": 1 } ], "ticks": 120, "valueMultiplier": 3 },
+    { "id": "make_space_suit", "inputs": [ { "item": "titanium", "count": 4 }, { "item": "plastic", "count": 10 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "space_suit", "count": 1 } ], "ticks": 90, "valueMultiplier": 3.5 },
+    { "id": "make_maglev", "inputs": [ { "item": "superconductor", "count": 8 }, { "item": "motor", "count": 4 }, { "item": "aluminium", "count": 20 } ], "outputs": [ { "item": "maglev", "count": 1 } ], "ticks": 150, "valueMultiplier": 3.5 },
 
     // Bulk machines (idea B11, content drop 4.22.0): delete every entry marked "Bulk machines" to remove them.
     // Twice the input and output of the plain recipe in 1.5 times the time, at the same value multiplier, so
@@ -695,6 +709,30 @@
       "meta": { "model": "assembler", "accent": "#2fbf8f", "glyph": "e", "description": "Builds an e-bike from 2 aluminium, 2 motors and 2 batteries. Home appliances: light, electric and easy to sell." }
     },
 
+    // ---- Late exports (content drop, 4.26.0) -----------------------------------------------
+    // One machine for each of the last three tiers, each with only its own recipe.
+    {
+      "id": "rover_works", "name": "Rover Works", "behavior": "processor", "cost": 4e8, "category": "crafting", "tier": 7,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_rover" ], "inputCapacity": 24, "outputCapacity": 4 },
+      "meta": { "model": "assembler", "accent": "#d9a066", "glyph": "R", "description": "Builds a planetary rover from 4 motors, 2 batteries and 6 aluminium. Late exports: a use for motors next to the space line." }
+    },
+    {
+      "id": "suit_lab", "name": "Suit Lab", "behavior": "processor", "cost": 1.5e9, "category": "crafting", "tier": 8,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_space_suit" ], "inputCapacity": 24, "outputCapacity": 4 },
+      "meta": { "model": "assembler", "accent": "#f2f2ee", "glyph": "s", "description": "Sews a space suit from 4 titanium, 10 plastic and 2 batteries. Late exports." }
+    },
+    {
+      "id": "maglev_works", "name": "Maglev Works", "behavior": "processor", "cost": 6e9, "category": "crafting", "tier": 9,
+      "group": "machine", "replaces": [ "machine", "belt" ],
+      "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
+      "params": { "recipes": [ "make_maglev" ], "inputCapacity": 36, "outputCapacity": 4 },
+      "meta": { "model": "launchpad", "accent": "#c8d4e6", "glyph": "M", "description": "Builds a maglev train from 8 superconductors, 4 motors and 20 aluminium. Late exports: fast trains on floating magnets." }
+    },
+
     // ---- Economy -------------------------------------------------------------------------
     {
       "id": "seller", "name": "Market Depot", "behavior": "seller", "cost": 50, "category": "economy", "tier": 0,
@@ -877,14 +915,20 @@
     { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },
     // Deep-space probes (content drop, 4.6.0): delete with the item, recipe and Probe Works.
     { "id": "space_probe_1", "name": "Beyond orbit",      "description": "Launch your first deep-space probe.",    "kind": "produced",  "item": "space_probe", "target": 1, "reward": 3e9 },
+    // Late exports (4.26.0)
+    { "id": "rover_1",      "name": "Wheels on Mars",    "description": "Build your first planetary rover.",      "kind": "produced",  "item": "rover", "target": 1, "reward": 2.5e9 },
     // Orbital tier (content drop, 4.13.0): delete with the tier, items, recipes and machines.
     { "id": "titanium_200", "name": "Light and strong",  "description": "Produce 200 titanium.",                   "kind": "produced",  "item": "titanium", "target": 200, "reward": 4e9 },
     { "id": "habitat_module_1", "name": "Room with a view", "description": "Build your first habitat module.",  "kind": "produced",  "item": "habitat_module", "target": 1, "reward": 6e9 },
     { "id": "orbital_station_1", "name": "Home in orbit", "description": "Launch your first orbital station.",   "kind": "produced",  "item": "orbital_station", "target": 1, "reward": 1.5e10 },
+    // Late exports (4.26.0), Orbital tier: delete with either.
+    { "id": "space_suit_1", "name": "Suited up",         "description": "Make your first space suit.",            "kind": "produced",  "item": "space_suit", "target": 1, "reward": 1e10 },
     // Fusion tier (content drop, 4.25.0): delete with the tier, items, recipes and machines.
     { "id": "lithium_500",  "name": "Salt of the earth", "description": "Produce 500 lithium.",                   "kind": "produced",  "item": "lithium", "target": 500, "reward": 2e10 },
     { "id": "fusion_cell_1", "name": "A star in a jar",  "description": "Produce your first fusion cell.",        "kind": "produced",  "item": "fusion_cell", "target": 1, "reward": 3e10 },
     { "id": "starship_1",   "name": "To the stars",      "description": "Launch your first starship.",            "kind": "produced",  "item": "starship", "target": 1, "reward": 8e10 },
+    // Late exports (4.26.0), Fusion tier: delete with either.
+    { "id": "maglev_1",     "name": "Floating along",    "description": "Build your first maglev train.",         "kind": "produced",  "item": "maglev", "target": 1, "reward": 5e10 },
     { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 }
   ]
 }

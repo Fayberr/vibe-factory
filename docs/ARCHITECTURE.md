@@ -373,6 +373,21 @@ recipes, buildings and goals), the appliance words in four tier descriptions, th
 (`kettle`, `tv`, `washer`, `bike`), `HomeAppliancesTests.cs` and its exclusion in the two dead-end
 filters. The removal test proves every other item value is unchanged and no tier earns less.
 
+### Late exports
+
+The 4.26.0 content drop gives the three late tiers a side product each, built like the appliances: a
+planetary rover (Rover Works, Space: 4 motors, 2 batteries, 6 aluminium), a space suit (Suit Lab, Orbital:
+4 titanium, 10 plastic, 2 batteries) and a maglev train (Maglev Works, Fusion: 8 superconductors, 4 motors,
+20 aluminium). Each machine has only its own recipe, at most three kinds of input like every recipe, from
+main-line parts only, and nothing uses the products. They are worth $11.4K, $1.58K and $16.4K, far below
+the tier's main product, so `balance tiers` is unchanged. Three goals come with it.
+
+Every entry is marked "Late exports" in `base.json`. To remove it, delete those entries (three items,
+recipes, buildings and goals), the three item mesh cases (`rover`, `suit`, `maglev`), `LateExportsTests.cs`,
+its exclusion in the two dead-end filters and the `LateExportsTests` calls in the Orbital and Fusion tier
+tests. The suit and the maglev are built on the Orbital and Fusion tiers, so removing one of those tiers
+removes its export too (`LateExportsTests.RemoveTier`).
+
 ### Research
 
 Research sits beside the tiers and never gates them: nothing a tier needs is bought with it, so a

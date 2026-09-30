@@ -45,6 +45,8 @@ public static class ItemMeshes
         // Fusion tier (4.25.0)
         "fusion_cell" => 0.01f,
         "starship" => 0.036f,
+        // Late exports (4.26.0): built up from the belt deck.
+        "rover" or "suit" or "maglev" => 0.01f,
         _ => 0.11f,
     };
 
@@ -251,6 +253,21 @@ public static class ItemMeshes
             case "starship":
                 Starship(mb, mat);
                 break;
+            // Late exports (4.26.0): delete these three cases with the line.
+            case "rover":
+                Rover(mb, mat);
+                break;
+            case "suit":
+                Suit(mb, mat);
+                break;
+            case "maglev":
+                // A long rounded car with a cone nose and a window band, floating on its magnet skirt.
+                mb.Box(mat, new Vector3(0, 0.008f, 0), new Vector3(0.17f, 0.016f, 0.04f), 0.003f);
+                mb.Box(mat, new Vector3(-0.01f, 0.043f, 0), new Vector3(0.14f, 0.045f, 0.06f), 0.015f);
+                mb.With(new Transform3D(new Basis(Vector3.Forward, Mathf.Pi / 2), new Vector3(0.06f, 0.043f, 0)),
+                    b => b.Cylinder(mat, Vector3.Zero, 0.026f, 0.035f, 12, topRadius: 0.006f, smooth: true));
+                mb.Box(mat, new Vector3(-0.01f, 0.052f, 0), new Vector3(0.12f, 0.01f, 0.062f), 0.002f);
+                break;
             default:
                 mb.Box(mat, Vector3.Zero, new Vector3(0.18f, 0.18f, 0.18f), 0.03f);
                 break;
@@ -389,6 +406,31 @@ public static class ItemMeshes
     }
 
     /// <summary>Electric kettle: a tapering body on a base plate, a lid knob, a spout ahead and a handle behind.</summary>
+    /// <summary>Six wheels under a flat body with a solar deck on top and a camera mast at the front.</summary>
+    private static void Rover(MeshBuilder mb, Material m)
+    {
+        foreach (float x in new[] { -0.05f, 0f, 0.05f })
+            foreach (float z in new[] { -0.052f, 0.052f })
+                Wheel(mb, m, new Vector3(x, 0.022f, z), 0.022f, 0.014f, 10);
+        mb.Box(m, new Vector3(0, 0.05f, 0), new Vector3(0.14f, 0.035f, 0.09f), 0.006f);
+        mb.Box(m, new Vector3(-0.015f, 0.071f, 0), new Vector3(0.09f, 0.006f, 0.08f), 0.001f);
+        mb.Box(m, new Vector3(0.045f, 0.09f, 0), new Vector3(0.008f, 0.05f, 0.008f), 0.001f);
+        mb.Box(m, new Vector3(0.048f, 0.12f, 0), new Vector3(0.02f, 0.014f, 0.03f), 0.002f);
+    }
+
+    /// <summary>Standing, facing forward: legs, a torso with a life-support pack, arms and a round helmet with a visor.</summary>
+    private static void Suit(MeshBuilder mb, Material m)
+    {
+        foreach (float z in new[] { -0.022f, 0.022f })
+            mb.Box(m, new Vector3(0, 0.035f, z), new Vector3(0.035f, 0.07f, 0.03f), 0.006f);
+        mb.Box(m, new Vector3(0, 0.1f, 0), new Vector3(0.045f, 0.065f, 0.08f), 0.01f);
+        mb.Box(m, new Vector3(-0.035f, 0.105f, 0), new Vector3(0.025f, 0.06f, 0.065f), 0.005f);
+        foreach (float z in new[] { -0.05f, 0.05f })
+            mb.Beam(m, new Vector3(0, 0.125f, z), new Vector3(0.01f, 0.075f, z * 1.1f), 0.018f);
+        mb.Cylinder(m, new Vector3(0, 0.133f, 0), 0.026f, 0.035f, 12, smooth: true);
+        mb.Box(m, new Vector3(0.022f, 0.152f, 0), new Vector3(0.008f, 0.016f, 0.03f), 0.002f);
+    }
+
     /// <summary>Lying along the belt, nose forward: a hull drum, a cone nose, an engine skirt and two fins.</summary>
     private static void Starship(MeshBuilder mb, Material m)
     {

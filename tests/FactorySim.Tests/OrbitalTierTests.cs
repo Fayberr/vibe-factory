@@ -23,6 +23,7 @@ public class OrbitalTierTests
     {
         var pack = ContentRegistry.ParsePack(ContentRegistry.BasePackJson());
         FusionTierTests.RemoveFrom(pack); // the Fusion tier (4.25.0) is built on this one, so it goes first
+        LateExportsTests.RemoveTier(pack, Orbital); // so is the space suit (4.26.0)
         Assert.Equal("Orbital", pack.Tiers[^1].Name);
         pack.Tiers.RemoveAt(pack.Tiers.Count - 1);
         Assert.Equal(5, pack.Items.RemoveAll(i => Items.Contains(i.Id)));
@@ -97,10 +98,11 @@ public class OrbitalTierTests
     public void Removing_the_tier_leaves_all_previous_content_unchanged()
     {
         var without = Without();
-        Assert.Equal(C.Items.Keys.Except(Items).OrderBy(id => id), without.Items.Keys.OrderBy(id => id));
-        Assert.Equal(C.Recipes.Keys.Except(Recipes).OrderBy(id => id), without.Recipes.Keys.OrderBy(id => id));
-        Assert.Equal(C.Buildings.Keys.Except(Buildings).OrderBy(id => id), without.Buildings.Keys.OrderBy(id => id));
-        Assert.Equal(C.Milestones.Select(m => m.Id).Except(Milestones).OrderBy(id => id),
+        var export = LateExportsTests.At(Orbital); // the tier takes its late export (4.26.0) with it
+        Assert.Equal(C.Items.Keys.Except(Items).Except(export.Items).OrderBy(id => id), without.Items.Keys.OrderBy(id => id));
+        Assert.Equal(C.Recipes.Keys.Except(Recipes).Except(export.Recipes).OrderBy(id => id), without.Recipes.Keys.OrderBy(id => id));
+        Assert.Equal(C.Buildings.Keys.Except(Buildings).Except(export.Buildings).OrderBy(id => id), without.Buildings.Keys.OrderBy(id => id));
+        Assert.Equal(C.Milestones.Select(m => m.Id).Except(Milestones).Except(export.Goals).OrderBy(id => id),
             without.Milestones.Select(m => m.Id).OrderBy(id => id));
         Assert.Equal(C.Tiers.Take(Orbital).Select(t => (t.Name, t.Cost, t.RequiredEarnings, t.Description)),
             without.Tiers.Select(t => (t.Name, t.Cost, t.RequiredEarnings, t.Description)));
