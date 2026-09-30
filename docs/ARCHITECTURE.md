@@ -286,9 +286,9 @@ of a choice, and the player spends the bank whenever they like in the Research w
 
 - **Packs.** `ItemDef.Science` (`"science": true`) marks a pack. It is made, sold and belted like any
   item and is never asked for in an order (orders skip it as they skip byproducts). The trial
-  recipe has `valueMultiplier: 0.5`, so a pack sells for the average of its two parts: a depot's belt
-  earns no more with packs on it than with plates or wire, and selling packs is never a reason to make
-  them. (At 1 it was: two parts' worth in one unit wins wherever depots are the limit, which the exact
+  recipes have `valueMultiplier: 0.5`, so packs sell for half the value of their parts: a depot's belt
+  earns no more with packs on it than with the best ingredient, and selling packs is never a reason to make
+  them. (At 1 it was: several parts' worth in one unit wins wherever depots are the limit, which the exact
   balance optimiser found in 4.3.0.) `balance items` lists packs on their own line and never as a dead end.
 - **The bank.** `World.Science` holds banked packs per item (`ScienceOf`, `CanPay`, internal
   `AddScience`/`PayScience`). It is saved as `SaveData.Science`, sorted by id, zero entries left out,
@@ -317,16 +317,27 @@ that double: `research_drills` (`miner.rate` +5% a level, 20 packs first), `rese
 banks a pack every 4 seconds, so all five drill levels (620 packs) take about 41 minutes. The pack
 changes no other item's value or tier.
 
+**Slice 2** in 4.4.0 is marked "Research slice 2": `science_2` (Advanced Science Pack), the
+`pack_2` recipe in the existing Science Bench, and three advanced upgrades from tier 2. The pack
+uses one steel beam, one gear and two screws. Each advanced upgrade adds three more levels with the
+same effect and price curve as its basic counterpart. Fully researching both slices gives drills
+and market prices about +48% total, and machines about +114%. The higher pack changes no existing
+item's value, tier or tier pacing.
+
 **To tune it**, edit `base.json`: `perLevel`, `maxLevel`, `costGrowth` and `packs` on the upgrades, the
 lab's `interval` and `capacity`, or the pack recipe. `ResearchTrialTests` pins the current prices and
 speeds, so change it with them.
 
-**To remove it**, delete from `base.json` the seven entries (`science_1`, `pack_1`, `science_bench`,
-`lab`, and the three `research_*` upgrades) with their "Research trial" comment blocks, then delete
-`tests/FactorySim.Tests/ResearchTrialTests.cs`. The Research button then never shows. Old saves load
+**To remove all research content**, delete from `base.json` both science items, both pack recipes,
+the Science Bench, the Lab and all six `research_*` upgrades, then delete `ResearchTrialTests.cs`
+and `ResearchSlice2Tests.cs`. The Research button then never shows. Old saves load
 with a warning each: the labs and benches are dropped (without a refund, like any building whose def
 is gone), bought levels and the bank are dropped, and every other building is kept. The lab behavior, the bank and pack prices are general and
 can stay dormant, as the upgrade mechanism did before.
+
+**To remove only slice 2**, delete the `science_2` item, `pack_2` recipe and three upgrades ending
+in `_advanced`, remove `pack_2` from the Science Bench's recipe list, and delete
+`tests/FactorySim.Tests/ResearchSlice2Tests.cs`. The basic pack, Lab and first five levels remain.
 
 ### Orders and goals
 

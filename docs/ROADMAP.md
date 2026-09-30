@@ -302,18 +302,20 @@ and the comment blocks marked "Byproduct trial"; and delete `ByproductTrialTests
 ### 10. Research (trial)
 
 Research sits beside the tiers and never gates them. A Science Bench (tier 1) makes a Basic Science
-Pack from an iron plate and a copper wire, a Lab takes packs off a belt and banks them, and the
-Research window (key L) spends the bank on three global bonuses, five levels each: drill output +5%,
-market prices +5% and machine speed +10% a level, with pack prices that double (20, 40, 80, 160, 320;
-machine speed starts at 10). A lab banks one pack every 4 seconds whether or not anything is being
-bought, so a research line never backs up. Packs sell for exactly their parts and are never ordered,
-and no existing item's value or tier changed.
+Pack from an iron plate and a copper wire. At Industry it also makes an Advanced Science Pack from
+steel, a gear and two screws. A Lab takes either pack off a belt and banks it, and the Research
+window (key L) spends the bank on three global bonuses: drill output +5%, market prices +5% and
+machine speed +10% a level. The basic pack buys five levels and the advanced pack buys three more;
+pack prices double each level. A lab banks one pack every 4 seconds whether or not anything is being
+bought, so a research line never backs up. Packs sell for half their parts and are never ordered,
+and neither slice changes an existing item's value, tier or baseline pacing.
 
-This is slice 1 of `docs/RESEARCH-PLAN.md` (option A, a flat list, no tree). To remove it, delete the
-seven entries marked "Research trial" in `base.json` (`science_1`, `pack_1`, `science_bench`, `lab`
-and the three `research_*` upgrades) and `ResearchTrialTests.cs`; the Research button then never
-shows. The numbers to tune are the upgrades' `perLevel`, `maxLevel`, `costGrowth` and `packs`, and
-the lab's `interval`. Details: "Research" in the architecture notes.
+This is slices 1 and 2 of `docs/RESEARCH-PLAN.md` (option A, a flat list, no tree). Slice 2 is the
+five entries marked "Research slice 2" plus `pack_2` in the Science Bench recipe list. Removing it
+leaves slice 1 unchanged. Removing both science items, both recipes, both buildings and all six
+upgrades removes the whole system from content and hides the Research button. The numbers to tune are the recipes, upgrades' `perLevel`,
+`maxLevel`, `costGrowth` and `packs`, and the lab's `interval`. Details: "Research" in the
+architecture notes.
 
 ### 11. The away report (done)
 
@@ -332,5 +334,5 @@ progress" in the architecture notes.
   recipes, end-game megaprojects) is worth a first try.
 - Step 8 (multiplayer): the open items listed above, and when to start it.
 - Step 9 (byproducts): keep, extend or remove the trial after playing it.
-- Step 10 (research): keep, retune or remove the trial after playing it; whether a second pack
-  (slice 2 of the research plan) should follow.
+- Step 10 (research): keep, retune or remove the two-slice trial after playing it; whether a third
+  pack or optional content unlocks should ever follow.

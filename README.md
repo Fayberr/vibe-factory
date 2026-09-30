@@ -182,10 +182,11 @@ their choice.
   depots pay more. Ten drills means ten upgrades. Levels show as coloured trims (bronze,
   silver, gold, cyan, violet) and are kept by copy/paste.
 - **Research (trial, optional).** From Workshop on, a Science Bench makes Basic Science Packs from
-  an iron plate and a copper wire, and a Lab takes them off a belt and banks one every 4 seconds.
-  The Research window (`L`) spends the bank on three bonuses for the whole factory, five levels
-  each: drills +5%, market prices +5% and machines +10% a level, each level twice the packs of the
-  last. It never gates a tier, and packs sell for half their parts and are never ordered.
+  an iron plate and a copper wire. Industry adds Advanced Science Packs made from steel, gears and
+  screws. A Lab takes either pack off a belt and banks one every 4 seconds. The Research window
+  (`L`) spends the bank on drills, market prices and machine speed: five basic levels followed by
+  three advanced levels, with each level costing twice the packs of the last. It never gates a
+  tier, and packs sell for half their parts and are never ordered.
 - **While you were away.** The factory keeps running while the game is closed (the first ten
   minutes simulated in full, the rest worked out from them). After a break of two minutes or more,
   a window shows what it earned, each product's rate and share, and the buildings that sat waiting
@@ -223,7 +224,7 @@ their choice.
 ## Testing
 
 ```bash
-dotnet test                                                     # core and save-file tests (223)
+dotnet test                                                     # core and save-file tests (328)
 
 # Godot client (headless): build, then a quick smoke run of the demo factory
 godot --headless --path godot --build-solutions --quit

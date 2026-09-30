@@ -5,10 +5,9 @@ using FactorySim.Persistence;
 namespace FactorySim.Tests;
 
 /// <summary>
-/// The research trial in base.json: a Science Bench makes Basic Science Packs from plates and wire, a
-/// Lab banks them, and three global upgrades are bought with the bank. Deleting the trial means deleting
-/// its seven content entries and this file (see "Research" in docs/ARCHITECTURE.md); the lab behavior,
-/// the bank and pack prices on upgrades can stay dormant, as the upgrade mechanism did before.
+/// The research trial in base.json: Science Benches make packs, Labs bank them, and global upgrades
+/// are bought with the bank. Deleting the whole trial means deleting both content slices and this file
+/// (see "Research" in docs/ARCHITECTURE.md); the general research plumbing can stay dormant.
 /// </summary>
 public class ResearchTrialTests
 {
@@ -18,11 +17,11 @@ public class ResearchTrialTests
     internal static ContentPack WithoutTrialPack()
     {
         var pack = ContentRegistry.ParsePack(ContentRegistry.BasePackJson());
-        int removed = pack.Items.RemoveAll(i => i.Id == "science_1")
-                      + pack.Recipes.RemoveAll(r => r.Id == "pack_1")
+        int removed = pack.Items.RemoveAll(i => i.Id is "science_1" or "science_2")
+                      + pack.Recipes.RemoveAll(r => r.Id is "pack_1" or "pack_2")
                       + pack.Buildings.RemoveAll(b => b.Id is "science_bench" or "lab")
                       + pack.Upgrades.RemoveAll(u => u.Id.StartsWith("research_", StringComparison.Ordinal));
-        Assert.Equal(7, removed);
+        Assert.Equal(12, removed);
         return pack;
     }
 
@@ -51,7 +50,7 @@ public class ResearchTrialTests
     {
         var before = Without().ItemValue;
         var after = C.ItemValue;
-        Assert.Equal(before.Keys.Append("science_1").OrderBy(k => k), after.Keys.OrderBy(k => k));
+        Assert.Equal(before.Keys.Concat(new[] { "science_1", "science_2" }).OrderBy(k => k), after.Keys.OrderBy(k => k));
         foreach (var (item, info) in before) Assert.Equal(info, after[item]);
     }
 
@@ -66,7 +65,7 @@ public class ResearchTrialTests
         Assert.Equal((v["iron_plate"].Value + v["copper_wire"].Value) / 2, v["science_1"].Value);
         Assert.True(v["science_1"].Value <= Math.Max(v["iron_plate"].Value, v["copper_wire"].Value));
         Assert.Equal(1, v["science_1"].Tier);
-        Assert.All(C.UpgradeList.Where(u => u.Packs.Length > 0), u => Assert.Equal(1, u.Tier));
+        Assert.All(C.UpgradeList.Where(u => u.Packs.Any(p => p.Item == "science_1")), u => Assert.Equal(1, u.Tier));
     }
 
     [Fact]

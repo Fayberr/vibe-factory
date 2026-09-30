@@ -1,10 +1,11 @@
 # Research and laboratories: plan
 
-**Status (4.1.0): slice 1 (section 8) is built as a trial**, exactly as described there, with a lab
-model of its own instead of a recoloured depot. It is in the Research window (key L). How to tune or
-remove it: "Research" in `docs/ARCHITECTURE.md`. The rest of this document is still a plan.
+**Status (4.4.0): slices 1 and 2 are built as a trial.** Slice 1 is section 8. Slice 2 adds the
+written-up `science_2` recipe from section 6 and three higher continuations of the same flat bonuses.
+The Lab and Research window remain fully data-driven. How to tune or remove either slice: "Research"
+in `docs/ARCHITECTURE.md`. The rest of this document is still a plan.
 
-Planning only beyond slice 1, and nothing in this document is decided beyond what the
+Planning only beyond slice 2, and nothing in this document is decided beyond what the
 owner already decided: **research is paid in items the player manufactures**, science packs made in
 the factory and eaten by a lab, never in money. Everything else (how big a tree, whether it
 branches, how it relates to tiers) is a proposal with a recommendation.
@@ -489,4 +490,21 @@ Client:
 Not in the slice: tier 2 and 3 packs, prerequisites, unlocks, the research option in the balance tool.
 
 Try it by playing one run to tier 3 with and without a lab. Keep it if building the pack line feels
-like progress; remove it by deleting the seven content entries, which leaves the game as it is today.
+like progress. At the time, its seven content entries were the whole removable trial; section 9 now
+adds the independently removable second slice.
+
+## 9. Second slice shipped in 4.4.0
+
+The next smallest increment keeps option A and adds one higher pack, without prerequisites or a
+technology graph:
+
+- `science_2`, Advanced Science Pack, opens at Industry.
+- `pack_2`: one steel beam, one gear and two screws, 60 ticks in the existing Science Bench.
+- Three advanced upgrades add three more levels of drill output, market prices and machine speed.
+  They use the same effects and doubling price curve as slice 1, paid only in Advanced Science Packs.
+- The recipe uses `valueMultiplier: 0.5`, so the pack sells for half its parts and never beats its
+  best ingredient at a depot. Baseline tier pacing is unchanged.
+
+The strong bonuses top out at about +48% across both slices, inside section 7's proposed +25% to
++50% range. Remove the slice by deleting the five marked entries, removing `pack_2` from the Science
+Bench and deleting `ResearchSlice2Tests.cs`; slice 1 then behaves exactly as it did before.

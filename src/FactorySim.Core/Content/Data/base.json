@@ -84,10 +84,14 @@
     // next to plastic, and a blast furnace burns it instead of coal. "byproduct" keeps it out of orders.
     { "id": "tar",          "name": "Tar",          "baseValue": 0, "byproduct": true, "meta": { "color": "#1c1814", "shape": "pile" } },
 
-    // Research trial (see "Research" in docs/ARCHITECTURE.md): a pack is made from parts, a lab banks it,
-    // and the bank buys the upgrades below. Nothing needs research: remove the pack, its recipe, the
-    // Science Bench, the Lab and the upgrades, and the game is as it was. "science" keeps packs out of orders.
+    // Research trial slice 1 (see "Research" in docs/ARCHITECTURE.md): a pack is made from parts, a lab
+    // banks it, and the bank buys the upgrades below. Nothing needs research. "science" keeps packs out
+    // of orders. Remove both marked slices, the Science Bench and the Lab to remove all research content.
     { "id": "science_1",    "name": "Basic Science Pack", "baseValue": 0, "science": true, "meta": { "color": "#8f7cff", "shape": "flask" } },
+
+    // Research slice 2 (4.4.0): the higher pack continues the optional flat research list at Industry.
+    // Delete every entry marked "Research slice 2" and remove pack_2 from the Science Bench to drop it.
+    { "id": "science_2",    "name": "Advanced Science Pack", "baseValue": 0, "science": true, "meta": { "color": "#43c6e8", "shape": "flask" } },
 
     // Consumer goods (content drop, 4.3.0): an optional side line with one product a tier, built from the
     // parts the main line already makes, so each tier has a second thing worth selling. Its parts feed
@@ -146,6 +150,9 @@
     // earns more from a belt of packs than from a belt of plates or wire, and selling packs is never a reason
     // to make them. (At 1 it did: two parts' worth in one unit wins wherever depots are the limit.)
     { "id": "pack_1", "inputs": [ { "item": "iron_plate", "count": 1 }, { "item": "copper_wire", "count": 1 } ], "outputs": [ { "item": "science_1", "count": 1 } ], "ticks": 40, "valueMultiplier": 0.5 },
+
+    // Research slice 2 (4.4.0). Half the parts' value keeps this pack from becoming a depot product.
+    { "id": "pack_2", "inputs": [ { "item": "steel", "count": 1 }, { "item": "gear", "count": 1 }, { "item": "screw", "count": 2 } ], "outputs": [ { "item": "science_2", "count": 1 } ], "ticks": 60, "valueMultiplier": 0.5 },
 
     // Consumer goods. Chairs use the logs that sit idle until crates; lanterns the coal (through steel)
     // that sits idle until steel is needed; phones and cars are a second product beside motors and robots;
@@ -506,8 +513,9 @@
       "id": "science_bench", "name": "Science Bench", "behavior": "processor", "cost": 500, "category": "research", "tier": 1,
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
-      "params": { "recipes": [ "pack_1" ], "inputCapacity": 8, "outputCapacity": 8 },
-      "meta": { "model": "assembler", "accent": "#8f7cff", "glyph": "B", "description": "Puts an iron plate and a copper wire together into a Basic Science Pack. Belt the packs into a Lab." }
+      // Research slice 2 (4.4.0): remove pack_2 here when removing the higher pack.
+      "params": { "recipes": [ "pack_1", "pack_2" ], "inputCapacity": 8, "outputCapacity": 8 },
+      "meta": { "model": "assembler", "accent": "#8f7cff", "glyph": "B", "description": "Makes Basic and Advanced Science Packs from factory parts. Belt the packs into a Lab." }
     },
     {
       "id": "lab", "name": "Lab", "behavior": "lab", "cost": 500, "category": "research", "tier": 1,
@@ -528,7 +536,12 @@
   "upgrades": [
     { "id": "research_drills",   "name": "Drill output",  "description": "Every drill mines 5% faster per level.",           "tier": 1, "stat": "miner.rate",      "effect": "multiply", "perLevel": 1.05, "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 20 } ] },
     { "id": "research_prices",   "name": "Market prices", "description": "Depots pay 5% more for everything per level.",     "tier": 1, "stat": "sell.multiplier", "effect": "multiply", "perLevel": 1.05, "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 20 } ] },
-    { "id": "research_machines", "name": "Machine speed", "description": "Every machine works 10% faster per level.",         "tier": 1, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 10 } ] }
+    { "id": "research_machines", "name": "Machine speed", "description": "Every machine works 10% faster per level.",         "tier": 1, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 5, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_1", "count": 10 } ] },
+
+    // Research slice 2 (4.4.0): three more levels of the same bonuses, paid in the higher pack.
+    { "id": "research_drills_advanced",   "name": "Advanced drill output",  "description": "Every drill mines another 5% faster per level.",       "tier": 2, "stat": "miner.rate",      "effect": "multiply", "perLevel": 1.05, "maxLevel": 3, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_2", "count": 20 } ] },
+    { "id": "research_prices_advanced",   "name": "Advanced market prices", "description": "Depots pay another 5% more per level.",                "tier": 2, "stat": "sell.multiplier", "effect": "multiply", "perLevel": 1.05, "maxLevel": 3, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_2", "count": 20 } ] },
+    { "id": "research_machines_advanced", "name": "Advanced machine speed", "description": "Every machine works another 10% faster per level.",      "tier": 2, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 3, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_2", "count": 10 } ] }
   ],
 
   // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, built,
