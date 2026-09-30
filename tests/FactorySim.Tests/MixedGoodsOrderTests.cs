@@ -91,7 +91,7 @@ public class MixedGoodsOrderTests
     public void Removing_the_increment_leaves_all_previous_content_unchanged()
     {
         var without = Without();
-        Assert.Empty(without.ContractBundles);
+        Assert.DoesNotContain(without.ContractBundles, x => x.Id == Bundle);
         Assert.Equal(C.Items.Keys.OrderBy(id => id), without.Items.Keys.OrderBy(id => id));
         Assert.Equal(C.Recipes.Keys.OrderBy(id => id), without.Recipes.Keys.OrderBy(id => id));
         Assert.Equal(C.Buildings.Keys.OrderBy(id => id), without.Buildings.Keys.OrderBy(id => id));

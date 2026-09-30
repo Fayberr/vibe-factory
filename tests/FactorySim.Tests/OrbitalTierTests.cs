@@ -6,7 +6,7 @@ namespace FactorySim.Tests;
 
 /// <summary>
 /// Orbital tier content drop (4.13.0): a ninth tier after Space. Delete every base.json entry marked
-/// "Orbital tier", the three item mesh cases and this file to remove it, and put back the Space-era
+/// "Orbital tier", its "Tier orders" entry (station_supplies), the three item mesh cases and this file to remove it, and put back the Space-era
 /// expectations noted in <c>GoalsTests</c>, <c>RecipeTreeTests</c>, <c>ByproductTrialTests</c> and
 /// <c>DeepSpaceProbeTests</c>.
 /// </summary>
@@ -28,6 +28,7 @@ public class OrbitalTierTests
         Assert.Equal(4, pack.Recipes.RemoveAll(r => Recipes.Contains(r.Id)));
         Assert.Equal(5, pack.Buildings.RemoveAll(b => Buildings.Contains(b.Id)));
         Assert.Equal(3, pack.Milestones.RemoveAll(m => Milestones.Contains(m.Id)));
+        pack.ContractBundles.RemoveAll(b => b.Tier == Orbital); // the tier's own customer order (4.23.0)
         return ContentRegistry.Build(BehaviorRegistry.CreateDefault(), new[] { pack });
     }
 

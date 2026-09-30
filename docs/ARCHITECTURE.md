@@ -432,6 +432,12 @@ The 4.10.0 mixed-goods drop is the single `contractBundles` entry marked "Mixed 
 45 to 90 seconds of income as ordinary orders. Delete that entry and `MixedGoodsOrderTests.cs` to
 remove the drop; the dormant general multi-line contract support may stay.
 
+The 4.23.0 tier orders are seven more `contractBundles` entries marked "Tier orders", one for each tier
+from Industry to Orbital. A bundle is drawn only while its tier is the newest, so every tier has one mixed
+order on offer. They ask only for main-line goods (never a consumer good or an export), so removing another
+drop never leaves an order asking for a missing item; only `station_supplies` belongs to a removable drop,
+and goes with the Orbital tier. Delete the marked entries and `TierOrdersTests.cs` to remove them.
+
 ### Determinism
 
 Identical content + save + command sequence ⇒ identical results. The simulation

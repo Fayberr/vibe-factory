@@ -292,6 +292,16 @@ Every earlier tier is unchanged. The new wait is about as long as the one before
 balance tool counts in full. The numbers to tune are the tier's `cost` and `requiredEarnings` and
 the two top multipliers. To remove it, see "Orbital tier" in the architecture notes.
 
+**Eighth drop: customer orders for every tier (4.23.0).** The 4.10.0 mixed order existed only at
+Workshop. Now each tier from Industry to Orbital has one of its own, drawn while that tier is the
+newest, at the same 75% of the goods' value: a Builder's order (steel, glass, screws), Hardware store
+(frames, cable, plastic), Gadget shop (circuits, batteries, jewelry), Robot workshop (a robot, motors,
+circuits), Hangar order (a drone, aluminium, frames), Mission supplies (a satellite, rocket fuel,
+circuits) and Station supplies (a habitat module, solar panels, titanium). Each asks for something the
+tier just unlocked next to older parts, so an order pulls from the whole factory. Orders never count
+in `balance tiers`, so pacing is unchanged. Remove: delete the `contractBundles` entries marked "Tier
+orders" and `TierOrdersTests.cs`.
+
 ### 5. Polish and belt look (done)
 
 Two follow-ups from looking at the game after step 1:

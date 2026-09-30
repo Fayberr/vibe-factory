@@ -687,9 +687,28 @@
     { "id": "research_machines_advanced", "name": "Advanced machine speed", "description": "Every machine works another 10% faster per level.",      "tier": 2, "stat": "machine.speed",   "effect": "multiply", "perLevel": 1.1,  "maxLevel": 3, "baseCost": 0, "costGrowth": 2, "packs": [ { "item": "science_2", "count": 10 } ] }
   ],
 
-  // Mixed customer order (content drop, 4.10.0): delete this entry to remove the drop.
+  // Mixed customer order (content drop, 4.10.0): delete the workshop_supplies entry to remove the drop.
   "contractBundles": [
-    { "id": "workshop_supplies", "name": "Workshop supplies", "tier": 1, "items": [ { "item": "iron_plate", "count": 2 }, { "item": "copper_wire", "count": 2 }, { "item": "plank", "count": 1 } ], "rewardMultiplier": 0.75 }
+    { "id": "workshop_supplies", "name": "Workshop supplies", "tier": 1, "items": [ { "item": "iron_plate", "count": 2 }, { "item": "copper_wire", "count": 2 }, { "item": "plank", "count": 1 } ], "rewardMultiplier": 0.75 },
+
+    // Customer orders for every tier (content drop, 4.23.0): one mixed order a tier from Industry to Orbital,
+    // each drawn only while its tier is the newest. They ask only for main-line goods, so removing another drop
+    // (consumer goods, exports) never breaks them; the Orbital one goes with the Orbital tier.
+    // Delete every entry marked "Tier orders" to remove them.
+    // Tier orders
+    { "id": "builders_order",   "name": "Builder's order",  "tier": 2, "items": [ { "item": "steel", "count": 2 }, { "item": "glass", "count": 2 }, { "item": "screw", "count": 8 } ], "rewardMultiplier": 0.75 },
+    // Tier orders
+    { "id": "hardware_store",   "name": "Hardware store",   "tier": 3, "items": [ { "item": "frame", "count": 1 }, { "item": "cable", "count": 4 }, { "item": "plastic", "count": 10 } ], "rewardMultiplier": 0.75 },
+    // Tier orders
+    { "id": "gadget_shop",      "name": "Gadget shop",      "tier": 4, "items": [ { "item": "circuit", "count": 2 }, { "item": "battery", "count": 1 }, { "item": "jewelry", "count": 2 } ], "rewardMultiplier": 0.75 },
+    // Tier orders
+    { "id": "robot_workshop",   "name": "Robot workshop",   "tier": 5, "items": [ { "item": "robot", "count": 1 }, { "item": "motor", "count": 2 }, { "item": "circuit", "count": 4 } ], "rewardMultiplier": 0.75 },
+    // Tier orders
+    { "id": "hangar_order",     "name": "Hangar order",     "tier": 6, "items": [ { "item": "drone", "count": 1 }, { "item": "aluminium", "count": 10 }, { "item": "frame", "count": 2 } ], "rewardMultiplier": 0.75 },
+    // Tier orders
+    { "id": "mission_supplies", "name": "Mission supplies", "tier": 7, "items": [ { "item": "satellite", "count": 1 }, { "item": "rocket_fuel", "count": 20 }, { "item": "circuit", "count": 10 } ], "rewardMultiplier": 0.75 },
+    // Tier orders
+    { "id": "station_supplies", "name": "Station supplies", "tier": 8, "items": [ { "item": "habitat_module", "count": 1 }, { "item": "solar_panel", "count": 4 }, { "item": "titanium", "count": 20 } ], "rewardMultiplier": 0.75 }
   ],
 
   // Goals with cash rewards, checked every second. Kinds: earned, sold, produced, produced_rate, built,

@@ -193,7 +193,9 @@ their choice.
   for things you can already make, sized to your current income, and newer products are
   asked for more often. Small parts (screws, rods) are only offered while income is small
   enough that an order stays a sane number of units. The optional Workshop supplies order combines
-  iron plates, copper wire and planks, and pays 75% of their base content value. Don't like one?
+  iron plates, copper wire and planks, and pays 75% of their base content value. Every later tier
+  has a mixed order of its own while it is your newest tier (Builder's order, Hardware store,
+  Gadget shop, Robot workshop, Hangar order, Mission supplies, Station supplies). Don't like one?
   Swap it for a small fee.
 - **Goals.** 42 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   a sustained steel production challenge, first robot, first car, first satellite, first
