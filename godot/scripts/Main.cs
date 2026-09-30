@@ -161,6 +161,26 @@ public partial class Main : Node3D
                 var c = System.Array.ConvertAll(arg["--drag=".Length..].Split(','), int.Parse);
                 GetTree().CreateTimer(Math.Max(0.5, wait - 2)).Timeout += () => HoldDrag(camera, new GridPos(c[0], c[1], 0), new GridPos(c[2], c[3], 0));
             }
+            if (arg.StartsWith("--build-search=") && hud.BuildMenuPanel is { } menu)
+            {
+                // The build menu, searching for the given text (--build-search=plate).
+                menu.Root.Visible = true;
+                menu.Search.Text = arg["--build-search=".Length..];
+                menu.Filter(menu.Search.Text);
+            }
+            if (arg.StartsWith("--sign="))
+            {
+                // --sign=x,y,text: a sign on the demo layout's cell (x, y) with that text, built for free and selected.
+                var parts = arg["--sign=".Length..].Split(',', 3);
+                var at = FactorySim.Samples.DemoLayout.CellOf(host.Sim, int.Parse(parts[0]), int.Parse(parts[1]));
+                bool sandbox = host.Sim.World.Sandbox;
+                host.Sim.World.Sandbox = true;
+                var placed = host.Execute(new PlaceBuilding("sign", at, Dir.South));
+                GD.Print($"SIGN: {(placed.Ok ? "placed" : placed.Error)} at {at}");
+                host.Execute(new SelectRecipe(at, parts.Length > 2 ? parts[2] : "Sign"));
+                host.Sim.World.Sandbox = sandbox;
+                if (placed.Ok) tools.Selection.Add(placed.EntityId);
+            }
             if (arg.StartsWith("--select="))
             {
                 // --select=x,y: open the Manage window for the building on that cell.

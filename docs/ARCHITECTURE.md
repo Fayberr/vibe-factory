@@ -624,6 +624,27 @@ refuses a goal that is already met or cannot be (every tier unlocked), and `Chec
 `faster` keys, the fast-forward members of `SimHost`, `FastForward.cs` and `FastForwardTests.cs`.
 `Simulation.NextTierBlocker` stays, since the unlock command uses it.
 
+**Signs** (idea G3, `Behaviors/SignBehavior` and `Visual/ModelFactorySign`): the `sign` behavior
+keeps one string in `SignState.Text` and exposes it as its `Selection`, so `SelectRecipe` writes
+it, `EditHistory` undoes it, `Blueprint` copies it and the save keeps it, all through code that
+already existed for recipes. `Select` cleans the text to one line and refuses more than
+`SignParams.MaxLength`; `CheckLoaded` cuts a longer one from a save with a warning. The status is
+`default` (not working, no idle reason), which bottlenecks and alerts skip. In the client,
+`WorldView` rebuilds a sign's model on `EntitySelectionChanged` and adds `ModelFactory.SignLabel`, a
+billboard `Label3D`; the Manage window shows a text box for a selection of signs and writes it on
+Enter or when the box loses focus (a click in the world releases focus first, so the write lands on
+the sign that was selected). The camera ignores its pan keys while a text box has focus. To remove
+signs: the `sign` entry in `base.json`, `SignBehavior.cs` and its registry line, `SignTests.cs`,
+`ModelFactorySign.cs` and its case in `ModelFactory.Build`, the sign lines in `WorldView`, the sign
+box in `ManageWindow`, `BuildController.SetSignText`, and the `--sign` smoke flag.
+
+**Build menu search** (idea H5, `UI/HudPanels` `BuildMenu`): each tile keeps a lower-case search
+text built once from the def (name, category name, description, and the item names of its recipes'
+inputs and outputs or its drill's ore). `Filter` hides tiles that miss any typed word and hides
+empty categories; Enter picks the first visible unlocked tile. The camera and the hotkeys ignore
+keys while the box has focus. To remove it: the search members of `BuildMenu` and the
+`--build-search` smoke flag.
+
 **Audio assets.** Sounds live in `godot/audio/sfx/{name}_{n}.ogg`; a named sound plays one
 of its files at random. Adding a variation is dropping in another numbered file. Music is
 `godot/audio/music/*.ogg`. Every file is a recording (Kenney CC0, Kevin MacLeod CC BY 4.0);

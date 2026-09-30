@@ -79,7 +79,8 @@ public partial class CameraRig : Node3D
     {
         if (AutoOrbit) _yawTarget += (float)delta * 2.5f;
         float dt = (float)delta;
-        if (Interactive && !Input.IsKeyPressed(Key.Ctrl))
+        // Typing in a text box (a sign, a search) must not pan the camera.
+        if (Interactive && !Input.IsKeyPressed(Key.Ctrl) && GetViewport().GuiGetFocusOwner() is not (LineEdit or TextEdit))
         {
             var move = Vector2.Zero;
             if (Keybinds.Held("pan_forward") || Input.IsKeyPressed(Key.Up)) move.Y -= 1;

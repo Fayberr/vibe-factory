@@ -606,6 +606,13 @@
       "upgrade": { "maxLevel": 1 },
       "meta": { "model": "forge", "accent": "#d96b32", "glyph": "X", "description": "Destroys every solid item fed into its input and pays nothing. Use it as a cheap escape valve for unwanted byproducts; a depot is better when you want the money." }
     },
+    // Sign (idea G3, 4.17.0): delete this one entry to remove signs. The text is set in the Manage window.
+    {
+      "id": "sign", "name": "Sign", "behavior": "sign", "cost": 10, "category": "decor", "tier": 0,
+      "group": "decor",
+      "params": { "maxLength": 40 },
+      "meta": { "model": "sign", "accent": "#f2c14e", "glyph": "T", "description": "Shows a line of text above your factory, so a big build explains itself. Select it to write on it. It does nothing else." }
+    },
 
     // ---- Research trial ------------------------------------------------------------------
     // A bench makes packs, a lab banks them (one every 4 seconds at level 1), the Research window spends

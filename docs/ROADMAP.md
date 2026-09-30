@@ -491,6 +491,22 @@ gives up after an hour of game time, saying what the next tier still needs. The 
 live in `FastForward` in the core. The tier check the unlock command makes is now one method,
 `Simulation.NextTierBlocker`, shared by both. Details: "Speed and Run until" in the architecture notes.
 
+### 17. Signs (done)
+
+Idea G3. A Sign is a cheap 1×1 building with no ports that shows a line of text (up to 40
+characters) floating above it, turned to the camera. It never works or waits, so the bottleneck
+pins and alerts ignore it. The text is written in the Manage window, for one sign or several at
+once. It is stored as the sign's "selection", the slot a machine's recipe choice uses, so the
+existing command, undo, blueprints and saves carry it with no new plumbing. Details: "Signs" in the
+architecture notes.
+
+### 18. Build menu search (done)
+
+Idea H5. A search box at the top of the build menu filters the tiles by every word typed, matched
+against the building's name, category, description, and the names of the items its recipes make and
+use (or the ore a drill mines). Enter builds the first unlocked match, and closing the menu clears
+the search. It lives entirely in the client's `BuildMenu`.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it

@@ -258,16 +258,24 @@ public sealed class ManageWindow
     private string? _sortKey;
     private string? _sortSelectionKey;
 
+    private readonly VBoxContainer _signBox = new();
+    private readonly LineEdit _signText = new() { PlaceholderText = "Write something", CaretBlink = true };
+    private readonly Action<string> _write;
+    private string _signShown = "";
+    private string? _signSelectionKey;
+
     private readonly GridContainer _info = new() { Columns = 2 };
     private readonly Control _infoSection;
     private readonly List<InfoLine> _lines = new();
 
     private static readonly HashSet<string> CoveredLines = new() { "Producing", "Recipe", "Produces", "Rate" };
     private static readonly HashSet<string> CoveredBySort = new() { "Sorting" };
+    private static readonly HashSet<string> CoveredBySign = new() { "Text" };
     private static readonly double RawShare = new SellerParams().RawMultiplier;
 
-    public ManageWindow(Action upgrade, Action delete, Action<string?> choose, Action<int, string?> filter, Action rotate, Action move, Action copy, Action close)
+    public ManageWindow(Action upgrade, Action delete, Action<string?> choose, Action<int, string?> filter, Action<string> write, Action rotate, Action move, Action copy, Action close)
     {
+        _write = write;
         _upgrade = upgrade;
         _delete = delete;
         _choose = choose;
@@ -375,6 +383,19 @@ public sealed class ManageWindow
         _sort.AddChild(Ui.Pad(_sortRows, 14, 8));
         body.AddChild(_sort);
 
+        // A sign's text (idea G3): written on Enter or when the box loses focus.
+        var signTitle = Ui.Label("Text", 15);
+        signTitle.AddThemeFontOverride("font", UiTheme.Bold);
+        signTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        _signBox.AddThemeConstantOverride("separation", 0);
+        _signBox.AddChild(new HSeparator());
+        _signBox.AddChild(Ui.Pad(signTitle, 8, 8));
+        _signText.AddThemeFontSizeOverride("font_size", 15);
+        _signText.TextSubmitted += _ => _signText.ReleaseFocus();
+        _signText.FocusExited += WriteSign;
+        _signBox.AddChild(Ui.Pad(_signText, 14, 8));
+        body.AddChild(_signBox);
+
         // Anything else worth knowing (buffers, earnings, belt speed).
         var infoBox = new VBoxContainer();
         infoBox.AddThemeConstantOverride("separation", 0);
@@ -436,10 +457,41 @@ public sealed class ManageWindow
         _sort.Visible = sorter;
         if (sorter) ShowSorting(sim, first, selection, thumbs);
 
+        // Text for signs (several are written together).
+        bool sign = selection.All(e => e.State is SignState);
+        _signBox.Visible = sign;
+        _speed.Root.Visible = _status.Root.Visible = !sign; // a sign never runs
+        if (sign) ShowSign(selection, selectionKey);
+        else if (_signText.HasFocus()) _signText.ReleaseFocus();
+
         for (int i = _lines.Count - 1; i >= 0; i--)
-            if ((CoveredLines.Contains(_lines[i].Label) && (processor || miner)) || (CoveredBySort.Contains(_lines[i].Label) && sorter)) _lines.RemoveAt(i);
+            if ((CoveredLines.Contains(_lines[i].Label) && (processor || miner)) || (CoveredBySort.Contains(_lines[i].Label) && sorter)
+                || (CoveredBySign.Contains(_lines[i].Label) && sign)) _lines.RemoveAt(i);
         ShowInfo();
         Window.Fit();
+    }
+
+    /// <summary>The sign text box for scripted tests.</summary>
+    public LineEdit SignText => _signText;
+
+    private void ShowSign(IReadOnlyList<Entity> selection, string? selectionKey)
+    {
+        var texts = selection.Select(e => ((SignState)e.State).Text).Distinct().ToList();
+        string common = texts.Count == 1 ? texts[0] : "";
+        _signText.PlaceholderText = texts.Count == 1 ? "Write something" : "Several texts: write one for all";
+        _signText.MaxLength = selection[0].Def.Params is SignParams p ? p.MaxLength : 40;
+        // Leave the box alone while it is being typed in, unless the selection changed under it.
+        if (_signText.HasFocus() && selectionKey == _signSelectionKey) return;
+        _signSelectionKey = selectionKey;
+        _signShown = common;
+        if (_signText.Text != common) _signText.Text = common;
+    }
+
+    private void WriteSign()
+    {
+        if (!_signBox.Visible || _signText.Text == _signShown) return;
+        _signShown = _signText.Text;
+        _write(_signText.Text);
     }
 
     private void ShowOne(Simulation sim, Entity e, Thumbnails thumbs)

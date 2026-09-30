@@ -308,6 +308,9 @@ public partial class WorldView : Node3D
             case EntityLevelChanged l:
                 _dirty.Add(l.EntityId);
                 break;
+            case EntitySelectionChanged c when World.GetEntity(c.EntityId)?.State is SignState:
+                _dirty.Add(c.EntityId); // a sign's text is part of its model
+                break;
             case PlotBought:
                 RebuildGround();
                 break;
@@ -350,6 +353,7 @@ public partial class WorldView : Node3D
         rig.Root.Position = GridMapping.CellFloor(e.Pos);
         rig.Root.Rotation = new Vector3(0, GridMapping.Yaw(e.Facing), 0);
         rig.Root.Visible = IsVisible(e.Pos.Z);
+        if (ModelFactory.SignLabel(e) is { } text) rig.Root.AddChild(text);
 
         // Elevated buildings standing over empty ground get a support column.
         if (e.Pos.Z > 0 && ColumnEmptyBelow(e))

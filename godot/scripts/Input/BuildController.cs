@@ -338,6 +338,20 @@ public partial class BuildController : Node3D
         Changed?.Invoke();
     }
 
+    /// <summary>Writes <paramref name="text"/> on every selected sign (idea G3). One undo step.</summary>
+    public void SetSignText(string text)
+    {
+        var signs = SelectedEntities().Where(e => e.State is SignState).ToList();
+        if (signs.Count == 0) return;
+        History.BeginGroup();
+        string? error = null;
+        foreach (var e in signs)
+            if (History.Execute(new SelectRecipe(e.Pos, text)) is { Ok: false } r) error ??= r.Error;
+        History.EndGroup();
+        if (error != null) Notice(error);
+        Changed?.Invoke();
+    }
+
     /// <summary>Sets what the selected machines produce (null = automatic). One undo step.</summary>
     public void ChooseRecipe(string? recipe)
     {
@@ -481,6 +495,9 @@ public partial class BuildController : Node3D
                 _overWorld = true;
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } mb:
+                // A click in the world ends typing in a text box first (a sign's text is written as it
+                // loses focus, while the sign is still the selection).
+                GetViewport().GuiReleaseFocus();
                 _overWorld = true;
                 _mouse = mb.Position;
                 UpdateHover();

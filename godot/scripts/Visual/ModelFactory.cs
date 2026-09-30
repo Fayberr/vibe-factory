@@ -78,6 +78,9 @@ public static partial class ModelFactory
             case "launchpad":
                 LaunchPad(rig, def, accent, effects);
                 break;
+            case "sign":
+                Sign(rig, def, accent);
+                break;
             default:
                 Add(rig, rig.Root, Cached($"box:{def.Id}", () =>
                 {

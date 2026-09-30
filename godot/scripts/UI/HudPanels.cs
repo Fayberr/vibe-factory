@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using FactorySim.Behaviors;
 using FactorySim.Content;
 using FactorySim.View;
 
@@ -104,6 +105,7 @@ public static class Ui
         "processing" => "Processing",
         "crafting" => "Crafting",
         "economy" => "Economy",
+        "decor" => "Signs",
         _ => char.ToUpperInvariant(category[0]) + category[1..],
     };
 
@@ -113,7 +115,7 @@ public static class Ui
             : id.Length == 0 ? "Unknown item"
             : char.ToUpperInvariant(id[0]) + id[1..].Replace('_', ' ');
 
-    public static readonly string[] CategoryOrder = { "logistics", "production", "processing", "crafting", "economy" };
+    public static readonly string[] CategoryOrder = { "logistics", "production", "processing", "crafting", "economy", "decor" };
 
     /// <summary>Why a building can't be placed right now (tier lock or build limit), or null.</summary>
     public static string? Blocker(Simulation sim, BuildingDef def) => sim.LockReason(def) ?? sim.LimitReason(def);
@@ -207,23 +209,45 @@ public sealed class BuildingTile
     }
 }
 
-/// <summary>Categorised catalogue of all buildings (B).</summary>
+/// <summary>
+/// Categorised catalogue of all buildings (B), with a search box (idea H5) that matches a building's
+/// name, category and description and the items it makes or uses, so "plate" finds every building
+/// that makes or takes plates. Enter builds the first match that is unlocked. To remove the search:
+/// <c>_search</c>, <c>Filter</c>, <c>SearchText</c> and the <c>_sections</c> bookkeeping.
+/// </summary>
 public sealed class BuildMenu
 {
     public readonly PanelContainer Root;
     private readonly List<BuildingTile> _tiles = new();
     public BuildingDef? Hovered { get; private set; }
 
+    private readonly LineEdit _search = new()
+    {
+        PlaceholderText = "Search buildings and what they make",
+        ClearButtonEnabled = true,
+        CustomMinimumSize = new Vector2(320, 0),
+    };
+    private readonly List<(Label Title, GridContainer Grid, List<(BuildingTile Tile, string Text)> Tiles)> _sections = new();
+    private readonly Label _noMatch = Ui.Label("No building matches. Try an item, like plate or wire.", 14, UiTheme.Muted);
+    private readonly Action<BuildingDef> _pick;
+
     private Simulation? _sim;
 
     public BuildMenu(ContentRegistry content, Thumbnails thumbs, Action<BuildingDef> onPick, Func<BuildingDef, string> keyOf)
     {
+        _pick = onPick;
         var body = new VBoxContainer();
         var header = new HBoxContainer();
         header.AddChild(Ui.Label("Build", 22));
         header.AddChild(Ui.Spacer());
         header.AddChild(Ui.Label($"Click to build · hover + 1 to 0 to put on the hotbar · locked ones unlock in Progress ({Keybinds.Name("progress")})", 13, UiTheme.Muted));
         body.AddChild(header);
+        _search.AddThemeFontSizeOverride("font_size", 15);
+        _search.TextChanged += Filter;
+        _search.TextSubmitted += _ => PickFirst();
+        body.AddChild(_search);
+        _noMatch.Visible = false;
+        body.AddChild(_noMatch);
 
         var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(740, 520), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         var list = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -235,9 +259,12 @@ public sealed class BuildMenu
         {
             var defs = content.BuildingList.Where(b => b.Category == cat).ToList();
             if (defs.Count == 0) continue;
-            list.AddChild(Ui.Label(Ui.CategoryName(cat).ToUpperInvariant(), 13, UiTheme.Muted));
+            var title = Ui.Label(Ui.CategoryName(cat).ToUpperInvariant(), 13, UiTheme.Muted);
+            list.AddChild(title);
             var grid = new GridContainer { Columns = 5 };
             list.AddChild(grid);
+            var section = (title, grid, new List<(BuildingTile, string)>());
+            _sections.Add(section);
             foreach (var def in defs)
             {
                 var tile = new BuildingTile(new Vector2(138, 168), showName: true);
@@ -248,11 +275,77 @@ public sealed class BuildMenu
                 tile.Button.MouseExited += () => { if (Hovered == def) Hovered = null; };
                 grid.AddChild(tile.Button);
                 _tiles.Add(tile);
+                section.Item3.Add((tile, SearchText(def, content)));
             }
         }
         Root = Ui.Panel(body);
         Root.Visible = false;
+        // Closing forgets the search, so the menu opens complete.
+        Root.VisibilityChanged += () =>
+        {
+            if (Root.Visible || _search.Text.Length == 0) return;
+            _search.Text = "";
+            Filter("");
+        };
         thumbs.Updated += id => Refresh(thumbs, keyOf, _sim);
+    }
+
+    /// <summary>The search box, for scripted tests and the smoke flag.</summary>
+    public LineEdit Search => _search;
+
+    /// <summary>Shows only the buildings whose search text holds every word typed.</summary>
+    public void Filter(string query)
+    {
+        var words = query.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        int shown = 0;
+        foreach (var (title, grid, tiles) in _sections)
+        {
+            int inSection = 0;
+            foreach (var (tile, text) in tiles)
+            {
+                bool match = words.All(text.Contains);
+                tile.Button.Visible = match;
+                if (match) inSection++;
+            }
+            title.Visible = grid.Visible = inSection > 0;
+            shown += inSection;
+        }
+        _noMatch.Visible = shown == 0;
+    }
+
+    /// <summary>Enter in the search box: build the first unlocked match.</summary>
+    private void PickFirst()
+    {
+        foreach (var (_, _, tiles) in _sections)
+            foreach (var (tile, _) in tiles)
+                if (tile.Button.Visible && tile.Def is { } def && _sim?.LockReason(def) == null)
+                {
+                    _search.ReleaseFocus();
+                    _pick(def);
+                    return;
+                }
+    }
+
+    /// <summary>What a search matches: name, category, description, and the items made and used.</summary>
+    private static string SearchText(BuildingDef def, ContentRegistry content)
+    {
+        var words = new List<string> { def.Name, Ui.CategoryName(def.Category), def.MetaOr("description", "") };
+        string ItemName(string id) => content.Items.TryGetValue(id, out var item) ? item.Name : id;
+        switch (def.Params)
+        {
+            case MinerParams m:
+                words.Add(ItemName(m.Item));
+                break;
+            case ProcessorParams p:
+                foreach (var id in p.Recipes)
+                    if (content.Recipes.TryGetValue(id, out var recipe))
+                    {
+                        words.AddRange(recipe.Outputs.Select(o => ItemName(o.Item)));
+                        words.AddRange(recipe.Inputs.Select(i => ItemName(i.Item)));
+                    }
+                break;
+        }
+        return string.Join(" ", words).ToLowerInvariant();
     }
 
     public void Refresh(Thumbnails thumbs, Func<BuildingDef, string> keyOf, Simulation? sim)

@@ -196,6 +196,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
   shareable string. Also a precondition for sharing with a friend later.
 - **G2. Blueprint mirror and multi-rotate (S).** The clipboard already exists.
 - **G3. Signs and labels (S).** Placeable text so a big factory explains itself.
+  *Built in 4.17.0* (roadmap step 17): the Sign building, written in the Manage window.
 - **G4. Paint or per line colours (S).** Cheap ownership.
 - **G5. Photo mode and timelapse (S/M).** Hide the UI, orbit freely, and export the factory growing
   from `EditHistory`.
@@ -211,6 +212,7 @@ Parked but not rejected: the rest of Part 1. Part 2 and Part 3 are the larger me
 - **H3. Copy settings between machines (S).** Paste a recipe to a whole selection.
 - **H4. Mass upgrade a line (S).** Partly exists through the upgrade tool.
 - **H5. Search and filter in the build menu (S).**
+  *Built in 4.17.0* (roadmap step 18): matches names, descriptions and the items made or used.
 - **H6. A real "why is this stopped" explainer (S).** Name the missing input in the inspector, and
   where it could come from.
 

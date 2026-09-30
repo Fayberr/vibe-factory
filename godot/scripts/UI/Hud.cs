@@ -74,6 +74,7 @@ public partial class Hud : CanvasLayer
     public ManageWindow Manage => _manage;
     public TutorialPanel Tutorial => _tutorial;
     public Control? BuildMenu => _menu?.Root;
+    public BuildMenu? BuildMenuPanel => _menu;
 
     /// <summary>The build stamp in the corner of the screen. For scripted checks.</summary>
     public Label Version => _version;
@@ -372,6 +373,7 @@ public partial class Hud : CanvasLayer
             delete: _tools.DeleteSelection,
             choose: recipe => _tools.ChooseRecipe(recipe),
             filter: (output, item) => _tools.ChooseFilter(output, item),
+            write: text => _tools.SetSignText(text),
             rotate: () => _tools.Rotate(1),
             move: () => _tools.BeginMove(),
             copy: () => _tools.CopySelection(enterPaste: true),

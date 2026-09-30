@@ -236,6 +236,12 @@ their choice.
   **Run until…**, which runs as fast as the computer allows until the next tier can be unlocked,
   money doubles or ten minutes pass. A machine that stops ends it early, and it gives up after an
   hour of game time with the reason (for a tier that needs goods nothing makes yet).
+- **Signs.** A Sign ($10, under Signs in the build menu) shows a line of text floating above it, up
+  to 40 characters. Select one to write on it in the Manage window; select several to write the same
+  text on all. Undo, copy and paste, blueprints and saves keep the text.
+- **Build menu search.** The build menu (`B`) has a search box that matches a building's name,
+  category and description and the items it makes or uses, so "wire" lists every building that
+  makes or takes wire. Enter builds the first unlocked match; closing the menu clears the search.
 - **Raw resources sell for 25%, and every ore is worth the same $1.** An item is worth the
   work in it: what went in times the recipe's multiplier, so processing is what pays, and a
   newer tier builds on the old chains instead of replacing them. Parts feed many recipes
@@ -292,7 +298,7 @@ godot --path godot -- --smoke --showcase --screenshot=/abs/showcase.png
 # --away=seconds (simulates that long offline and shows the away report), --bottlenecks (opens
 # Bottlenecks with the world pins on), --planner[=item] (opens the Planner), --history (opens History;
 # add --wait=65 for a line), --alerts (opens Alerts), --run-until=tier|money|minutes
-# (starts a Run until), --tutorial (an empty factory at the tutorial's
+# (starts a Run until), --sign=x,y,text (a selected sign on the demo layout's cell x,y), --build-search=text (the build menu, searching), --tutorial (an empty factory at the tutorial's
 # first step), --pause (opens the pause menu), --title (the title screen; add
 # --menu=settings|controls|new|load|credits to open one of its windows), --tool=<building id>
 # (build tool in hand), --drag=x0,y0,x1,y1 (holds a box-select drag over those cells).

@@ -15,6 +15,7 @@ public sealed class BehaviorRegistry
         r.Register(new RouterBehavior());
         r.Register(new LabBehavior());
         r.Register(new DiscarderBehavior());
+        r.Register(new SignBehavior());
         return r;
     }
 
