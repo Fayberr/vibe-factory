@@ -6,11 +6,16 @@ progression. The game logic is a **deterministic, engine-agnostic C# simulation*
 
 ![The demo factory](docs/images/hero.jpg)
 
-| Drag a belt across a line: it bridges itself | Manage a building, choose its recipe; windows side by side |
+| A belt dragged across another one bridges itself | The Manage window: recipe, level, speed, status |
 |---|---|
-| ![Automatic bridge over a belt](docs/images/bridge.jpg) | ![Manage, Progress and Statistics windows](docs/images/windows.jpg) |
+| ![Automatic bridge over a belt](docs/images/bridge.jpg) | ![The Manage window on a smelter](docs/images/manage.jpg) |
 | **Build menu with rendered icons** | **Every building and item is generated in code** |
 | ![Build menu](docs/images/build-menu.jpg) | ![Machine showcase](docs/images/showcase.jpg) |
+
+More screenshots (Progress, Statistics, Orders, Targets, Alerts, Bottlenecks, Research,
+the Planner, History, the away report, the tutorial and the title screen) are in the
+[gallery](docs/GALLERY.md). Every one is a real frame from the client, stamped with the
+build it came from in the bottom right corner.
 
 Every 3D model is **generated in code**: beveled low-poly bodies, belt profiles swept
 along curves, lattice towers, and smoking chimneys. Build-menu and hotbar icons are
