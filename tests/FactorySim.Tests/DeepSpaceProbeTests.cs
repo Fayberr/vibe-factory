@@ -49,7 +49,8 @@ public class DeepSpaceProbeTests
         // Space, not the last tier: the Orbital tier (4.13.0) comes after it, and probes do speed that one up.
         int space = C.Tiers.ToList().FindIndex(t => t.Name == "Space");
         Assert.Equal(withoutPacing[space - 1].CumulativeSeconds, withPacing[space - 1].CumulativeSeconds, 6); // a row's total includes its own wait
-        Assert.InRange(withPacing[space].IncomePerSecond, withoutPacing[space].IncomePerSecond, withoutPacing[space].IncomePerSecond * 1.25);
+        // Up to half as much again: the Space value boost (4.28.0) is paid on the probe's extra step too.
+        Assert.InRange(withPacing[space].IncomePerSecond, withoutPacing[space].IncomePerSecond, withoutPacing[space].IncomePerSecond * 1.5);
         Assert.True(C.ItemValue["space_probe"].Value > C.ItemValue["satellite"].Value);
     }
 

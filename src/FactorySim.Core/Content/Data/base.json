@@ -19,15 +19,25 @@
   // Money a new game starts with: a first drill, belt, smelter and depot line, with a little to spare.
   "startingMoney": 250,
 
+  // The game's length knob. Every amount of money below except what goods are worth is multiplied
+  // by this: building prices (and so upgrades), tier prices and required earnings, land, research,
+  // the starting money and goal rewards. Income stays the same, so the whole game takes this many
+  // times as long (2 = twice as long). A pack on top can set its own.
+  "priceScale": 1,
+
   // The land: a grid of square plots. You start with one (column 2, row 4: the middle of the south
   // edge) and buy the rest, always one that shares an edge with your land. A plot next to the start
   // costs plotPrice, and every further step away from the start multiplies that by priceGrowth, so
   // plots the same distance out cost the same. Depots stand on the outer border of the whole map.
-  "map": { "plotSize": 15, "columns": 5, "rows": 5, "startColumn": 2, "startRow": 4, "plotPrice": 2500, "priceGrowth": 8 },
+  "map": { "plotSize": 15, "columns": 5, "rows": 5, "startColumn": 2, "startRow": 4, "plotPrice": 1000, "priceGrowth": 22 },
 
   // A tier opens when lifetime earnings and the goods it asks for ("deliver": units sold at depots,
   // totals over the whole game) are both there, and it is paid for. The goods are what the tier
   // before makes, so a factory has to actually run its parts, not only earn.
+  // "valueBoost" multiplies what the tier's own new goods are worth (every recipe that makes an item
+  // first made in this tier; older items keep their value, even from this tier's bulk machines). It
+  // compounds down the chain, since later goods are built from boosted parts, so each tier's main
+  // product earns several times the last one's and the numbers grow big.
   "tiers": [
     { "name": "Basics",         "description": "Drill, smelt, sell.",                                             "cost": 0,     "requiredEarnings": 0 },
     { "name": "Workshop",       "description": "Copper, wood, chairs, presses and polishers.",                    "cost": 500,   "requiredEarnings": 750 },
@@ -35,19 +45,19 @@
       "deliver": [ { "item": "iron_plate", "count": 150 }, { "item": "copper_wire", "count": 150 } ] },
     { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys, kettles and export terminals.", "cost": 8e4,   "requiredEarnings": 1.5e5,
       "deliver": [ { "item": "steel", "count": 150 }, { "item": "crate", "count": 60 } ] },
-    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry, televisions and bulk machines.", "cost": 1e6,   "requiredEarnings": 2e6,
+    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry, televisions and bulk machines.", "cost": 1.4e6,   "requiredEarnings": 3.5e6, "valueBoost": 1.15,
       "deliver": [ { "item": "toy", "count": 80 }, { "item": "frame", "count": 60 } ] },
-    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, cars and washing machines.",           "cost": 1.5e7, "requiredEarnings": 3e7,
+    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, cars and washing machines.",           "cost": 2.4e7, "requiredEarnings": 6e7, "valueBoost": 1.85,
       "deliver": [ { "item": "motor", "count": 60 }, { "item": "jewelry", "count": 40 } ] },
-    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones, airliners and e-bikes.",                       "cost": 1.2e8, "requiredEarnings": 2.5e8,
+    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones, airliners and e-bikes.",                       "cost": 7.2e8, "requiredEarnings": 1.8e9, "valueBoost": 3.7,
       "deliver": [ { "item": "robot", "count": 40 } ] },
-    { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 2e9,   "requiredEarnings": 4e9,
+    { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 1.08e10,   "requiredEarnings": 2.7e10, "valueBoost": 1.55,
       "deliver": [ { "item": "drone", "count": 30 } ] },
     // Orbital tier (content drop, 4.13.0): delete every entry marked "Orbital tier" to remove it.
-    { "name": "Orbital",        "description": "Titanium, solar panels, habitat modules and orbital stations.",  "cost": 5e9,   "requiredEarnings": 1.2e10,
+    { "name": "Orbital",        "description": "Titanium, solar panels, habitat modules and orbital stations.",  "cost": 1.04e11,   "requiredEarnings": 2.6e11, "valueBoost": 3.8,
       "deliver": [ { "item": "satellite", "count": 25 } ] },
     // Fusion tier (content drop, 4.25.0): delete every entry marked "Fusion tier" to remove it.
-    { "name": "Fusion",         "description": "Lithium brine, superconductors, fusion cells and starships.",    "cost": 1.5e10, "requiredEarnings": 3.5e10,
+    { "name": "Fusion",         "description": "Lithium brine, superconductors, fusion cells and starships.",    "cost": 1.16e12, "requiredEarnings": 2.9e12, "valueBoost": 4,
       "deliver": [ { "item": "orbital_station", "count": 10 } ] }
   ],
 
@@ -171,7 +181,7 @@
     { "id": "smelt_gold", "inputs": [ { "item": "gold_ore", "count": 1 } ], "outputs": [ { "item": "gold_ingot", "count": 1 } ], "ticks": 24, "valueMultiplier": 2.5 },
     { "id": "make_circuit", "inputs": [ { "item": "copper_wire", "count": 3 }, { "item": "plastic", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "circuit", "count": 1 } ], "ticks": 40, "valueMultiplier": 3.5 },
     { "id": "make_battery", "inputs": [ { "item": "circuit", "count": 1 }, { "item": "cable", "count": 1 }, { "item": "iron_plate", "count": 2 } ], "outputs": [ { "item": "battery", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
-    { "id": "make_motor", "inputs": [ { "item": "steel", "count": 1 }, { "item": "gear", "count": 2 }, { "item": "battery", "count": 1 } ], "outputs": [ { "item": "motor", "count": 1 } ], "ticks": 60, "valueMultiplier": 3.5 },
+    { "id": "make_motor", "inputs": [ { "item": "steel", "count": 2 }, { "item": "gear", "count": 2 }, { "item": "battery", "count": 1 } ], "outputs": [ { "item": "motor", "count": 1 } ], "ticks": 60, "valueMultiplier": 3.5 },
     { "id": "make_jewelry", "inputs": [ { "item": "gold_ingot", "count": 2 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "jewelry", "count": 1 } ], "ticks": 50, "valueMultiplier": 3.5 },
     // Tier 5-7: robots are built on a toy body; drones need a robot; satellites need a drone
     { "id": "make_robot", "inputs": [ { "item": "toy", "count": 1 }, { "item": "motor", "count": 2 }, { "item": "circuit", "count": 2 } ], "outputs": [ { "item": "robot", "count": 1 } ], "ticks": 80, "valueMultiplier": 4.5 },
@@ -227,7 +237,7 @@
     { "id": "make_lantern", "inputs": [ { "item": "glass", "count": 1 }, { "item": "steel", "count": 1 }, { "item": "copper_wire", "count": 2 } ], "outputs": [ { "item": "lantern", "count": 1 } ], "ticks": 40, "valueMultiplier": 2.2 },
     { "id": "make_tire", "inputs": [ { "item": "plastic", "count": 3 }, { "item": "steel", "count": 1 } ], "outputs": [ { "item": "tire", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.2 },
     { "id": "make_phone", "inputs": [ { "item": "circuit", "count": 1 }, { "item": "battery", "count": 1 }, { "item": "glass", "count": 1 } ], "outputs": [ { "item": "phone", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
-    { "id": "make_car", "inputs": [ { "item": "motor", "count": 2 }, { "item": "tire", "count": 4 }, { "item": "chair", "count": 2 } ], "outputs": [ { "item": "car", "count": 1 } ], "ticks": 80, "valueMultiplier": 5.5 },
+    { "id": "make_car", "inputs": [ { "item": "motor", "count": 2 }, { "item": "tire", "count": 4 }, { "item": "chair", "count": 2 } ], "outputs": [ { "item": "car", "count": 1 } ], "ticks": 80, "valueMultiplier": 5 },
     { "id": "make_airliner", "inputs": [ { "item": "frame", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "phone", "count": 2 } ], "outputs": [ { "item": "airliner", "count": 1 } ], "ticks": 120, "valueMultiplier": 5.5 },
 
     // Home appliances (4.24.0). Kettles give cable a first use outside batteries and pumps, televisions put
@@ -235,17 +245,18 @@
     // and robots, and e-bikes the second use of aluminium and a third of batteries. Each is worth less per item
     // and pays back slower than its tier's main product, so where depots are the limit (`balance tiers`) the
     // main line still wins: appliances are variety and a place for spare parts, never a better way to play.
-    { "id": "make_kettle", "inputs": [ { "item": "steel", "count": 1 }, { "item": "cable", "count": 1 }, { "item": "plastic", "count": 2 } ], "outputs": [ { "item": "kettle", "count": 1 } ], "ticks": 30, "valueMultiplier": 2.5 },
-    { "id": "make_television", "inputs": [ { "item": "glass", "count": 2 }, { "item": "circuit", "count": 2 }, { "item": "plastic", "count": 4 } ], "outputs": [ { "item": "television", "count": 1 } ], "ticks": 50, "valueMultiplier": 3 },
-    { "id": "make_washing_machine", "inputs": [ { "item": "motor", "count": 1 }, { "item": "steel", "count": 4 }, { "item": "iron_plate", "count": 4 } ], "outputs": [ { "item": "washing_machine", "count": 1 } ], "ticks": 60, "valueMultiplier": 3 },
-    { "id": "make_ebike", "inputs": [ { "item": "aluminium", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "ebike", "count": 1 } ], "ticks": 80, "valueMultiplier": 3.5 },
+    { "id": "make_kettle", "inputs": [ { "item": "steel", "count": 1 }, { "item": "cable", "count": 1 }, { "item": "plastic", "count": 2 } ], "outputs": [ { "item": "kettle", "count": 1 } ], "ticks": 30, "valueMultiplier": 3.2 },
+    { "id": "make_television", "inputs": [ { "item": "glass", "count": 2 }, { "item": "circuit", "count": 2 }, { "item": "plastic", "count": 4 } ], "outputs": [ { "item": "television", "count": 1 } ], "ticks": 50, "valueMultiplier": 6 },
+    { "id": "make_washing_machine", "inputs": [ { "item": "motor", "count": 1 }, { "item": "steel", "count": 4 }, { "item": "iron_plate", "count": 4 } ], "outputs": [ { "item": "washing_machine", "count": 1 } ], "ticks": 60, "valueMultiplier": 3.5 },
+    { "id": "make_ebike", "inputs": [ { "item": "aluminium", "count": 2 }, { "item": "motor", "count": 2 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "ebike", "count": 1 } ], "ticks": 80, "valueMultiplier": 10 },
 
-    // Late exports (4.26.0). The rover is a second use of motors and batteries at Space, the suit a small use of
-    // titanium at Orbital, the maglev a second use of superconductors at Fusion. Each is worth
-    // far less per item than its tier's main product, so like the appliances they never change `balance tiers`.
-    { "id": "make_rover", "inputs": [ { "item": "motor", "count": 4 }, { "item": "battery", "count": 2 }, { "item": "aluminium", "count": 6 } ], "outputs": [ { "item": "rover", "count": 1 } ], "ticks": 120, "valueMultiplier": 3 },
-    { "id": "make_space_suit", "inputs": [ { "item": "titanium", "count": 4 }, { "item": "plastic", "count": 10 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "space_suit", "count": 1 } ], "ticks": 90, "valueMultiplier": 3.5 },
-    { "id": "make_maglev", "inputs": [ { "item": "superconductor", "count": 8 }, { "item": "motor", "count": 4 }, { "item": "aluminium", "count": 20 } ], "outputs": [ { "item": "maglev", "count": 1 } ], "ticks": 150, "valueMultiplier": 3.5 },
+    // Late exports (4.26.0, repriced 4.28.0). Each is built on the tier before's main product (rover: a drone and
+    // a robot; suit and maglev: habitat modules), so it carries that tier's value and stays worth selling when
+    // values jump per tier. Per ore (see `balance items`) each earns about half to two thirds of its tier's main
+    // product: a real second line, never the better one. Tests in LateExportsTests keep it that way.
+    { "id": "make_rover", "inputs": [ { "item": "drone", "count": 1 }, { "item": "robot", "count": 1 }, { "item": "battery", "count": 4 } ], "outputs": [ { "item": "rover", "count": 1 } ], "ticks": 120, "valueMultiplier": 3.5 },
+    { "id": "make_space_suit", "inputs": [ { "item": "habitat_module", "count": 1 }, { "item": "titanium", "count": 4 }, { "item": "battery", "count": 2 } ], "outputs": [ { "item": "space_suit", "count": 1 } ], "ticks": 90, "valueMultiplier": 4.2 },
+    { "id": "make_maglev", "inputs": [ { "item": "habitat_module", "count": 2 }, { "item": "superconductor", "count": 8 }, { "item": "fusion_cell", "count": 1 } ], "outputs": [ { "item": "maglev", "count": 1 } ], "ticks": 150, "valueMultiplier": 20 },
 
     // Bulk machines (idea B11, content drop 4.22.0): delete every entry marked "Bulk machines" to remove them.
     // Twice the input and output of the plain recipe in 1.5 times the time, at the same value multiplier, so
@@ -477,7 +488,7 @@
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_circuit", "make_motor" ], "inputCapacity": 10, "outputCapacity": 8 },
-      "meta": { "model": "assembler", "accent": "#3fbf6a", "glyph": "E", "description": "Assembles circuit boards (3 wire, plastic, glass) and motors (steel, 2 gears and a battery)." }
+      "meta": { "model": "assembler", "accent": "#3fbf6a", "glyph": "E", "description": "Assembles circuit boards (3 wire, plastic, glass) and motors (2 steel, 2 gears and a battery)." }
     },
     {
       "id": "battery_plant", "name": "Battery Plant", "behavior": "processor", "cost": 1.5e5, "category": "crafting", "tier": 4,
@@ -542,7 +553,7 @@
     {
       "id": "titanium_mine", "name": "Titanium Mine", "behavior": "miner", "cost": 3e8, "category": "production", "tier": 8,
       "group": "extractor", "replaces": [ "extractor" ],
-      "limit": { "base": 2, "perTier": 2 },
+      "limit": { "base": 6, "perTier": 2 },
       "ports": [ { "kind": "out", "side": "front" } ],
       "params": { "item": "titanium_ore", "interval": 40, "amount": 1 },
       "meta": { "model": "drill", "accent": "#8e9bab", "glyph": "T", "description": "Mines titanium ore: 1 every 2 s." }
@@ -581,7 +592,7 @@
     {
       "id": "brine_well", "name": "Brine Well", "behavior": "miner", "cost": 2e9, "category": "production", "tier": 9,
       "group": "extractor", "replaces": [ "extractor" ],
-      "limit": { "base": 2, "perTier": 2 },
+      "limit": { "base": 6, "perTier": 2 },
       "ports": [ { "kind": "out", "side": "front" } ],
       "params": { "item": "lithium_brine", "interval": 20, "amount": 1 },
       "meta": { "model": "pump", "accent": "#6fd6c8", "glyph": "L", "description": "Pumps lithium brine: 1 a second." }
@@ -675,7 +686,7 @@
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_airliner" ], "inputCapacity": 16, "outputCapacity": 8 },
-      "meta": { "model": "launchpad", "accent": "#eef3f8", "glyph": "v", "description": "Builds an airliner from 2 frames, 2 motors and 2 phones. Consumer goods: the end of the line, as good as drones." }
+      "meta": { "model": "launchpad", "accent": "#eef3f8", "glyph": "v", "description": "Builds an airliner from 2 frames, 2 motors and 2 phones. Consumer goods: the end of the line, sold beside drones." }
     },
 
     // ---- Home appliances (content drop, 4.24.0) ---------------------------------------------
@@ -716,21 +727,21 @@
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_rover" ], "inputCapacity": 24, "outputCapacity": 4 },
-      "meta": { "model": "assembler", "accent": "#d9a066", "glyph": "R", "description": "Builds a planetary rover from 4 motors, 2 batteries and 6 aluminium. Late exports: a use for motors next to the space line." }
+      "meta": { "model": "assembler", "accent": "#d9a066", "glyph": "R", "description": "Builds a planetary rover from a robot, a scout drone and 4 batteries. Late exports: a second line beside the space probes." }
     },
     {
       "id": "suit_lab", "name": "Suit Lab", "behavior": "processor", "cost": 1.5e9, "category": "crafting", "tier": 8,
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_space_suit" ], "inputCapacity": 24, "outputCapacity": 4 },
-      "meta": { "model": "assembler", "accent": "#f2f2ee", "glyph": "s", "description": "Sews a space suit from 4 titanium, 10 plastic and 2 batteries. Late exports." }
+      "meta": { "model": "assembler", "accent": "#f2f2ee", "glyph": "s", "description": "Builds a space suit around the life support of a habitat module, with 4 titanium and 2 batteries. Late exports." }
     },
     {
       "id": "maglev_works", "name": "Maglev Works", "behavior": "processor", "cost": 6e9, "category": "crafting", "tier": 9,
       "group": "machine", "replaces": [ "machine", "belt" ],
       "ports": [ { "kind": "in", "side": "back" }, { "kind": "in", "side": "left" }, { "kind": "in", "side": "right" }, { "kind": "out", "side": "front" } ],
       "params": { "recipes": [ "make_maglev" ], "inputCapacity": 36, "outputCapacity": 4 },
-      "meta": { "model": "launchpad", "accent": "#c8d4e6", "glyph": "M", "description": "Builds a maglev train from 8 superconductors, 4 motors and 20 aluminium. Late exports: fast trains on floating magnets." }
+      "meta": { "model": "launchpad", "accent": "#c8d4e6", "glyph": "M", "description": "Builds a maglev train from 2 habitat modules as carriages, 8 superconductors and a fusion cell. Late exports: fast trains on floating magnets." }
     },
 
     // ---- Economy -------------------------------------------------------------------------
@@ -889,46 +900,47 @@
     { "id": "frames_50",   "name": "Framework",         "description": "Produce 50 frames.",                     "kind": "produced",  "item": "frame", "target": 50, "reward": 30000 },
     { "id": "sold_10k",     "name": "Mass market",       "description": "Sell 10,000 items.",                     "kind": "sold",      "target": 1e4,    "reward": 40000 },
     { "id": "earn_1m",      "name": "Millionaire",       "description": "Earn $1,000,000 in total.",              "kind": "earned",    "target": 1e6,    "reward": 150000 },
-    { "id": "circuit_100",  "name": "Chip maker",        "description": "Produce 100 circuits.",                  "kind": "produced",  "item": "circuit", "target": 100, "reward": 100000 },
-    { "id": "battery_50",  "name": "Fully charged",     "description": "Produce 50 batteries.",                  "kind": "produced",  "item": "battery", "target": 50, "reward": 200000 },
+    { "id": "circuit_100",  "name": "Chip maker",        "description": "Produce 100 circuits.",                  "kind": "produced",  "item": "circuit", "target": 100, "reward": 2e5 },
+    { "id": "battery_50",  "name": "Fully charged",     "description": "Produce 50 batteries.",                  "kind": "produced",  "item": "battery", "target": 50, "reward": 4e5 },
     // Industrial exports (content drop, 4.7.0): delete with the two products, recipes and machines.
     { "id": "industrial_pump_1", "name": "Primed",       "description": "Produce your first industrial pump.",    "kind": "produced",  "item": "industrial_pump", "target": 1, "reward": 100000 },
     // Consumer goods
-    { "id": "phone_1",      "name": "Hello?",            "description": "Produce your first phone.",              "kind": "produced",  "item": "phone", "target": 1, "reward": 250000 },
+    { "id": "phone_1",      "name": "Hello?",            "description": "Produce your first phone.",              "kind": "produced",  "item": "phone", "target": 1, "reward": 5e5 },
     // Home appliances (4.24.0)
-    { "id": "television_1", "name": "Prime time",        "description": "Produce your first television.",         "kind": "produced",  "item": "television", "target": 1, "reward": 200000 },
-    { "id": "contract_50",  "name": "Trusted partner",   "description": "Complete 50 orders.",                    "kind": "contracts", "target": 50,     "reward": 400000 },
-    { "id": "level_25",     "name": "Maxed out",         "description": "Upgrade a building to level 25.",        "kind": "level",     "target": 25,     "reward": 1e6 },
-    { "id": "robot_1",      "name": "It's alive",        "description": "Produce your first robot.",              "kind": "produced",  "item": "robot", "target": 1, "reward": 2e6 },
+    { "id": "television_1", "name": "Prime time",        "description": "Produce your first television.",         "kind": "produced",  "item": "television", "target": 1, "reward": 4e5 },
+    { "id": "contract_50",  "name": "Trusted partner",   "description": "Complete 50 orders.",                    "kind": "contracts", "target": 50,     "reward": 8e5 },
+    { "id": "level_25",     "name": "Maxed out",         "description": "Upgrade a building to level 25.",        "kind": "level",     "target": 25,     "reward": 2e6 },
+    { "id": "robot_1",      "name": "It's alive",        "description": "Produce your first robot.",              "kind": "produced",  "item": "robot", "target": 1, "reward": 1.2e7 },
     // Consumer goods
-    { "id": "car_1",        "name": "Road trip",         "description": "Produce your first car.",                "kind": "produced",  "item": "car", "target": 1, "reward": 3e6 },
+    { "id": "car_1",        "name": "Road trip",         "description": "Produce your first car.",                "kind": "produced",  "item": "car", "target": 1, "reward": 1.5e7 },
     // Home appliances (4.24.0)
-    { "id": "washing_machine_1", "name": "Spin cycle",    "description": "Produce your first washing machine.",    "kind": "produced",  "item": "washing_machine", "target": 1, "reward": 2.5e6 },
+    { "id": "washing_machine_1", "name": "Spin cycle",    "description": "Produce your first washing machine.",    "kind": "produced",  "item": "washing_machine", "target": 1, "reward": 1.2e7 },
     { "id": "earn_100m",    "name": "Tycoon",            "description": "Earn $100 million in total.",            "kind": "earned",    "target": 1e8,    "reward": 1.5e7 },
-    { "id": "drone_1",      "name": "Liftoff",           "description": "Produce your first drone.",              "kind": "produced",  "item": "drone", "target": 1, "reward": 5e7 },
+    { "id": "drone_1",      "name": "Liftoff",           "description": "Produce your first drone.",              "kind": "produced",  "item": "drone", "target": 1, "reward": 3e8 },
     // Consumer goods
-    { "id": "airliner_1",   "name": "Wheels up",         "description": "Produce your first airliner.",           "kind": "produced",  "item": "airliner", "target": 1, "reward": 8e7 },
+    { "id": "airliner_1",   "name": "Wheels up",         "description": "Produce your first airliner.",           "kind": "produced",  "item": "airliner", "target": 1, "reward": 4e8 },
     // Home appliances (4.24.0)
-    { "id": "ebike_1",      "name": "Pedal power",       "description": "Produce your first e-bike.",             "kind": "produced",  "item": "ebike", "target": 1, "reward": 6e7 },
-    { "id": "sold_1m",      "name": "World market",      "description": "Sell a million items.",                  "kind": "sold",      "target": 1e6,    "reward": 2e8 },
+    { "id": "ebike_1",      "name": "Pedal power",       "description": "Produce your first e-bike.",             "kind": "produced",  "item": "ebike", "target": 1, "reward": 3e8 },
+    { "id": "sold_1m",      "name": "World market",      "description": "Sell a million items.",                  "kind": "sold",      "target": 1e6,    "reward": 1e9 },
     { "id": "earn_10b",     "name": "Mogul",             "description": "Earn $10 billion in total.",             "kind": "earned",    "target": 1e10,   "reward": 1.5e9 },
-    { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 2e9 },
+    { "id": "satellite_1",  "name": "Into orbit",        "description": "Launch your first satellite.",           "kind": "produced",  "item": "satellite", "target": 1, "reward": 5e9 },
     // Deep-space probes (content drop, 4.6.0): delete with the item, recipe and Probe Works.
-    { "id": "space_probe_1", "name": "Beyond orbit",      "description": "Launch your first deep-space probe.",    "kind": "produced",  "item": "space_probe", "target": 1, "reward": 3e9 },
+    { "id": "space_probe_1", "name": "Beyond orbit",      "description": "Launch your first deep-space probe.",    "kind": "produced",  "item": "space_probe", "target": 1, "reward": 8e9 },
     // Late exports (4.26.0)
-    { "id": "rover_1",      "name": "Wheels on Mars",    "description": "Build your first planetary rover.",      "kind": "produced",  "item": "rover", "target": 1, "reward": 2.5e9 },
+    { "id": "rover_1",      "name": "Wheels on Mars",    "description": "Build your first planetary rover.",      "kind": "produced",  "item": "rover", "target": 1, "reward": 6e9 },
     // Orbital tier (content drop, 4.13.0): delete with the tier, items, recipes and machines.
-    { "id": "titanium_200", "name": "Light and strong",  "description": "Produce 200 titanium.",                   "kind": "produced",  "item": "titanium", "target": 200, "reward": 4e9 },
-    { "id": "habitat_module_1", "name": "Room with a view", "description": "Build your first habitat module.",  "kind": "produced",  "item": "habitat_module", "target": 1, "reward": 6e9 },
-    { "id": "orbital_station_1", "name": "Home in orbit", "description": "Launch your first orbital station.",   "kind": "produced",  "item": "orbital_station", "target": 1, "reward": 1.5e10 },
+    { "id": "titanium_200", "name": "Light and strong",  "description": "Produce 200 titanium.",                   "kind": "produced",  "item": "titanium", "target": 200, "reward": 4e10 },
+    { "id": "habitat_module_1", "name": "Room with a view", "description": "Build your first habitat module.",  "kind": "produced",  "item": "habitat_module", "target": 1, "reward": 6e10 },
+    { "id": "orbital_station_1", "name": "Home in orbit", "description": "Launch your first orbital station.",   "kind": "produced",  "item": "orbital_station", "target": 1, "reward": 1.5e11 },
     // Late exports (4.26.0), Orbital tier: delete with either.
-    { "id": "space_suit_1", "name": "Suited up",         "description": "Make your first space suit.",            "kind": "produced",  "item": "space_suit", "target": 1, "reward": 1e10 },
+    { "id": "space_suit_1", "name": "Suited up",         "description": "Make your first space suit.",            "kind": "produced",  "item": "space_suit", "target": 1, "reward": 1e11 },
     // Fusion tier (content drop, 4.25.0): delete with the tier, items, recipes and machines.
-    { "id": "lithium_500",  "name": "Salt of the earth", "description": "Produce 500 lithium.",                   "kind": "produced",  "item": "lithium", "target": 500, "reward": 2e10 },
-    { "id": "fusion_cell_1", "name": "A star in a jar",  "description": "Produce your first fusion cell.",        "kind": "produced",  "item": "fusion_cell", "target": 1, "reward": 3e10 },
-    { "id": "starship_1",   "name": "To the stars",      "description": "Launch your first starship.",            "kind": "produced",  "item": "starship", "target": 1, "reward": 8e10 },
+    { "id": "lithium_500",  "name": "Salt of the earth", "description": "Produce 500 lithium.",                   "kind": "produced",  "item": "lithium", "target": 500, "reward": 2e11 },
+    { "id": "fusion_cell_1", "name": "A star in a jar",  "description": "Produce your first fusion cell.",        "kind": "produced",  "item": "fusion_cell", "target": 1, "reward": 3e11 },
+    { "id": "starship_1",   "name": "To the stars",      "description": "Launch your first starship.",            "kind": "produced",  "item": "starship", "target": 1, "reward": 1e12 },
     // Late exports (4.26.0), Fusion tier: delete with either.
-    { "id": "maglev_1",     "name": "Floating along",    "description": "Build your first maglev train.",         "kind": "produced",  "item": "maglev", "target": 1, "reward": 5e10 },
-    { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 }
+    { "id": "maglev_1",     "name": "Floating along",    "description": "Build your first maglev train.",         "kind": "produced",  "item": "maglev", "target": 1, "reward": 5e11 },
+    { "id": "earn_1t",      "name": "Trillionaire",      "description": "Earn $1 trillion in total.",             "kind": "earned",    "target": 1e12,   "reward": 1.5e11 },
+    { "id": "earn_1q",      "name": "Quadrillionaire",   "description": "Earn $1 quadrillion in total.",          "kind": "earned",    "target": 1e15,   "reward": 1.5e14 }
   ]
 }

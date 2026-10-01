@@ -23,7 +23,7 @@ plays underneath. See [Credits](#credits).
 
 **A full game around it:** a title screen with your factory running behind it, five save
 slots (autosave, play time, last played), a pause menu, a tutorial, a long progression of
-ten tiers, customer orders and 52 goals, and settings in four tabs:
+ten tiers, customer orders and 53 goals, and settings in four tabs:
 
 - **Audio:** master, music, effects and interface volume; mute when the game is in the background.
 - **Display:** fullscreen, vsync, frame rate limit, FPS counter, graphics quality, interface size.
@@ -66,7 +66,8 @@ dotnet run --project "src/FactorySim.Cli" -- inspect save.json   # live report o
 ```
 
 **Balance tool.** `balance` is a calculator over `base.json`: `balance tiers` estimates how long
-each tier takes, `balance items` lists what everything is worth and what uses it, and
+each tier takes, `balance items` lists what everything is worth, what it earns per ore (how products compare, since
+ore is what limits a factory) and what uses it, and
 `balance item <name> [rate]` breaks down one production line (machines, ores per second, build
 cost, payback), and `balance land` prices the map's plots against income (which tier can afford
 each ring, and how many minutes of income it is). Options: `--level N` (every building at level N), `--polish none|products|all`,
@@ -193,10 +194,17 @@ their choice.
   Electronics, a washing machine at Robotics and an e-bike at Aerospace, each from a machine of its
   own and main-line parts. They sell for less than the tier's main product, so they are variety and
   a home for spare parts rather than the best way to play.
-- **Late exports.** The last three tiers get an optional product each: a planetary rover at Space
-  (motors, batteries, aluminium), a space suit at Orbital (titanium, plastic, batteries) and a
-  maglev train at Fusion (superconductors, motors, aluminium). Like the appliances they are
-  variety rather than the best sale.
+- **Late exports.** The last three tiers get an optional product each, built on the tier before's
+  main product: a planetary rover at Space (a drone, a robot, batteries), a space suit at Orbital (a
+  habitat module, titanium, batteries) and a maglev train at Fusion (two habitat modules,
+  superconductors, a fusion cell). They earn about 40 to 65% of what the main product earns per ore:
+  a real second line, never the better one.
+- **Money scale.** Money grows fast: each late tier earns several times the one before, from about
+  $1K a second at Petrochemicals to billions a second in an upgraded Fusion factory, and a starship
+  is worth about $300M. Two settings in `base.json` set this: a tier's `valueBoost` (what the tier's
+  own new goods are worth) and the top-level `priceScale`, which multiplies every price (buildings,
+  upgrades, tiers, land, goal rewards) but no item's value, so it sets how long the game takes
+  without changing how it plays. At 2 everything takes twice as long.
 - **Industrial exports.** Industry and Petrochemicals add dedicated Tool Works and Pump Works.
   Their optional toolkits and pumps turn rods, screws, gears, cables and frames into sellable
   equipment without changing a tier gate or any existing machine's automatic recipes.
@@ -209,9 +217,9 @@ their choice.
   has a mixed order of its own while it is your newest tier (Builder's order, Hardware store,
   Gadget shop, Robot workshop, Hangar order, Mission supplies, Station supplies, Shipyard order). Don't like one?
   Swap it for a small fee.
-- **Goals.** 52 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
+- **Goals.** 53 milestones (first sale, 50 conveyors, a level 10 building, 10 orders,
   a sustained steel production challenge, first robot, first car, first satellite, first
-  deep-space probe, first orbital station, first starship, a trillion earned...), each with a cash reward. The Progress window shows
+  deep-space probe, first orbital station, first starship, a quadrillion earned...), each with a cash reward. The Progress window shows
   the next four with progress bars.
 - **Per-building upgrades.** Every building has its own
   level: drills and machines get faster (machines also add a little value), belts and
@@ -288,7 +296,7 @@ their choice.
   with the one plot at the bottom middle and buys the rest (while you build, move or paste, every plot you do not own shows its price flat on the ground, and the ones next to yours can be bought: click the plot and confirm).
   A plot must share an edge with land you own, never just a corner. The price depends on how far
   the plot is from your starting plot, not on how many you own: the three plots next to the start
-  cost the same ($2.5K), and every step further out costs eight times more, up to $82M in the far
+  cost the same ($1K), and every step further out costs 22 times more, up to $5.15B in the far
   corners. You can only build on your own land; the blue rim around the whole map is where
   depots and export terminals work, so a plot on the map's edge is worth more than its size.
   Sandbox owns the whole map for free.
@@ -384,7 +392,8 @@ cd godot && godot --headless --export-release "Windows Desktop" ../build/VibeFac
 Most content is data. `src/FactorySim.Core/Content/Data/base.json` defines tiers,
 items (value, `raw`), recipes and buildings (footprint, ports, behavior, params, tier,
 `limit`, `upgrade` track, and `group`/`replaces` for dropping one building onto another).
-A building's `meta.model` picks its procedural model (`belt`, `ramp`, `splitter`,
+The top-level `priceScale` (1 in the base game) multiplies every price and no value, so it is the
+game's length in one number. A building's `meta.model` picks its procedural model (`belt`, `ramp`, `splitter`,
 `merger`, `drill`, `treefarm`, `quarry`, `pump`, `furnace`, `forge`, `sawmill`, `press`,
 `refinery`, `assembler`, `polisher`, `depot`), and `meta.accent` tints it. A new machine that
 reuses an existing behavior and model therefore needs no code at all. Extra packs

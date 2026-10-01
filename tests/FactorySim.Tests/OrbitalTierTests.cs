@@ -67,8 +67,9 @@ public class OrbitalTierTests
         var v = C.ItemValue;
         Assert.Equal("orbital_station", C.Items.Keys.Where(id => !C.Items[id].Science).MaxBy(id => v[id].Value));
 
+        // Each late tier's product takes over: several times the income of the tier before.
         var pacing = TierPacing.Estimate(C, new BalanceAssumptions { Level = 1 });
-        Assert.InRange(pacing[Orbital].IncomePerSecond / pacing[Orbital - 1].IncomePerSecond, 1.5, 3);
+        Assert.InRange(pacing[Orbital].IncomePerSecond / pacing[Orbital - 1].IncomePerSecond, 3, 10);
         var station = Assert.Single(pacing[Orbital].Products, p => p.Item == "orbital_station");
         Assert.True(station.IncomePerSecond > 0.25 * pacing[Orbital].IncomePerSecond);
     }

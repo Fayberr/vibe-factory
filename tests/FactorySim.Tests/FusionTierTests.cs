@@ -81,8 +81,9 @@ public class FusionTierTests
         var v = C.ItemValue;
         Assert.Equal("starship", C.Items.Keys.Where(id => !C.Items[id].Science).MaxBy(id => v[id].Value));
 
+        // Each late tier's product takes over: several times the income of the tier before.
         var pacing = TierPacing.Estimate(C, new BalanceAssumptions { Level = 1 });
-        Assert.InRange(pacing[Fusion].IncomePerSecond / pacing[Fusion - 1].IncomePerSecond, 1.5, 3);
+        Assert.InRange(pacing[Fusion].IncomePerSecond / pacing[Fusion - 1].IncomePerSecond, 3, 10);
         var ship = Assert.Single(pacing[Fusion].Products, p => p.Item == "starship");
         Assert.True(ship.IncomePerSecond > 0.25 * pacing[Fusion].IncomePerSecond);
     }
@@ -90,7 +91,8 @@ public class FusionTierTests
     [Fact]
     public void The_wait_for_it_is_no_longer_than_twice_the_wait_for_orbital()
     {
-        var pacing = TierPacing.Estimate(C, new BalanceAssumptions { Level = 1 });
+        // Measured for a player who upgrades (what the tier requirements are tuned against).
+        var pacing = TierPacing.Estimate(C, new BalanceAssumptions { UpgradePaybackSeconds = 1800 });
         Assert.InRange(pacing[Fusion - 1].Seconds, 0, 2 * pacing[Fusion - 2].Seconds);
     }
 

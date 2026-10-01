@@ -90,6 +90,8 @@ against it instead of guessed:
 - `balance item <name> [rate]` breaks down one production line: machines per step, ores per
   second, belt load, build cost, payback time.
 - Options: `--level N`, `--polish none|products|all`, `--tier N`, `--pack extra.json`.
+- Since 4.28.0, `balance items` has a Per ore column (sale price over the ore in one unit), which
+  compares products fairly because ore is what limits a factory.
 - Since 4.27.0, `--payback MIN` makes `balance tiers` play a player who upgrades: each tier's
   factory is rebuilt at whichever level up to the old one gets to the next tier first, then
   upgraded one whole-factory level at a time as soon as it can pay, if the upgrade earns its
@@ -353,6 +355,7 @@ optional one with a machine of its own, main-line parts only, each only sold.
 The first draft had four ingredients for the rover and the suit, which the recipe rule (one ingredient
 a machine side) rejects, so circuit boards and the solar panel came out. `balance tiers` is unchanged.
 Three goals (first rover, suit and maglev). Remove: see "Late exports" in the architecture notes.
+Repriced in 4.28.0 to be built on the tier before's main product; see step 24.
 
 ### 5. Polish and belt look (done)
 
@@ -614,6 +617,56 @@ better choice sitting next to its plain one and nothing needs a per-recipe unloc
 existing machine like any other machine. Remove them by deleting the base.json entries marked "Bulk
 machines" (see `BulkMachinesTests`).
 
+### 24. Big numbers and a smooth curve (done)
+
+The 4.28.0 rebalance, all in `base.json` plus two knobs. Asked for: much bigger money late on, a wait
+that grows smoothly tier by tier instead of one wall, side products that stay worth making, and the
+game's length as one setting that can be changed later.
+
+- **Two knobs.** A tier's `valueBoost` multiplies the value of every good first made at that tier,
+  and it compounds down the chain (Electronics 1.15, Robotics 1.85, Aerospace 3.7, Space 1.55,
+  Orbital 3.8, Fusion 4). The top-level `priceScale` (1) multiplies every price and no value:
+  buildings, upgrades, tiers, land, starting money, goal rewards and money goals. Income stays the
+  same, so the whole game takes exactly that many times as long. Details: "Economy knobs" in the
+  architecture notes.
+- **Tier prices** follow the new incomes: Electronics asks for $3.5M earned, Robotics $60M,
+  Aerospace $1.8B, Space $27B, Orbital $260B, Fusion $2.9T, each with a price of 40% of that.
+
+| Tier | Income at level 1, before | after | Wait at `--payback 30`, before | after |
+|---|---|---|---|---|
+| Petrochemicals | $1.04K/s | $1.04K/s | 8m | 10m |
+| Electronics | $4.79K/s | $6.48K/s | 21m | 16m |
+| Robotics | $18.61K/s | $43.00K/s | 24m | 23m |
+| Aerospace | $41.61K/s | $294.88K/s | 3h 28m | 31m |
+| Space | $105.03K/s | $2.26M/s | 14h 2m | 43m |
+| Orbital | $182.74K/s | $12.54M/s | 2m | 1h 1m |
+| Fusion | $297.21K/s | $76.94M/s | | |
+
+The waits are the time before the next tier opens. A player who upgrades (`--payback 30`) ends at
+$22.57B a second in a level 10 Fusion factory (was $734.82K at level 2), and a starship is worth
+$302.63M (was $1.68M). Each late tier earns 3 to 12 times the one before at level 1 (a test).
+
+- **Length is the open part.** The reference player now finishes in 3h 18m, against 18h 39m before,
+  almost all of which was the 14 hour Space wall; at level 1 it is 5d 5h (was 3d 16h). `priceScale`
+  stretches it without changing anything else: 3 gives about 10 hours, 5 about 16.5 hours. Which
+  target fits is still open (see below).
+- **Side products by ore.** `balance items` has a Per ore column: what one sells for over the ore
+  in it, the fair comparison because ore is what limits a factory. The late exports, worth a few
+  thousand dollars next to main products worth millions, are now built on the previous tier's main
+  product (rover: a drone, a robot, 4 batteries; suit: a habitat module, 4 titanium, 2 batteries;
+  maglev: 2 habitat modules, 8 superconductors, a fusion cell) and earn about 52, 66 and 41% per ore
+  of the probe, the station and the starship. The other side products moved with the boosts (kettle
+  x3.2, television x6, washing machine x3.5, car x5, e-bike x10). At level 1 the phone takes 20% of
+  Electronics' sales, the car 21% of Robotics' and the airliner 30% of Aerospace's.
+- **Idle coal.** A motor takes 2 steel (was 1), which uses up the coal Electronics left idle.
+  Robotics still leaves 18% of its coal idle, which is accepted for now.
+- **Land.** The first ring costs $1K and every ring 22 times more, up to $5.15B in the far corners,
+  about a minute of an upgraded Fusion factory's income (was $2.5K times 8, up to $82M). The far
+  corners stay a late goal.
+- **Goals.** Rewards from Electronics on follow the new incomes, and a new goal asks for a
+  quadrillion dollars earned (53 goals). Basics to Industry are unchanged, so the tutorial and the
+  first quarter of an hour play exactly as before.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it
@@ -623,3 +676,5 @@ machines" (see `BulkMachinesTests`).
 - Step 9 (byproducts): keep, extend or remove the trial after playing it.
 - Step 10 (research): keep, retune or remove the two-slice trial after playing it; whether a third
   pack or optional content unlocks should ever follow.
+- Step 24 (money scale): the target length. `priceScale` is 1 (about 3h 18m for a player who
+  upgrades, 5 days at level 1); whether it should be an idle game of days or an active one of hours.

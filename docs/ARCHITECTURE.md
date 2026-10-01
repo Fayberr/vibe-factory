@@ -199,6 +199,17 @@ underneath. Lifts and multi-level machines use the same mechanism.
   raw resources to give every item's level-1 value and the tier it becomes available. The
   Manage window shows it, and a test checks that each tier's best product is worth at
   least double the last. Every ore is worth $1, so an item's value is the work in it.
+- **Economy knobs.** Two numbers in `base.json` scale the whole economy, both applied once in
+  `ContentRegistry.Build`, so the simulation only ever sees the result. A tier's `valueBoost`
+  (default 1) multiplies the `valueMultiplier` of every recipe whose output is first made at that tier
+  (`RecipeDef.Boosted`); a recipe on a later machine that makes an older good, like a bulk machine, is
+  left alone, so a good is worth the same whichever machine made it. It compounds down the chain. The
+  top-level `priceScale` (default 1, the last pack that sets it wins) multiplies every money price
+  (`Priced` on buildings, upgrades, tiers, goals and the map, plus `startingMoney`): building costs,
+  upgrade base costs, tier prices and required earnings, plot prices, goal rewards and the targets of
+  `earned` goals. Item values, research packs and order rewards (which come from item values) stay,
+  so income is unchanged and the game takes `priceScale` times as long for a player who upgrades on
+  the same terms (`EconomyKnobsTests`).
 - **Recipe tree.** `base.json` holds one connected tree: shared parts feed many recipes and
   only the final main-line products (the deep-space probe and the orbital station) are sold and used in nothing. Optional
   consumer goods and industrial exports are deliberate sell-only leaves. Tests walk the tree to
@@ -376,11 +387,12 @@ filters. The removal test proves every other item value is unchanged and no tier
 ### Late exports
 
 The 4.26.0 content drop gives the three late tiers a side product each, built like the appliances: a
-planetary rover (Rover Works, Space: 4 motors, 2 batteries, 6 aluminium), a space suit (Suit Lab, Orbital:
-4 titanium, 10 plastic, 2 batteries) and a maglev train (Maglev Works, Fusion: 8 superconductors, 4 motors,
-20 aluminium). Each machine has only its own recipe, at most three kinds of input like every recipe, from
-main-line parts only, and nothing uses the products. They are worth $11.4K, $1.58K and $16.4K, far below
-the tier's main product, so `balance tiers` is unchanged. Three goals come with it.
+planetary rover (Rover Works, Space: a drone, a robot, 4 batteries), a space suit (Suit Lab, Orbital: a
+habitat module, 4 titanium, 2 batteries) and a maglev train (Maglev Works, Fusion: 2 habitat modules,
+8 superconductors, a fusion cell). Each machine has only its own recipe, at most three kinds of input like
+every recipe, from main-line parts only, and nothing uses the products. Since 4.28.0 each is built on the
+previous tier's main product, so it carries the tier's value boost, and earns 33 to 90% of its tier's main
+product per ore (about 52, 66 and 41% today; `LateExportsTests` holds the range). Three goals come with it.
 
 Every entry is marked "Late exports" in `base.json`. To remove it, delete those entries (three items,
 recipes, buildings and goals), the three item mesh cases (`rover`, `suit`, `maglev`), `LateExportsTests.cs`,

@@ -77,12 +77,18 @@ public class LateExportsTests
     }
 
     [Fact]
-    public void An_export_is_worth_less_than_its_tiers_main_product()
+    public void An_export_earns_less_per_ore_than_its_tiers_main_product_but_not_far_less()
     {
-        var v = C.ItemValue;
-        Assert.True(v["rover"].Value < v["satellite"].Value);
-        Assert.True(v["space_suit"].Value < v["habitat_module"].Value);
-        Assert.True(v["maglev"].Value < v["starship"].Value);
+        // Ore is what limits a factory, so goods compare per ore. An export is a real second line
+        // (at least a third of the main product), but the main line stays the better one.
+        var book = RecipeBook.Create(C);
+        double PerOre(string item)
+        {
+            var chain = ProductionChain.For(book, item);
+            return chain.SaleValue / chain.RawPerSecond.Values.Sum();
+        }
+        foreach (var (export, main) in new[] { ("rover", "space_probe"), ("space_suit", "orbital_station"), ("maglev", "starship") })
+            Assert.InRange(PerOre(export) / PerOre(main), 0.33, 0.9);
     }
 
     [Fact]
