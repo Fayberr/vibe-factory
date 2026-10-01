@@ -650,8 +650,8 @@ $302.63M (was $1.68M). Each late tier earns 3 to 12 times the one before at leve
   almost all of which was the 14 hour Space wall; at level 1 it is 5d 5h (was 3d 16h). `priceScale`
   stretches it: for the same `--payback 30` player 2 gives 6h 36m, 3 gives 9h 55m and 4 gives 14h 1m.
   Above 4 it jumps (4.5: 22h, 5: 1d 14h), because upgrades stop earning their price back within 30
-  minutes and the factory stays a few levels lower. Level 1 scales exactly. Which target fits is
-  still open (see below).
+  minutes and the factory stays a few levels lower. Level 1 scales exactly. Step 25 settled it
+  another way: at least 10 hours for the best player.
 - **Side products by ore.** `balance items` has a Per ore column: what one sells for over the ore
   in it, the fair comparison because ore is what limits a factory. The late exports, worth a few
   thousand dollars next to main products worth millions, are now built on the previous tier's main
@@ -669,6 +669,52 @@ $302.63M (was $1.68M). Each late tier earns 3 to 12 times the one before at leve
   quadrillion dollars earned (53 goals). Basics to Industry are unchanged, so the tutorial and the
   first quarter of an hour play exactly as before.
 
+### 25. Ten hours at least (done)
+
+The 4.29.0 rebalance. Asked for: the ten tiers should take at least 10 hours, and depot and export
+terminal levels should get more expensive the higher they go. The 3h 18m of 4.28.0 came from cheap
+upgrades: a player who upgraded ran about 40 times faster than one at level 1, so upgrading skipped
+most of the game.
+
+- **Level tracks in the content.** The upgrade track of each behavior now lives in `base.json`
+  (`levelTracks`: processor, miner, seller); a building's own `upgrade` still wins, and the C#
+  defaults are only the fallback. Changing what a level costs is now a content edit.
+- **Pricier levels.** A machine's first level costs 2 times the machine (was 1.2) and every next
+  one 2.2 times the last (was 1.7); a drill's 2 times, then 2.5 (was 1.2, then 1.65). Level 25 is
+  still the cap for both.
+- **Steeper depots.** A track can set `costGrowthStep`, added to the growth for every level: Market
+  Depots and export terminals go x1.9, x2.0, x2.1 and so on, still without a cap. Going from level
+  20 to 21 on a $50 depot costs about $21.5B (was $19.8M), from 30 to 31 about $4e16 (was $12B).
+- **Smoothed tier prices.** Workshop $1.35K earned, Industry $33K, Petrochemicals $820K,
+  Electronics $28M, Robotics $350M, Aerospace $5.2B, Space $53B, Orbital $390B, Fusion $2.8T, so
+  every tier takes longer than the one before (a test). Deliveries and value boosts are unchanged.
+
+| Tier | Wait at `--payback 30`, before | after |
+|---|---|---|
+| Basics | 2m 12s | 3m 2s |
+| Workshop | 2m 47s | 8m 0s |
+| Industry | 9m 8s | 19m 40s |
+| Petrochemicals | 10m 23s | 40m 12s |
+| Electronics | 15m 44s | 1h 3m |
+| Robotics | 22m 44s | 1h 29m |
+| Aerospace | 30m 44s | 1h 55m |
+| Space | 43m 19s | 2h 17m |
+| Orbital | 1h 1m | 2h 50m |
+| Total | 3h 18m | 10h 46m |
+
+- **Play styles.** The most patient player (upgrades whenever it brings the next tier closer) needs
+  10h 28m, the fastest there is; one who only upgrades drills 14h 7m. Pickier players take longer:
+  `--payback 10` 22h 21m, `--payback 5` 1d 17h, level 3 1d 16h, level 1 8d 1h (was 5d 5h).
+  `GameLengthTests` keeps the best player at 10 hours or more.
+- **Income.** Fewer levels means a smaller mid game: the reference player reaches Fusion at level 5
+  earning $1.64B a second (was $22.57B at level 10). Fusion has no end, so the patient player keeps
+  climbing there, to about $3.23T a second.
+- **Other levers tried.** 100 times the deliveries only gave 4h 14m (the optimizer upgrades drills
+  instead), and `priceScale` 3 gave 9h 55m with every price, land included, 3 times higher. The
+  level costs were the cause, so they were the fix.
+- **Old saves.** Removing a building refunds what its levels cost at today's prices, so an upgraded
+  building from an older save refunds more than was paid for it, once. Accepted.
+
 ## Open questions
 
 - Step 4 (more content): the consumer goods side line shipped in 4.3.0; next, whether to keep it
@@ -678,5 +724,5 @@ $302.63M (was $1.68M). Each late tier earns 3 to 12 times the one before at leve
 - Step 9 (byproducts): keep, extend or remove the trial after playing it.
 - Step 10 (research): keep, retune or remove the two-slice trial after playing it; whether a third
   pack or optional content unlocks should ever follow.
-- Step 24 (money scale): the target length. `priceScale` is 1 (about 3h 18m for a player who
-  upgrades, 5 days at level 1); whether it should be an idle game of days or an active one of hours.
+- Step 25 (length): the ten tiers now take at least 10 hours for the best player. Whether the
+  levels above that (8 days at level 1) feel right after playing it.

@@ -111,9 +111,11 @@ public sealed class ContentRegistry
         BigNum startingMoney = 0;
         var map = new MapDef();
         double price = 1;
+        var levelTracks = new Dictionary<string, UpgradeTrack>();
         foreach (var pack in packs)
         {
             if (pack.StartingMoney is BigNum money) startingMoney = money;
+            foreach (var (behavior, track) in pack.LevelTracks) levelTracks[behavior] = track;
             if (pack.Map != null) map = pack.Map;
             if (pack.PriceScale is double scale) price = scale;
             if (pack.Tiers.Count > 0)
@@ -130,7 +132,11 @@ public sealed class ContentRegistry
         }
 
         if (!(price > 0) || double.IsInfinity(price)) throw new ContentException($"priceScale must be above 0 (got {price}).");
-        var buildingList = buildings.List;
+        // A building without its own "upgrade" levels like the rest of its behavior (a copy, so a pack
+        // object reused for another registry keeps its own blank to fill).
+        var buildingList = buildings.List
+            .Select(b => b.Upgrade == null && levelTracks.TryGetValue(b.Behavior, out var track) ? b.WithUpgrade(track) : b)
+            .ToList();
         var upgradeList = upgrades.List;
         var milestoneList = milestones.List;
         if (price != 1)
@@ -235,7 +241,7 @@ public sealed class ContentRegistry
             var behavior = Behaviors.Get(b.Behavior);
             behavior.Bind(b, this);
             b.Upgrade ??= behavior.DefaultUpgrade(b);
-            if (b.Upgrade.CostGrowth < 1 || b.Upgrade.MaxLevel < 1)
+            if (b.Upgrade.CostGrowth < 1 || b.Upgrade.CostGrowthStep < 0 || b.Upgrade.MaxLevel < 1)
                 throw new ContentException($"Building '{b.Id}': invalid upgrade track.");
         }
 

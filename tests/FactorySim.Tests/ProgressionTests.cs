@@ -174,7 +174,7 @@ public class ProgressionTests
         Assert.Contains("tier 1", r.Error);
 
         Assert.False(sim.Execute(new UnlockTier()).Ok); // needs lifetime earnings first
-        sim.World.Stats.TotalEarned = 1000;
+        sim.World.Stats.TotalEarned = TestUtil.Content.Tiers[1].RequiredEarnings;
         var mapBefore = sim.World.Bounds;
         int plotsBefore = sim.World.Land.OwnedCount;
         Assert.True(sim.Execute(new UnlockTier()).Ok);
@@ -188,7 +188,7 @@ public class ProgressionTests
     public void Tiers_and_levels_survive_save_and_load()
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 100_000);
-        sim.World.Stats.TotalEarned = 1000;
+        sim.World.Stats.TotalEarned = TestUtil.Content.Tiers[1].RequiredEarnings;
         sim.Execute(new UnlockTier());
         sim.Place("copper_miner", 0, 0, 0, Dir.East);
         sim.Execute(new SetBuildingLevels(new[] { new LevelChange(new GridPos(0, 0, 0), 7) }));

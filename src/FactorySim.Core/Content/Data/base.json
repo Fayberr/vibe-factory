@@ -5,7 +5,7 @@
 // Ports: "side" is relative to the building facing north; "cell" is a footprint cell.
 // Buildings: "tier" gates unlocking; "group"/"replaces" control placing on top of other
 // buildings (a splitter can be dropped into a belt line, a belt never replaces a machine);
-// "upgrade" overrides the behavior's default per-building level track; "limit" caps how
+// "upgrade" overrides the level track of the building's behavior ("levelTracks" below); "limit" caps how
 // many can be built (base, plus perTier for every "every" tiers unlocked after the building's own).
 // Items marked "raw" sell at a quarter of their value: processing is what pays. Every ore is worth
 // about the same ($1), so what an item is worth comes from the work in it: a recipe's output is worth
@@ -31,6 +31,19 @@
   // plots the same distance out cost the same. Depots stand on the outer border of the whole map.
   "map": { "plotSize": 15, "columns": 5, "rows": 5, "startColumn": 2, "startRow": 4, "plotPrice": 1000, "priceGrowth": 22 },
 
+  // How buildings level up, by behavior (a building's own "upgrade" wins; a behavior left out keeps
+  // its built-in track). The first upgrade costs the building's price × costFactor, every further
+  // one × costGrowth, and costGrowthStep is added to that multiple at every level, so the steps get
+  // steeper. Speed and value add per level above 1. Machine and drill levels are the main lever on
+  // the game's length: cheaper ones let a good player skip through the tiers (4.28.0 took 3h 18m
+  // with ×1.7 and ×1.65), so check `balance tiers --payback 30` after changing them. Depots and
+  // export terminals have no top level: every level is a steeper step (×1.9, ×2.0, ×2.1 ...).
+  "levelTracks": {
+    "processor": { "maxLevel": 25, "speedPerLevel": 0.35, "valuePerLevel": 0.04, "costFactor": 2, "costGrowth": 2.2 },
+    "miner":     { "maxLevel": 25, "speedPerLevel": 0.5, "costFactor": 2, "costGrowth": 2.5 },
+    "seller":    { "maxLevel": null, "valuePerLevel": 0.1, "costFactor": 2, "costGrowth": 1.9, "costGrowthStep": 0.1 }
+  },
+
   // A tier opens when lifetime earnings and the goods it asks for ("deliver": units sold at depots,
   // totals over the whole game) are both there, and it is paid for. The goods are what the tier
   // before makes, so a factory has to actually run its parts, not only earn.
@@ -40,24 +53,24 @@
   // product earns several times the last one's and the numbers grow big.
   "tiers": [
     { "name": "Basics",         "description": "Drill, smelt, sell.",                                             "cost": 0,     "requiredEarnings": 0 },
-    { "name": "Workshop",       "description": "Copper, wood, chairs, presses and polishers.",                    "cost": 500,   "requiredEarnings": 750 },
-    { "name": "Industry",       "description": "Coal, steel, sand, glass, gears, screws, crates and lanterns.",   "cost": 6000,  "requiredEarnings": 1e4,
+    { "name": "Workshop",       "description": "Copper, wood, chairs, presses and polishers.",                    "cost": 900,   "requiredEarnings": 1350 },
+    { "name": "Industry",       "description": "Coal, steel, sand, glass, gears, screws, crates and lanterns.",   "cost": 2e4,   "requiredEarnings": 3.3e4,
       "deliver": [ { "item": "iron_plate", "count": 150 }, { "item": "copper_wire", "count": 150 } ] },
-    { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys, kettles and export terminals.", "cost": 8e4,   "requiredEarnings": 1.5e5,
+    { "name": "Petrochemicals", "description": "Oil, plastic, cables, frames, tires, toys, kettles and export terminals.", "cost": 4.4e5, "requiredEarnings": 8.2e5,
       "deliver": [ { "item": "steel", "count": 150 }, { "item": "crate", "count": 60 } ] },
-    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry, televisions and bulk machines.", "cost": 1.4e6,   "requiredEarnings": 3.5e6, "valueBoost": 1.15,
+    { "name": "Electronics",    "description": "Gold, circuits, batteries, motors, phones, jewelry, televisions and bulk machines.", "cost": 1.1e7, "requiredEarnings": 2.8e7, "valueBoost": 1.15,
       "deliver": [ { "item": "toy", "count": 80 }, { "item": "frame", "count": 60 } ] },
-    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, cars and washing machines.",           "cost": 2.4e7, "requiredEarnings": 6e7, "valueBoost": 1.85,
+    { "name": "Robotics",       "description": "Robots from a toy body, motors and circuits, cars and washing machines.",           "cost": 1.4e8, "requiredEarnings": 3.5e8, "valueBoost": 1.85,
       "deliver": [ { "item": "motor", "count": 60 }, { "item": "jewelry", "count": 40 } ] },
-    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones, airliners and e-bikes.",                       "cost": 7.2e8, "requiredEarnings": 1.8e9, "valueBoost": 3.7,
+    { "name": "Aerospace",      "description": "Bauxite, aluminium, drones, airliners and e-bikes.",                       "cost": 2.1e9, "requiredEarnings": 5.2e9, "valueBoost": 3.7,
       "deliver": [ { "item": "robot", "count": 40 } ] },
-    { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 1.08e10,   "requiredEarnings": 2.7e10, "valueBoost": 1.55,
+    { "name": "Space",          "description": "Rocket fuel and satellites.",                                     "cost": 2.1e10,  "requiredEarnings": 5.3e10, "valueBoost": 1.55,
       "deliver": [ { "item": "drone", "count": 30 } ] },
     // Orbital tier (content drop, 4.13.0): delete every entry marked "Orbital tier" to remove it.
-    { "name": "Orbital",        "description": "Titanium, solar panels, habitat modules and orbital stations.",  "cost": 1.04e11,   "requiredEarnings": 2.6e11, "valueBoost": 3.8,
+    { "name": "Orbital",        "description": "Titanium, solar panels, habitat modules and orbital stations.",  "cost": 1.55e11, "requiredEarnings": 3.9e11, "valueBoost": 3.8,
       "deliver": [ { "item": "satellite", "count": 25 } ] },
     // Fusion tier (content drop, 4.25.0): delete every entry marked "Fusion tier" to remove it.
-    { "name": "Fusion",         "description": "Lithium brine, superconductors, fusion cells and starships.",    "cost": 1.16e12, "requiredEarnings": 2.9e12, "valueBoost": 4,
+    { "name": "Fusion",         "description": "Lithium brine, superconductors, fusion cells and starships.",    "cost": 1.1e12, "requiredEarnings": 2.8e12, "valueBoost": 4,
       "deliver": [ { "item": "orbital_station", "count": 10 } ] }
   ],
 

@@ -84,8 +84,18 @@ public sealed class BuildingDef
     /// <summary>Progression tier that unlocks this building (index into the content's tiers).</summary>
     public int Tier { get; init; }
 
-    /// <summary>How the building levels up. Filled from the behavior's default when omitted.</summary>
+    /// <summary>
+    /// How the building levels up. When omitted: the content's track for its behavior
+    /// (<see cref="ContentPack.LevelTracks"/>), else the behavior's own default.
+    /// </summary>
     public UpgradeTrack? Upgrade { get; set; }
+
+    internal BuildingDef WithUpgrade(UpgradeTrack track)
+    {
+        var copy = (BuildingDef)MemberwiseClone();
+        copy.Upgrade = track;
+        return copy;
+    }
 
     /// <summary>How many of this building may exist (null = unlimited). Grows with later tiers.</summary>
     public BuildLimit? Limit { get; init; }
@@ -143,6 +153,13 @@ public sealed class UpgradeTrack
     public double CostFactor { get; init; } = 1.5;
     public double CostGrowth { get; init; } = 1.8;
 
+    /// <summary>
+    /// Added to <see cref="CostGrowth"/> for every level after the first, so each step costs a bigger
+    /// multiple than the one before (growth 1.9, step 0.1: ×1.9, ×2.0, ×2.1 ...). 0 = plain geometric.
+    /// Meant for uncapped tracks, which then stay a goal however far they go.
+    /// </summary>
+    public double CostGrowthStep { get; init; }
+
     /// <summary>Added to the speed multiplier per level above 1.</summary>
     public double SpeedPerLevel { get; init; }
 
@@ -155,16 +172,36 @@ public sealed class UpgradeTrack
     public bool CanUpgrade(int level) => MaxLevel is not int max || level < max;
 
     /// <summary>Price of going from <paramref name="level"/> to level + 1.</summary>
-    public BigNum UpgradeCost(BuildingDef def, int level) =>
-        def.Cost * CostFactor * BigNum.Pow(CostGrowth, Math.Max(1, level) - 1);
+    public BigNum UpgradeCost(BuildingDef def, int level)
+    {
+        int steps = Math.Max(1, level) - 1;
+        if (CostGrowthStep == 0) return def.Cost * CostFactor * BigNum.Pow(CostGrowth, steps);
+        BigNum cost = def.Cost * CostFactor;
+        for (int k = 0; k < steps; k++) cost *= GrowthAt(k);
+        return cost;
+    }
 
     /// <summary>Total spent on a building at <paramref name="level"/> (price plus all upgrades); refunded on removal.</summary>
     public BigNum Invested(BuildingDef def, int level)
     {
         BigNum total = def.Cost;
-        for (int l = 1; l < level; l++) total += UpgradeCost(def, l);
+        if (CostGrowthStep == 0)
+        {
+            for (int l = 1; l < level; l++) total += UpgradeCost(def, l);
+            return total;
+        }
+        // Rising growth: one running product instead of rebuilding it for every level.
+        BigNum step = def.Cost * CostFactor;
+        for (int l = 1; l < level; l++)
+        {
+            total += step;
+            step *= GrowthAt(l - 1);
+        }
         return total;
     }
+
+    /// <summary>The multiple from the upgrade after <paramref name="k"/> earlier ones to the next.</summary>
+    private double GrowthAt(int k) => CostGrowth + CostGrowthStep * k;
 }
 
 /// <summary>
@@ -437,6 +474,13 @@ public sealed class ContentPack
     /// whole game, takes this many times as long. The last pack that sets it wins; 1 = as written.
     /// </summary>
     public double? PriceScale { get; init; }
+
+    /// <summary>
+    /// Level tracks by behavior name ("processor", "miner", "seller" ...): how every building of that
+    /// behavior levels up unless it sets its own "upgrade". Later packs override per behavior; a
+    /// behavior left out keeps its built-in default.
+    /// </summary>
+    public Dictionary<string, UpgradeTrack> LevelTracks { get; init; } = new();
 
     public List<MilestoneDef> Milestones { get; init; } = new();
     public List<ContractBundleDef> ContractBundles { get; init; } = new();

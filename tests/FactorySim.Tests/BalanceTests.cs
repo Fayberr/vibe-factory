@@ -139,7 +139,7 @@ public class BalanceTests
         Assert.Equal(1, one.ValueFactor(seller));
         Assert.Equal(1.4, five.ValueFactor(seller), 9);
         Assert.Equal(50, one.BuildCost(seller), 9);
-        Assert.Equal(50 + 100 + 190 + 361 + 685.9, five.BuildCost(seller), 6); // $50, then ×2 growth 1.9 each
+        Assert.Equal(50 + 100 + 190 + 380 + 798, five.BuildCost(seller), 6); // $50, then ×2, growth 1.9 rising by 0.1 a level
 
         // Above its maximum a building simply stops: a merger tops out at 7.
         var high = Book(12);

@@ -180,7 +180,11 @@ underneath. Lifts and multi-level machines use the same mechanism.
   so results are **bit-identical across machines**.
 - **Per-building levels.** Every entity has a `Level`. Its def's `UpgradeTrack`
   (speed and value per level, cost factor and growth, optional max) comes from the
-  JSON `upgrade` field or the behavior's `DefaultUpgrade`. `SetBuildingLevels` changes
+  JSON `upgrade` field, else the content's `levelTracks` entry for its behavior (applied as a copy
+  in `ContentRegistry.Build`, later packs override per behavior), else the behavior's
+  `DefaultUpgrade`. `CostGrowthStep` (default 0) is added to the growth at every level, so an
+  uncapped track gets steeper the higher it goes (depots and export terminals: ×1.9, ×2.0, ×2.1 ...;
+  `GameLengthTests`). `SetBuildingLevels` changes
   several levels atomically and is undoable; removing a building refunds everything
   invested in it; blueprints keep levels and charge for them.
 - **Tiers and limits.** `TierDef`s gate buildings by `tier`, need lifetime earnings, a
@@ -209,7 +213,11 @@ underneath. Lifts and multi-level machines use the same mechanism.
   upgrade base costs, tier prices and required earnings, plot prices, goal rewards and the targets of
   `earned` goals. Item values, research packs and order rewards (which come from item values) stay,
   so income is unchanged and the game takes `priceScale` times as long for a player who upgrades on
-  the same terms (`EconomyKnobsTests`).
+  the same terms (`EconomyKnobsTests`). The third lever is the `levelTracks` cost of machine and drill
+  levels: it sets how much a good player can shorten the game by upgrading, and so the gap between
+  the reference player and one who never upgrades. `GameLengthTests` holds the ten tiers at 10 hours
+  or more for the reference, the most patient and a drills-only player, each tier longer than the one
+  before.
 - **Recipe tree.** `base.json` holds one connected tree: shared parts feed many recipes and
   only the final main-line products (the deep-space probe and the orbital station) are sold and used in nothing. Optional
   consumer goods and industrial exports are deliberate sell-only leaves. Tests walk the tree to

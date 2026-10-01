@@ -183,7 +183,7 @@ public class RecipeTreeTests
     private static Simulation SimAtTier1()
     {
         var sim = TestUtil.NewSim(sandbox: false, money: 1e9);
-        sim.World.Stats.TotalEarned = 1000;
+        sim.World.Stats.TotalEarned = TestUtil.Content.Tiers[1].RequiredEarnings;
         Assert.True(sim.Execute(new UnlockTier()).Ok);
         return sim;
     }

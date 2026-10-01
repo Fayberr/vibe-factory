@@ -205,6 +205,11 @@ their choice.
   own new goods are worth) and the top-level `priceScale`, which multiplies every price (buildings,
   upgrades, tiers, land, goal rewards) but no item's value, so it sets how long the game takes
   without changing how it plays. At 2 everything takes twice as long.
+- **Length.** The ten tiers take at least 10 hours of waiting for money even for a player who
+  builds every factory perfectly and instantly (10h 46m for one who buys upgrades that pay back
+  within 30 minutes, about 1 day 16 hours at level 3, 8 days if you never upgrade), each tier a little
+  longer than the one before, from 3 minutes at Basics to almost 3 hours at Orbital. Building comes
+  on top. Fusion has no end: depot levels and the $1Q goal keep going.
 - **Industrial exports.** Industry and Petrochemicals add dedicated Tool Works and Pump Works.
   Their optional toolkits and pumps turn rods, screws, gears, cables and frames into sellable
   equipment without changing a tier gate or any existing machine's automatic recipes.
@@ -226,7 +231,10 @@ their choice.
   splitters go from 4 to 20 items/s over 9 levels, mergers from 3.3 to 20 over 7 (a merger
   runs slower than a belt and spaces items wider, so it is a real throughput gate until it is
   levelled), market
-  depots pay more. Ten drills means ten upgrades. Levels show as coloured trims (bronze,
+  depots pay more. Ten drills means ten upgrades. Each level costs more than the last (a machine's
+  first upgrade is twice its price, then ×2.2 a level, a drill's ×2.5), so upgrading pays but
+  cannot skip the game. Market depots and export terminals have no top level, and every level is a
+  steeper step than the one before (×1.9, ×2.0, ×2.1 ...). Levels show as coloured trims (bronze,
   silver, gold, cyan, violet) and are kept by copy/paste.
 - **Research (trial, optional).** From Workshop on, a Science Bench makes Basic Science Packs from
   an iron plate and a copper wire. Industry adds Advanced Science Packs made from steel, gears and
@@ -392,6 +400,8 @@ cd godot && godot --headless --export-release "Windows Desktop" ../build/VibeFac
 Most content is data. `src/FactorySim.Core/Content/Data/base.json` defines tiers,
 items (value, `raw`), recipes and buildings (footprint, ports, behavior, params, tier,
 `limit`, `upgrade` track, and `group`/`replaces` for dropping one building onto another).
+`levelTracks` sets how every building of a behavior levels up (machines, drills, depots), unless a
+building has its own `upgrade`.
 The top-level `priceScale` (1 in the base game) multiplies every price and no value, so it is the
 game's length in one number. A building's `meta.model` picks its procedural model (`belt`, `ramp`, `splitter`,
 `merger`, `drill`, `treefarm`, `quarry`, `pump`, `furnace`, `forge`, `sawmill`, `press`,
