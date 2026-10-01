@@ -648,8 +648,10 @@ $302.63M (was $1.68M). Each late tier earns 3 to 12 times the one before at leve
 
 - **Length is the open part.** The reference player now finishes in 3h 18m, against 18h 39m before,
   almost all of which was the 14 hour Space wall; at level 1 it is 5d 5h (was 3d 16h). `priceScale`
-  stretches it without changing anything else: 3 gives about 10 hours, 5 about 16.5 hours. Which
-  target fits is still open (see below).
+  stretches it: for the same `--payback 30` player 2 gives 6h 36m, 3 gives 9h 55m and 4 gives 14h 1m.
+  Above 4 it jumps (4.5: 22h, 5: 1d 14h), because upgrades stop earning their price back within 30
+  minutes and the factory stays a few levels lower. Level 1 scales exactly. Which target fits is
+  still open (see below).
 - **Side products by ore.** `balance items` has a Per ore column: what one sells for over the ore
   in it, the fair comparison because ore is what limits a factory. The late exports, worth a few
   thousand dollars next to main products worth millions, are now built on the previous tier's main
