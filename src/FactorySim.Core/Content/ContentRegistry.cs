@@ -21,7 +21,8 @@ public sealed class ContentRegistry
     public BehaviorRegistry Behaviors { get; }
     public IReadOnlyDictionary<string, ItemDef> Items { get; }
     public IReadOnlyDictionary<string, BuildingDef> Buildings { get; }
-    public IReadOnlyDictionary<string, RecipeDef> Recipes { get; }
+    public IReadOnlyDictionary<string, RecipeDef> Recipes => _recipes;
+    private readonly Dictionary<string, RecipeDef> _recipes;
     public IReadOnlyDictionary<string, UpgradeDef> Upgrades { get; }
 
     private IReadOnlyDictionary<string, ItemValues.Info>? _itemValues;
@@ -67,7 +68,7 @@ public sealed class ContentRegistry
         Behaviors = behaviors;
         Items = items.ToDictionary(x => x.Id);
         Buildings = buildings.ToDictionary(x => x.Id);
-        Recipes = recipes.ToDictionary(x => x.Id);
+        _recipes = recipes.ToDictionary(x => x.Id);
         Upgrades = upgrades.ToDictionary(x => x.Id);
         BuildingList = buildings;
         UpgradeList = upgrades;
@@ -109,10 +110,12 @@ public sealed class ContentRegistry
         var contractBundles = new OrderedById<ContractBundleDef>(x => x.Id);
         BigNum startingMoney = 0;
         var map = new MapDef();
+        double price = 1;
         foreach (var pack in packs)
         {
             if (pack.StartingMoney is BigNum money) startingMoney = money;
             if (pack.Map != null) map = pack.Map;
+            if (pack.PriceScale is double scale) price = scale;
             if (pack.Tiers.Count > 0)
             {
                 tiers.Clear();
@@ -126,7 +129,21 @@ public sealed class ContentRegistry
             pack.ContractBundles.ForEach(contractBundles.Put);
         }
 
-        var registry = new ContentRegistry(behaviors, items.List, buildings.List, recipes.List, upgrades.List, tiers, milestones.List, contractBundles.List, startingMoney, map);
+        if (!(price > 0) || double.IsInfinity(price)) throw new ContentException($"priceScale must be above 0 (got {price}).");
+        var buildingList = buildings.List;
+        var upgradeList = upgrades.List;
+        var milestoneList = milestones.List;
+        if (price != 1)
+        {
+            buildingList = buildingList.Select(b => b.Priced(price)).ToList();
+            upgradeList = upgradeList.Select(u => u.Priced(price)).ToList();
+            milestoneList = milestoneList.Select(m => m.Priced(price)).ToList();
+            tiers = tiers.Select(t => t.Priced(price)).ToList();
+            map = map.Priced(price);
+            startingMoney *= price;
+        }
+
+        var registry = new ContentRegistry(behaviors, items.List, buildingList, recipes.List, upgradeList, tiers, milestoneList, contractBundles.List, startingMoney, map);
         registry.Validate();
         return registry;
     }
@@ -208,6 +225,14 @@ public sealed class ContentRegistry
                 throw new ContentException($"Building '{b.Id}': unknown placement rule '{b.Placement}'. Known: mapEdge.");
 
             b.Params = BindParams(b, behavior);
+        }
+
+        // Boosted recipes must be in place before machines resolve theirs.
+        ApplyValueBoosts();
+
+        foreach (var b in Buildings.Values)
+        {
+            var behavior = Behaviors.Get(b.Behavior);
             behavior.Bind(b, this);
             b.Upgrade ??= behavior.DefaultUpgrade(b);
             if (b.Upgrade.CostGrowth < 1 || b.Upgrade.MaxLevel < 1)
@@ -233,6 +258,39 @@ public sealed class ContentRegistry
                 if (!ItemValue.TryGetValue(need.Item, out var info) || info.Tier >= t)
                     throw new ContentException($"{tier}: deliver asks for '{need.Item}', which cannot be made before this tier is unlocked.");
             }
+    }
+
+    /// <summary>
+    /// Applies <see cref="TierDef.ValueBoost"/>: an item belongs to the earliest tier with a machine that
+    /// makes it, and every recipe that makes it is boosted by that tier's factor, so a later machine's
+    /// bulk recipe for an old item is worth what the old recipe is. Recipes get boosted copies; the
+    /// pack's own definitions are never changed, so a pack can be built into several registries.
+    /// </summary>
+    private void ApplyValueBoosts()
+    {
+        for (int t = 0; t < Tiers.Count; t++)
+            if (!(Tiers[t].ValueBoost > 0) || double.IsInfinity(Tiers[t].ValueBoost))
+                throw new ContentException($"Tier {t} ({Tiers[t].Name}): valueBoost must be above 0.");
+        if (Tiers.All(t => t.ValueBoost == 1)) return;
+
+        var recipeTier = new Dictionary<string, int>();
+        foreach (var b in BuildingList)
+            if (b.Params is ProcessorParams p)
+                foreach (var id in p.Recipes)
+                    recipeTier[id] = Math.Min(recipeTier.GetValueOrDefault(id, int.MaxValue), b.Tier);
+
+        var itemTier = new Dictionary<string, int>();
+        foreach (var (id, tier) in recipeTier)
+            if (_recipes.TryGetValue(id, out var r))
+                foreach (var o in r.Outputs)
+                    itemTier[o.Item] = Math.Min(itemTier.GetValueOrDefault(o.Item, int.MaxValue), tier);
+
+        foreach (var id in recipeTier.Keys)
+        {
+            if (!_recipes.TryGetValue(id, out var r) || r.Outputs.Length == 0) continue;
+            double boost = Tiers[r.Outputs.Min(o => itemTier[o.Item])].ValueBoost;
+            if (boost != 1) _recipes[id] = r.Boosted(boost);
+        }
     }
 
     private void ValidateMap()

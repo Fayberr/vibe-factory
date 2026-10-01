@@ -68,7 +68,16 @@ public sealed class BuildingDef
 
     public PortDef[] Ports { get; init; } = Array.Empty<PortDef>();
 
-    public BigNum Cost { get; init; }
+    public BigNum Cost { get => _cost; init => _cost = value; }
+    private BigNum _cost;
+
+    /// <summary>A copy at <paramref name="scale"/> times the price (see <see cref="ContentPack.PriceScale"/>).</summary>
+    internal BuildingDef Priced(double scale)
+    {
+        var copy = (BuildingDef)MemberwiseClone();
+        copy._cost = _cost * scale;
+        return copy;
+    }
 
     public string Category { get; init; } = "misc";
 
@@ -180,9 +189,6 @@ public sealed class TierDef
 {
     public string Name { get; init; } = "";
     public string Description { get; init; } = "";
-    public BigNum Cost { get; init; }
-    public BigNum RequiredEarnings { get; init; }
-
     /// <summary>
     /// Items that must have been sold at depots over the whole game (not spent: lifetime totals
     /// from the sales statistics) before the tier can be unlocked. They ask for goods the previous
@@ -190,6 +196,30 @@ public sealed class TierDef
     /// earned enough. Empty = no delivery needed.
     /// </summary>
     public ItemAmount[] Deliver { get; init; } = Array.Empty<ItemAmount>();
+
+    /// <summary>
+    /// Multiplies the value multiplier of every recipe that makes an item first made in this tier
+    /// (bulk versions of older recipes keep their old value). Values compound down the chain, so
+    /// this sets how much richer each tier is than the last. 1 = recipes as written.
+    /// </summary>
+    public double ValueBoost { get; init; } = 1;
+
+    /// <summary>Price to unlock.</summary>
+    public BigNum Cost { get => _cost; init => _cost = value; }
+
+    /// <summary>Lifetime earnings needed before it can be unlocked.</summary>
+    public BigNum RequiredEarnings { get => _requiredEarnings; init => _requiredEarnings = value; }
+
+    private BigNum _cost, _requiredEarnings;
+
+    /// <summary>A copy with price and earnings at <paramref name="scale"/> times (see <see cref="ContentPack.PriceScale"/>).</summary>
+    internal TierDef Priced(double scale)
+    {
+        var copy = (TierDef)MemberwiseClone();
+        copy._cost = _cost * scale;
+        copy._requiredEarnings = _requiredEarnings * scale;
+        return copy;
+    }
 
     /// <summary>How many units of <paramref name="need"/> the player has sold so far.</summary>
     public static long SoldOf(StatsTracker stats, ItemAmount need) => stats.Sold.GetValueOrDefault(need.Item);
@@ -218,7 +248,16 @@ public sealed class MapDef
     public int StartRow { get; init; } = 4;
 
     /// <summary>Price of a plot next to the start (distance 1).</summary>
-    public BigNum PlotPrice { get; init; } = 2500;
+    public BigNum PlotPrice { get => _plotPrice; init => _plotPrice = value; }
+    private BigNum _plotPrice = 2500;
+
+    /// <summary>A copy at <paramref name="scale"/> times the price (see <see cref="ContentPack.PriceScale"/>).</summary>
+    internal MapDef Priced(double scale)
+    {
+        var copy = (MapDef)MemberwiseClone();
+        copy._plotPrice = _plotPrice * scale;
+        return copy;
+    }
 
     /// <summary>Every further step away from the start multiplies the price by this.</summary>
     public double PriceGrowth { get; init; } = 8;
@@ -235,8 +274,21 @@ public sealed class RecipeDef
     /// <summary>Work needed per craft, in ticks at speed 1.</summary>
     public int Ticks { get; init; } = 20;
 
-    /// <summary>Output value = (sum of consumed input values) × this, split evenly over output units.</summary>
-    public double ValueMultiplier { get; init; } = 1;
+    /// <summary>
+    /// Output value = (sum of consumed input values) × this, split evenly over output units. Includes
+    /// the value boost of the tier the recipe's item belongs to (<see cref="TierDef.ValueBoost"/>).
+    /// </summary>
+    public double ValueMultiplier { get => _valueMultiplier; init => _valueMultiplier = value; }
+
+    private double _valueMultiplier = 1;
+
+    /// <summary>A copy worth <paramref name="boost"/> times as much per craft.</summary>
+    internal RecipeDef Boosted(double boost)
+    {
+        var copy = (RecipeDef)MemberwiseClone();
+        copy._valueMultiplier *= boost;
+        return copy;
+    }
 }
 
 public enum UpgradeEffectKind : byte
@@ -265,13 +317,23 @@ public sealed class UpgradeDef
     public UpgradeEffectKind Effect { get; init; } = UpgradeEffectKind.Multiply;
     public double PerLevel { get; init; } = 1.1;
 
-    public BigNum BaseCost { get; init; } = 100;
+    public BigNum BaseCost { get => _baseCost; init => _baseCost = value; }
+    private BigNum _baseCost = 100;
+
     public double CostGrowth { get; init; } = 1.5;
 
     /// <summary>Null = uncapped.</summary>
     public int? MaxLevel { get; init; }
 
     public BigNum CostForLevel(int currentLevel) => BaseCost * BigNum.Pow(CostGrowth, currentLevel);
+
+    /// <summary>A copy at <paramref name="scale"/> times the money price; research packs stay as they are (see <see cref="ContentPack.PriceScale"/>).</summary>
+    internal UpgradeDef Priced(double scale)
+    {
+        var copy = (UpgradeDef)MemberwiseClone();
+        copy._baseCost = _baseCost * scale;
+        return copy;
+    }
 
     /// <summary>
     /// Research packs paid for the first level, taken from the bank that labs fill (see
@@ -322,8 +384,22 @@ public sealed class MilestoneDef
     public string? Building { get; init; }
     /// <summary>Required units per second for a produced_rate milestone.</summary>
     public double Rate { get; init; }
-    public double Target { get; init; } = 1;
-    public BigNum Reward { get; init; }
+    public double Target { get => _target; init => _target = value; }
+    private double _target = 1;
+    public BigNum Reward { get => _reward; init => _reward = value; }
+    private BigNum _reward;
+
+    /// <summary>
+    /// A copy paying <paramref name="scale"/> times the reward, and asking for that many times the
+    /// money if it is an earnings goal (see <see cref="ContentPack.PriceScale"/>).
+    /// </summary>
+    internal MilestoneDef Priced(double scale)
+    {
+        var copy = (MilestoneDef)MemberwiseClone();
+        copy._reward = _reward * scale;
+        if (Kind == "earned") copy._target = _target * scale;
+        return copy;
+    }
 }
 
 /// <summary>A repeatable mix of goods that may be offered as one customer order.</summary>
@@ -353,6 +429,14 @@ public sealed class ContentPack
 
     /// <summary>The land layout; the last pack that sets it wins.</summary>
     public MapDef? Map { get; init; }
+
+    /// <summary>
+    /// The game's length knob: multiplies every amount of money in the content except what goods
+    /// are worth: building prices (and so upgrades), tier prices and required earnings, land,
+    /// research, starting money and goal rewards. Income stays the same, so every wait, and the
+    /// whole game, takes this many times as long. The last pack that sets it wins; 1 = as written.
+    /// </summary>
+    public double? PriceScale { get; init; }
 
     public List<MilestoneDef> Milestones { get; init; } = new();
     public List<ContractBundleDef> ContractBundles { get; init; } = new();

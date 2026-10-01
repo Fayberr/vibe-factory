@@ -198,7 +198,7 @@ public static class BalanceCommand
 
     public static string ItemReport(RecipeBook book)
     {
-        var table = new Table("Item", ">Tier", ">Value", ">Sells for", "Made in", ">Steps", "Used in", "Value from");
+        var table = new Table("Item", ">Tier", ">Value", ">Sells for", ">Per ore", "Made in", ">Steps", "Used in", "Value from");
         var items = book.Sources.Values
             .OrderBy(s => s.Tier).ThenBy(s => s.IsExtracted ? 0 : 1).ThenBy(s => s.Value);
         foreach (var s in items)
@@ -206,8 +206,11 @@ public static class BalanceCommand
             string usedIn = book.UsedBy.TryGetValue(s.Item, out var uses)
                 ? string.Join(", ", uses.SelectMany(u => u.Recipe.Outputs.Select(o => o.Item)).Distinct().Select(book.NameOf))
                 : "-";
-            table.Add(book.NameOf(s.Item), s.Tier.ToString(Inv), Money(s.Value), Money(book.SaleValue(s.Item)),
-                s.Building.Name, ProductionChain.For(book, s.Item).Depth.ToString(Inv), usedIn, Shares(book, s.RawShare, 3));
+            var chain = ProductionChain.For(book, s.Item);
+            double ores = chain.RawPerSecond.Values.Sum();
+            table.Add(book.NameOf(s.Item), s.Tier.ToString(Inv), Money(s.Value), Money(chain.SaleValue),
+                ores > 0 ? Money(chain.SaleValue / ores) : "-",
+                s.Building.Name, chain.Depth.ToString(Inv), usedIn, Shares(book, s.RawShare, 3));
         }
 
         var sb = new StringBuilder(table.ToString());
@@ -217,6 +220,7 @@ public static class BalanceCommand
         var packs = book.Sources.Values.Where(s => Science(s.Item)).Select(s => book.NameOf(s.Item)).ToList();
         if (packs.Count > 0) sb.AppendLine($"Research packs, studied in labs: {string.Join(", ", packs)}.");
         sb.AppendLine("Value = worth as it leaves its machine; sells for = at the first depot. Steps = crafting steps from the ore.");
+        sb.AppendLine("Per ore = what it sells for over the ore that goes into one: ore is what limits a factory, so products compare on this.");
         return sb.ToString();
     }
 
